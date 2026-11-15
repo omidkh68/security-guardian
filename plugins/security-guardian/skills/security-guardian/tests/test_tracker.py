@@ -62,13 +62,17 @@ class TrackingTests(unittest.TestCase):
         self.assertEqual(archived, (store/'runs'/one['run_id']/'findings.json').read_bytes())
 
         three = self.call('begin', '--mode', 'verify')
+        test_receipt = self.call('test', '--run', three['run_id'], payload={
+            'name':'unauthorized role update rejected', 'result':'PASS',
+            'finding_ids':[finding_id], 'evidence':['local test run']})
+        verified_test_id = test_receipt['test_ids'][0]
         self.call('record', '--run', three['run_id'], payload={**update,
                   'status': 'VERIFIED_FIXED',
                   'reason': 'Local negative API test passed after change',
                   'fix': {'summary': 'Enabled strict validation with authorization regression'},
-                  'verification': {'executed': True, 'result': 'PASS', 'evidence': ['tests/validation.e2e.spec.ts:10']}})
-        self.call('test', '--run', three['run_id'], payload={
-            'name':'unauthorized role update rejected', 'result':'PASS', 'evidence':['local test run']})
+                  'verification': {'executed': True, 'result': 'PASS',
+                                   'test_id': verified_test_id,
+                                   'evidence': ['tests/validation.e2e.spec.ts:10']}})
         done3 = self.call('finish', '--run', three['run_id'])
         self.assertEqual(done3['delta']['new_verified_fixes'], 1)
         self.assertEqual(done3['delta']['tests_passed'], 1)
@@ -100,6 +104,28 @@ class TrackingTests(unittest.TestCase):
                                                 'next_action':'Await approval to modify core authorization'})
         fin = self.call('finish', '--run', run, '--result','PARTIAL')
         self.assertEqual(fin['delta']['total_unresolved_or_unverified'], 2) # candidate + blocked
+
+    def test_claimed_fixed_requires_same_run_linked_pass(self):
+        run = self.call('begin', '--mode', 'fix')['run_id']
+        ledger = json.loads((self.root/'.security-guardian/ledger.json').read_text())['findings']
+        issue = next(x for x in ledger.values() if x['control_id']=='API-01')
+        base={'id':issue['id'],'control_id':'API-01','title':issue['title'],
+              'location':'app.ts','status':'VERIFIED_FIXED','reason':'Tested fix',
+              'fix':{'summary':'Safe DTO policy'},
+              'verification':{'executed':True,'result':'PASS','evidence':['test.log'],
+                              'test_id':'SGT-0000000000000000'}}
+        self.call('record','--run',run,payload=base,expected=2)
+        unrelated=self.call('test','--run',run,payload={
+            'name':'test for different issue','result':'PASS',
+            'finding_ids':[], 'evidence':['test.log']})['test_ids'][0]
+        self.call('record','--run',run,payload={**base,
+            'verification':{**base['verification'],'test_id':unrelated}},expected=2)
+        linked=self.call('test','--run',run,payload={
+            'name':'targeted access regression','result':'PASS',
+            'finding_ids':[issue['id']], 'evidence':['local test output']})['test_ids'][0]
+        self.call('record','--run',run,payload={**base,
+            'verification':{**base['verification'],'test_id':linked}})
+        self.call('finish','--run',run)
 
     def test_scanner_skips_generated_security_history(self):
         first = self.call('begin')['run_id']
