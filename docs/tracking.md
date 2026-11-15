@@ -64,3 +64,7 @@ Marketplace installation: locate the installed Skill's `scripts/security_tracker
 - Apply retention, access-control and backups independently; snapshots are immutable through the tracker workflow, **not cryptographically tamper-proof**. Filesystem administrators can still alter them.
 
 Schema details and exact commands: [tracking workflow](../plugins/security-guardian/skills/security-guardian/references/workflows/tracking.md).
+
+## Linked test evidence for verified fixes (next release)
+
+Before recording `VERIFIED_FIXED`, register the actual regression test with `finding_ids` containing the stable finding ID. The tracker returns a `test_id`. The follow-up verified finding must reference it under `verification.test_id`. The tracker requires a PASS, matching run and finding, and unchanged Git HEAD where available. Record a sanitized CI URL/output reference. This checks report consistency, not authenticity of the actual test execution, and it does not fingerprint uncommitted changes. See [verification matrix](verification-matrix.md).
