@@ -1,0 +1,11 @@
+{
+  "name": "security-guardian",
+  "displayName": "Security Guardian",
+  "version": "1.1.0",
+  "description": "Stack-aware security audits, 145 documented controls, safe remediation workflows and versioned findings.",
+  "author": { "name": "Security Guardian contributors" },
+  "homepage": "https://github.com/omidkh68/security-guardian",
+  "repository": "https://github.com/omidkh68/security-guardian",
+  "license": "MIT",
+  "keywords": ["security", "claude-code", "angular", "nestjs", "flutter", "devsecops", "owasp"]
+}

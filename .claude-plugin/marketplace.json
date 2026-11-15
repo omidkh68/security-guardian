@@ -1,0 +1,12 @@
+{
+  "name": "security-guardian-marketplace",
+  "description": "Security Guardian: stack-aware security auditing and evidence-led remediation for Claude Code.",
+  "owner": { "name": "Security Guardian contributors" },
+  "plugins": [
+    {
+      "name": "security-guardian",
+      "source": "./plugins/security-guardian",
+      "description": "145 security controls, 107 playbooks, versioned findings, safe remediation guidance."
+    }
+  ]
+}

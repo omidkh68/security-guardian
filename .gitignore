@@ -1,0 +1,36 @@
+# Private security findings generated in audited projects
+.security-guardian/
+**/.security-guardian/
+
+# Secrets & credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+*.mobileprovision
+
+# Python/IDE
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+
+# Builds and temp files
+build/
+dist/
+coverage/
+*.egg-info/
+*.log
+*.tmp
+
+# Release bundles
+/dist/

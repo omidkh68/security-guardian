@@ -1,0 +1,47 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Validate catalog, plugin metadata, scripts and file layouts
+        run: python scripts/validate_package.py
+      - name: Run offline tests
+        run: python -m unittest discover -s plugins/security-guardian/skills/security-guardian/tests -v
+      - name: Verify no tracked secret-like files or generated reports
+        run: |
+          if git ls-files | grep -E '(^|/)(\.env(\.|$)|\.security-guardian/)|\.(pem|p12|pfx|key)$' ; then
+            echo 'Potentially sensitive file tracked; refusing CI pass' >&2
+            exit 1
+          fi
+  install-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test direct installation and upgrade offline
+        run: |
+          set -euo pipefail
+          ROOT="$(mktemp -d)"
+          export HOME="$ROOT/home"
+          mkdir -p "$HOME" "$ROOT/project"
+          bash install.sh --user
+          test -f "$HOME/.claude/skills/security-guardian/SKILL.md"
+          bash install.sh --user --upgrade
+          find "$HOME/.claude/skill-backups" -name 'SKILL.md' -print | grep -q SKILL.md
+          bash install.sh --project "$ROOT/project"
+          test -f "$ROOT/project/.claude/skills/security-guardian/SKILL.md"

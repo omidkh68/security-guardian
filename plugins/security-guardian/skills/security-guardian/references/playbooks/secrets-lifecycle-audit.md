@@ -1,0 +1,31 @@
+# secrets-lifecycle-audit
+
+Specialist security review playbook. Mapped controls: CLOUD-05, SDLC-03.
+
+## Workflow
+
+1. Identify actual application scope and prerequisites; inspect the applicable domain reference.
+2. Trace relevant sources, trust boundaries and configuration; record file:line evidence.
+3. Treat static signatures as hypotheses, not proof of exploitability; verify using safe negative tests where possible.
+4. Write a minimal compatibility-preserving fix plan and acceptance tests.
+5. Execute edits only when the user explicitly requested remediation. Obtain specific approval for high-risk changes; never run destructive infrastructure operations.
+6. Verify with tests/builds where allowed; present residual risk, tests not run and rollback details.
+
+## Controls and exact gates
+
+### CLOUD-05 - Runtime secrets rather than image layers
+- Implement/check: Keep secrets out of Dockerfile layers, committed Compose files, image ENV and startup logs; use secret mounts/vault with rotation.
+- Acceptance: Image layers/history and artifacts do not reveal enduring secrets.
+- Priority P0; difficulty 70%; domain `CLOUD`; source page 24
+
+### SDLC-03 - Secret detection and verified rotation
+- Implement/check: Run pre-commit/pipeline secret scanning and periodic history checks; revoke exposed secrets immediately since deleting commits is insufficient.
+- Acceptance: Seeded test secrets fail the gate; leaked real secrets are revoked.
+- Priority P0; difficulty 35%; domain `SDLC`; source page 26
+
+## Safety gates
+
+- Read-only diagnosis is the default. Do not treat file name or absence of source code as conclusive vulnerability evidence.
+- No live exploit attempts, user impersonation, private key access, credential dumping or production scanning without explicit authorization.
+- Do not commit, push, install packages, alter CI/secrets/identity/PKI/payment/network or deploy unless separately authorized.
+- Keep existing semantics unless a demonstrated vulnerability and approved design justify the change.
