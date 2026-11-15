@@ -1,3 +1,11 @@
+## Unreleased
+
+- Add optional local Semgrep-based structural candidate detection with sanitized outputs.
+- Record scan coverage exclusions, size/depth limits and truncated scans.
+- Require same-run, same-finding, passing test references before recording VERIFIED_FIXED.
+- Add adversarial tests for missing Semgrep, omitted files and unrelated test evidence.
+- Add native Claude CLI validation instructions and a tag-triggered release workflow.
+
 # Changelog
 
 All notable changes to this open-source distribution are documented here. Dates are UTC and versions follow semantic versioning.

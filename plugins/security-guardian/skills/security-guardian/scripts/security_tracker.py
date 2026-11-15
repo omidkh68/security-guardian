@@ -188,8 +188,9 @@ def validate_finding(obj):
         raise ValueError('A fix summary is required before a finding is marked fixed')
     if status == 'VERIFIED_FIXED' and (verification.get('executed') is not True or
                                      verification.get('result') != 'PASS' or
-                                     not verification.get('evidence')):
-        raise ValueError('VERIFIED_FIXED requires executed=true, result=PASS and verification evidence')
+                                     not verification.get('evidence') or
+                                     not verification.get('test_id')):
+        raise ValueError('VERIFIED_FIXED requires executed=true, result=PASS, evidence and test_id')
     if status in {'DEFERRED', 'BLOCKED', 'ACCEPTED_RISK'} and not str(row.get('next_action', '')).strip():
         raise ValueError(f'{status} requires next_action')
     if status == 'ACCEPTED_RISK' and not str(row.get('approver', '')).strip():
@@ -212,10 +213,18 @@ def validate_test(obj):
     reason = str(obj.get('reason', '')).strip()
     if result != 'PASS' and not reason:
         raise ValueError('Non-passing tests require a reason')
+    evidence = obj.get('evidence', [])
+    if not isinstance(evidence, list) or len(evidence) > 50 or any(not isinstance(x, str) or len(x)>1024 for x in evidence):
+        raise ValueError('Test evidence must be a list of short, sanitized references')
+    if result == 'PASS' and not evidence:
+        raise ValueError('PASS requires evidence; do not record unexecuted tests as PASS')
+    linked = obj.get('finding_ids', [])
+    if not isinstance(linked, list) or any(not isinstance(x,str) or not re.fullmatch(r'SG-[A-Z]{3,5}-\d{2}-[0-9A-F]{12}',x) for x in linked):
+        raise ValueError('finding_ids must be an array of stable finding IDs')
     return {'name': str(obj['name']), 'result': result, 'reason': reason,
             'scope': str(obj.get('scope', '')), 'command_or_method': str(obj.get('command_or_method', '')),
-            'evidence': obj.get('evidence', []), 'recorded_at': now(),
-            'executed': result in {'PASS', 'FAIL'}}
+            'evidence': evidence, 'finding_ids': list(dict.fromkeys(linked)),
+            'recorded_at': now(), 'executed': result in {'PASS', 'FAIL'}}
 
 
 def ensure_run(store, index, run_id):
@@ -388,6 +397,22 @@ def record(args):
                 raise ValueError('Existing finding ID belongs to another control')
             if e['id'] in ledger['findings'] and not e.get('finding_key'):
                 e['finding_key'] = ledger['findings'][e['id']].get('finding_key')
+        # A verified fix needs a PASS test recorded in this SAME run and
+        # explicitly linked to this finding. This validates internal consistency
+        # but cannot independently prove an external command really ran.
+        test_by_id = {t['test_id']: t for t in run['tests'] if 'test_id' in t}
+        for e in entries:
+            if e['status'] == 'VERIFIED_FIXED':
+                verification = e['verification']
+                test = test_by_id.get(verification['test_id'])
+                if (test is None or test['result'] != 'PASS' or not test['executed'] or
+                        e['id'] not in test.get('finding_ids', []) or not test.get('evidence')):
+                    raise ValueError('VERIFIED_FIXED requires linked PASS test evidence from this run and finding ID')
+                tested_sha = test.get('git_commit')
+                current_sha = git_meta(root).get('commit')
+                if tested_sha and current_sha and tested_sha != current_sha:
+                    raise ValueError('Git HEAD changed after linked PASS test; rerun verification')
+                verification['git_commit'] = tested_sha
         for e in entries:
             apply_event(ledger, e, run)
             append_event(rdir / 'events.jsonl', {'at': now(), 'type': 'FINDING_REVIEWED',
@@ -405,13 +430,19 @@ def tests(args):
     with locked(store):
         index, ledger = load_state(store)
         rdir, run = ensure_run(store, index, args.run)
+        current_git = git_meta(root)
+        for t in entries:
+            t['test_id'] = 'SGT-' + secrets.token_hex(8).upper()
+            t['git_commit'] = current_git.get('commit')
+            t['git_dirty'] = current_git.get('dirty')
         run['tests'].extend(entries)
         for t in entries:
             append_event(rdir / 'events.jsonl', {'at': now(), 'type': 'TEST_RECORDED',
                                                   'name': t['name'], 'result': t['result']})
         save_state(store, index, ledger)
         snapshot(store, rdir, run, ledger, read_json(rdir / 'scanner.json'))
-    print(dump({'run_id': args.run, 'tests_recorded': len(entries)}).strip())
+    print(dump({'run_id': args.run, 'tests_recorded': len(entries),
+                'test_ids': [t['test_id'] for t in entries]}).strip())
 
 
 def finish(args):

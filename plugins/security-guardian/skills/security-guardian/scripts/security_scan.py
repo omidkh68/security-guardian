@@ -73,31 +73,54 @@ PATTERNS = [(cid, label, re.compile(expr, re.I if cid not in {'ANG-01'} else 0),
     for cid,label,expr,extensions,confidence,severity in PATTERNS]
 
 
-def project_files(root:Path):
+def project_files(root:Path, stats=None):
+    """Yield bounded source files while making all coverage gaps observable."""
+    stats = stats if stats is not None else {}
+    stats.update({'visited_files': 0, 'scanned_files': 0, 'skipped': {},
+                  'max_depth': 7, 'max_files': MAX_FILES, 'max_file_bytes': MAX_FILE_BYTES,
+                  'truncated': False})
+    def skipped(reason):
+        stats['skipped'][reason] = stats['skipped'].get(reason, 0) + 1
     count=0
     def onerror(error): pass
     # No symlink recursion; os.walk follows links only when followlinks=True.
     import os
     for base, folders, names in os.walk(root, topdown=True, followlinks=False, onerror=onerror):
         depth=len(Path(base).relative_to(root).parts)
-        folders[:]=sorted(f for f in folders if f not in EXCLUDE_DIRS and not f.startswith('.git') and not (Path(base).name=='.claude' and f in {'skills', 'plugins'}) and depth<7)
+        kept=[]
+        for f in sorted(folders):
+            if f in EXCLUDE_DIRS or f.startswith('.git') or (Path(base).name=='.claude' and f in {'skills', 'plugins'}):
+                skipped('excluded_directory')
+            elif depth>=7:
+                skipped('depth_limit_directory')
+                stats['truncated']=True
+            else:
+                kept.append(f)
+        folders[:]=kept
         for name in sorted(names):
-            if count >= MAX_FILES: return
+            stats['visited_files'] += 1
+            if count >= MAX_FILES:
+                skipped('file_count_limit')
+                stats['truncated']=True
+                continue
             p=Path(base)/name
-            if p.is_symlink() or not p.is_file(): continue
-            if p.suffix not in SCAN_SUFFIXES and name not in TEXT_NAMES: continue
-            if name in EXCLUDE_FILES or name in {'package-lock.json','npm-shrinkwrap.json','pnpm-lock.yaml','yarn.lock','pubspec.lock','Cargo.lock'} or name.startswith('.env') or name.endswith(('.lock','.pem','.key','.p12','.pfx','.crt','.der')): continue
+            if p.is_symlink() or not p.is_file(): skipped('symlink_or_nonfile'); continue
+            if p.suffix not in SCAN_SUFFIXES and name not in TEXT_NAMES: skipped('unsupported_file_type'); continue
+            if name in EXCLUDE_FILES or name in {'package-lock.json','npm-shrinkwrap.json','pnpm-lock.yaml','yarn.lock','pubspec.lock','Cargo.lock'} or name.startswith('.env') or name.endswith(('.lock','.pem','.key','.p12','.pfx','.crt','.der')):
+                skipped('excluded_sensitive_or_lockfile'); continue
             try:
                 size=p.stat().st_size
-            except OSError:continue
-            if size > MAX_FILE_BYTES:continue
+            except OSError: skipped('unreadable_stat'); continue
+            if size > MAX_FILE_BYTES: skipped('oversized_file'); stats['truncated']=True; continue
             count+=1
+            stats['scanned_files'] += 1
             yield p
 
 
 def process(root:Path):
     catalog=json.loads((Path(__file__).resolve().parent.parent/'references'/'controls.json').read_text())['controls']
-    files=list(project_files(root))
+    coverage={}
+    files=list(project_files(root, coverage))
     rels={str(p.relative_to(root)).replace('\\','/'):p for p in files}
     names=set(rels)
     evidence=[]
@@ -185,7 +208,8 @@ def process(root:Path):
     summary={'catalog_controls':len(catalog),'scanned_source_files':len(files),
       'discovered_stack':sorted(stack),'feature_hints':sorted(features),
       'applicability':dict(Counter(c['applicability'] for c in result)),
-      'heuristic_signals':len(evidence),'status':'NO_CONTROLS_CERTIFIED_BY_THIS_SCANNER',
+      'heuristic_signals':len(evidence),'scan_coverage':coverage,
+      'indicator_rules':len(PATTERNS),'status':'NO_CONTROLS_CERTIFIED_BY_THIS_SCANNER',
       'timestamp_utc':datetime.now(timezone.utc).isoformat()}
     return {'summary':summary,'signals':evidence[:2000],'controls':result,
       'limitations':['Regex signatures are not vulnerability proof.',
@@ -201,9 +225,13 @@ def markdown(result):
       f"- Stacks detected: {', '.join(s['discovered_stack']) or 'None confirmed'}",
       f"- Feature hints: {', '.join(s['feature_hints']) or 'None detected'}",
       f"- Heuristic patterns matched: **{s['heuristic_signals']}** (unconfirmed)",
+      f"- Static heuristic rules: **{s['indicator_rules']}** (not 145 verified controls)",
+      f"- Scan truncated: **{s['scan_coverage']['truncated']}**; skipped files/dirs: **{sum(s['scan_coverage']['skipped'].values())}**",
       '- **No controls are certified as passing by this tool.**','',
       '## Applicability counts', '']
     for status,qty in sorted(s['applicability'].items()):lines.append(f'- {status}: {qty}')
+    lines+=['', '## Scan coverage and limitations', '']
+    lines += [f'- {key}: {value}' for key,value in sorted(s['scan_coverage']['skipped'].items())]
     lines+=['','## Review signals (source location only; no secret values)','',
       '| Control | Candidate issue | Location | Confidence | Suggested triage |',
       '|---|---|---|---|---|']

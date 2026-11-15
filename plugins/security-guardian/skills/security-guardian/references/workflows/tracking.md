@@ -118,3 +118,7 @@ Commands are plain metadata; they are **never executed by this script**. Log bot
 5. A missing scanner signal is not a fix. A changed source file is not proof of remediation. A passing unrelated test is not proof that the security invariant holds. A missing server config is unknown, not passed.
 6. The `audit` mode has no source changes; the versioned report directory is an explicit and intentional audit artifact write.
 7. The tracker is a convenience ledger, not tamper-proof compliance storage. Maintain protected backups if durable evidence or formal assurance is required.
+
+### Linked passing test requirement (next release)
+
+The `test` tool returns a generated `test_id`. Provide `finding_ids` on the test record and `verification.test_id` on the following `record` call. `VERIFIED_FIXED` requires a passing test from the same run and finding with sanitized evidence and unchanged Git HEAD (when available). This validates bookkeeping consistency; it is not proof the caller actually executed the test.

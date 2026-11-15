@@ -1,0 +1,35 @@
+rules:
+  - id: security-guardian.angular-bypass-trust
+    languages: [typescript]
+    severity: WARNING
+    message: "Review Angular sanitizer bypass for untrusted data; unconfirmed."
+    pattern-either:
+      - pattern: $SANITIZER.bypassSecurityTrustHtml($VALUE)
+      - pattern: $SANITIZER.bypassSecurityTrustResourceUrl($VALUE)
+  - id: security-guardian.javascript-dom-innerhtml
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: "Review direct HTML assignment for XSS; unconfirmed."
+    pattern: $ELEMENT.innerHTML = $VALUE
+  - id: security-guardian.nestjs-validation-whitelist
+    languages: [typescript]
+    severity: ERROR
+    message: "ValidationPipe disables whitelist; trace affected DTOs and routes."
+    pattern: "new ValidationPipe({..., whitelist: false, ...})"
+  - id: security-guardian.prisma-unsafe-query
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: "Review Prisma unsafe raw query for injection."
+    pattern-either:
+      - pattern: $DB.$queryRawUnsafe(...)
+      - pattern: $DB.$executeRawUnsafe(...)
+  - id: security-guardian.node-tls-verify-disabled
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: "TLS certificate verification disabled; check deployed configuration."
+    pattern: "new https.Agent({..., rejectUnauthorized: false, ...})"
+  - id: security-guardian.flutter-bad-tls-callback
+    languages: [dart]
+    severity: WARNING
+    message: "Review Flutter badCertificateCallback for invalid certificate acceptance."
+    pattern: $CLIENT.badCertificateCallback = $CALLBACK
