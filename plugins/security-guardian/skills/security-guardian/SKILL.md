@@ -33,6 +33,12 @@ Treat any user arguments as a request, not as authorization for destructive or p
 
 The ledger is cumulative; `runs/vNNNN-.../` snapshots are frozen after `finish`. The scanner excludes `.security-guardian/` to avoid self-generated false positives. Never automatically commit these sensitive security reports; the user decides whether they belong in a private repository. Do not delete or rewrite prior runs.
 
+## Optional structural review and stricter verification
+
+If the user permits local tools and Semgrep is already installed, run `python3 <skill-dir>/scripts/security_semgrep.py --root <repo-root>`. This optional local AST/structural scan uses bundled rules, disables Semgrep metrics, and emits only sanitized candidate locations. If unavailable, explicitly mark `NOT_AVAILABLE` rather than claiming a pass. Always inspect the standard scanner's `scan_coverage` and call out skipped files and truncated results.
+
+For `VERIFIED_FIXED`, record a real passing test **first**, with `finding_ids` containing the stable finding ID. The tracker returns a `test_id`. Then record the finding with `verification.test_id`, `executed=true`, `result=PASS` and sanitized evidence. The test must belong to the same run and finding, and Git HEAD must match when available. This is report-consistency enforcement, not independent proof that the external test was executed.
+
 ## Step 1 — Inspect and determine scope
 
 1. Identify project/repository root; establish git branch/status, existing uncommitted edits, workspace layout, installed runtime and whether this is a monorepo. **Preserve existing changes.**
