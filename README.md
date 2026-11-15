@@ -96,6 +96,14 @@ python3 plugins/security-guardian/skills/security-guardian/scripts/security_scan
 
 The scanner is **triage**, not an independent confirmation of all 145 controls. It cannot inspect a live server, cloud IAM, actual production secrets policies, or non-repository settings.
 
+## 🔍 Optional structural scanning and coverage evidence
+
+In addition to its zero-dependency Python triage, Security Guardian offers **optional local Semgrep structural/AST-backed candidate detection**. It never silently installs Semgrep or claims that an unavailable engine has passed. Raw matched source snippets are excluded from the report.
+
+The standard scanner reports excluded files, size and depth limits, and whether the scan was truncated. Each verified fix now needs a same-run passing test linked to the same finding ID, with Git HEAD consistency checks when available. These records are not independent attestations.
+
+See the [verification matrix](docs/verification-matrix.md) for runtime installation testing, evidence limitations, release readiness and GitHub settings.
+
 ## 🎛️ Commands
 
 | Command in Claude Code | Behavior | Application writes? |
