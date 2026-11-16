@@ -41,6 +41,10 @@ before installing third-party skills.
   and ask `Use the security-guardian skill to audit this repository`.
   Gemini asks for confirmation on activation.
 
+A frequent classification distinction: Angular SSR host/proxy trust belongs
+to control `ANG-06`, while `BIZ-01` is tenant object authorization. The
+mapping check can classify this type without claiming the deployment is safe.
+
 The model **must not invent** slash commands for tracker subcommands.
 To inspect classifications without creating a run, execute
 `python3 <installed-skill>/scripts/security_tracker.py mapping-audit --root .`.
