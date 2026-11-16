@@ -1,3 +1,12 @@
+## Unreleased — control classification hardening (#7)
+
+- Validate common security finding category/control mappings against handbook criteria.
+- Flag ambiguous mapping for review and reject obvious incorrect classifications.
+- Add documented reviewer overrides and read-only legacy `mapping-audit` command.
+- Add explicit `reclassify` command preserving archived snapshots and issue history.
+- Exclude superseded records from active finding totals and show lineage in reports.
+- Add mapping, override, legacy migration and repeated-run regression tests.
+
 ## Unreleased
 
 - Add optional local Semgrep-based structural candidate detection with sanitized outputs.
