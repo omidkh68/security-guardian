@@ -20,15 +20,16 @@ import sys
 import tempfile
 
 import security_scan
+import control_mapping
 
 VERSION = '1.1.0'
 TRACK_DIR = '.security-guardian'
 STATUSES = {'CANDIDATE', 'NEEDS_REVIEW', 'CONFIRMED_OPEN', 'FIXED_UNVERIFIED',
-            'VERIFIED_FIXED', 'DEFERRED', 'BLOCKED', 'FALSE_POSITIVE', 'ACCEPTED_RISK'}
+            'VERIFIED_FIXED', 'DEFERRED', 'BLOCKED', 'FALSE_POSITIVE', 'ACCEPTED_RISK', 'SUPERSEDED'}
 MODES = {'audit', 'plan', 'fix', 'verify', 'release-gate', 'roadmap', 'control', 'skill'}
 TEST_RESULTS = {'PASS', 'FAIL', 'BLOCKED', 'NOT_RUN'}
 SEVERITIES = {'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO', 'UNKNOWN'}
-CLOSED = {'VERIFIED_FIXED', 'FALSE_POSITIVE'}
+CLOSED = {'VERIFIED_FIXED', 'FALSE_POSITIVE', 'SUPERSEDED'}
 
 
 def now():
@@ -150,7 +151,7 @@ def validate_finding(obj):
     row = dict(obj)
     cid = validate_id(row.get('control_id', ''))
     status = str(row.get('status', '')).upper()
-    if status not in STATUSES - {'CANDIDATE'}:
+    if status not in STATUSES - {'CANDIDATE', 'SUPERSEDED'}:
         raise ValueError(f'Invalid manually-reviewed status: {status}')
     title = str(row.get('title', '')).strip()
     location = str(row.get('location', '')).strip()
@@ -195,7 +196,12 @@ def validate_finding(obj):
         raise ValueError(f'{status} requires next_action')
     if status == 'ACCEPTED_RISK' and not str(row.get('approver', '')).strip():
         raise ValueError('Risk acceptance requires approver')
+    category = row.get('finding_category')
+    override = row.get('mapping_override')
+    mapping = control_mapping.classify(cid, title, reason, category=category, override=override)
     return {'id': ident, 'control_id': cid, 'finding_key': str(key) if key else None,
+            'finding_category': category or mapping['category'],
+            'mapping': mapping, 'mapping_override': override,
             'title': title, 'location': location, 'severity': severity, 'status': status,
             'reason': reason, 'evidence': row.get('evidence', []),
             'fix': fix, 'verification': verification, 'next_action': row.get('next_action', ''),
@@ -248,15 +254,22 @@ def make_current(index, ledger):
              '## Status totals', '']
     for status in sorted(STATUSES):
         lines.append(f'- {status}: {counts[status]}')
-    lines.extend(['', '## Full findings register', '',
-                  '| ID | Control | Severity | Current status | Last reviewed run | Location | Reason |',
-                  '|---|---|---|---|---|---|---|'])
+    lines.extend(['', '## Active findings register (superseded records excluded)', '',
+                  '| ID | Control | Mapping | Severity | Current status | Last reviewed run | Location | Reason |',
+                  '|---|---|---|---|---|---|---|---|'])
     for row in sorted(ledger['findings'].values(), key=lambda r: r['id']):
+        if row['status'] == 'SUPERSEDED':
+            continue
         escape = lambda v: str(v).replace('|', '/').replace('\n', ' ')[:140]
-        lines.append(f"| `{row['id']}` | {row['control_id']} | {row['severity']} | {row['status']} | "
+        mapping_status = (row.get('mapping') or {}).get('status', 'LEGACY_UNREVIEWED')
+        lines.append(f"| `{row['id']}` | {row['control_id']} | {mapping_status} | {row['severity']} | {row['status']} | "
                      f"`{row.get('last_reviewed_run', '—')}` | `{escape(row['location'])}` | {escape(row['reason'])} |")
     if not ledger['findings']:
-        lines.append('| — | — | — | No findings recorded | — | — | — |')
+        lines.append('| — | — | — | — | No active findings recorded | — | — | — |')
+    lines.extend(['', '## Reclassified historical IDs', ''])
+    for old in sorted(ledger['findings'].values(), key=lambda r: r['id']):
+        if old['status'] == 'SUPERSEDED':
+            lines.append(f"- `{old['id']}` superseded by `{old.get('superseded_by', '?')}`; history retained.")
     lines.extend(['', 'See `runs/<run-id>/RUN.md` for evidence and tests, and `ledger.json` for machine-readable history.',
                   'Only a verified, documented remediation can set VERIFIED_FIXED.', ''])
     return '\n'.join(lines)
@@ -387,12 +400,25 @@ def record(args):
     root, store = root_and_store(args.root)
     raw = json.loads(Path(args.file).read_text(encoding='utf-8') if args.file else sys.stdin.read())
     items = raw if isinstance(raw, list) else [raw]
-    entries = [validate_finding(x) for x in items]
     with locked(store):
         index, ledger = load_state(store)
         rdir, run = ensure_run(store, index, args.run)
+        # Preserve prior reviewed mapping metadata on subsequent status updates.
+        entries = []
+        for item in items:
+            if not isinstance(item, dict):
+                raise ValueError('Finding must be a JSON object')
+            row = dict(item)
+            previous = ledger['findings'].get(row.get('id'))
+            if previous:
+                for field in ('finding_category', 'mapping_override'):
+                    if field not in row and previous.get(field) is not None:
+                        row[field] = previous[field]
+            entries.append(validate_finding(row))
         # Validate target ID matches existing and don't allow duplicate conflicting IDs in same batch.
         for e in entries:
+            if e['id'] in ledger['findings'] and ledger['findings'][e['id']]['status'] == 'SUPERSEDED':
+                raise ValueError(f"Finding ID {e['id']} was reclassified; use {ledger['findings'][e['id']].get('superseded_by')}")
             if e['id'] in ledger['findings'] and ledger['findings'][e['id']]['control_id'] != e['control_id']:
                 raise ValueError('Existing finding ID belongs to another control')
             if e['id'] in ledger['findings'] and not e.get('finding_key'):
@@ -456,13 +482,15 @@ def finish(args):
         new_findings = ledger['findings']
         new_ids = set(new_findings) - set(old_findings)
         verified = {f['id'] for f in new_findings.values()
-                    if f['status'] == 'VERIFIED_FIXED' and old_findings.get(f['id'], {}).get('status') != 'VERIFIED_FIXED'}
+                    if f['status'] == 'VERIFIED_FIXED' and not f.get('reclassified_from') and old_findings.get(f['id'], {}).get('status') != 'VERIFIED_FIXED'}
         reopened = {f['id'] for f in new_findings.values()
                     if f['status'] in {'CONFIRMED_OPEN', 'BLOCKED', 'DEFERRED'} and
                     old_findings.get(f['id'], {}).get('status') == 'VERIFIED_FIXED'}
-        run['delta'] = {'new_findings_or_candidates': len(new_ids),
+        reclassified = {x for x in new_ids if new_findings[x].get('reclassified_from')}
+        run['delta'] = {'new_findings_or_candidates': len(new_ids - reclassified),
+                        'reclassified_findings': len(reclassified),
                         'new_verified_fixes': len(verified), 'reopened': len(reopened),
-                        'manual_review_events': sum(1 for f in new_findings.values() if f.get('last_reviewed_run') == args.run and f['status'] != 'CANDIDATE'),
+                        'manual_review_events': sum(1 for f in new_findings.values() if f.get('last_reviewed_run') == args.run and f['status'] not in {'CANDIDATE', 'SUPERSEDED'}),
                         'tests_recorded': len(run['tests']),
                         'tests_passed': sum(t['result'] == 'PASS' for t in run['tests']),
                         'tests_failed': sum(t['result'] == 'FAIL' for t in run['tests']),
