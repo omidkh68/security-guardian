@@ -165,3 +165,14 @@ status and historical events, with `reclassified_from`. The old ID persists as
 Only the replacement counts as an active problem. Never record new updates under
 a superseded ID; follow the replacement ID. Re-run the mapping audit afterward.
 The tracker maintains historical references, not a cryptographically immutable record.
+
+### Angular SSR host trust mapping
+
+For a finding about `X-Forwarded-Host`, host-derived tenant routing,
+or trusted proxy headers on an Angular SSR server, use category
+`ssr_host_proxy_trust` → **ANG-06**. This is more specific than BIZ-01
+(object-level tenant access authorization) or API-15 (client IP attribution).
+The finding's *security status* can remain NEEDS_REVIEW pending tests against
+the actual reverse proxy; matching a catalog ID alone proves nothing.
+For old BIZ-01 records, reclassify explicitly in a new run and preserve its
+original NEEDS_REVIEW status.
