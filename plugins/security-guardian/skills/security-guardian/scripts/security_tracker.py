@@ -503,8 +503,25 @@ def finish(args):
                                               'delta': run['delta']})
         save_state(store, index, ledger)
         snapshot(store, rdir, run, ledger, read_json(rdir / 'scanner.json'))
+    # PDF exports consume finalized evidence; export failures must not make a
+    # successfully finalized audit appear undone. No archived JSON is rewritten.
+    pdf = {}
+    errors = {}
+    pdf_script = Path(__file__).resolve().parent / 'security_report.py'
+    for key, extra in [('run', []), ('cumulative', ['--cumulative'])]:
+        try:
+            proc = subprocess.run([sys.executable, str(pdf_script), '--root', str(root),
+                                   '--run', args.run, *extra],
+                                  capture_output=True, text=True, timeout=35, check=False)
+            if proc.returncode != 0:
+                errors[key] = proc.stderr.strip()[:350]
+            else:
+                pdf[key] = json.loads(proc.stdout)['pdf']
+        except (OSError, ValueError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
+            errors[key] = str(exc)[:350]
     print(dump({'run_id': args.run, 'result': args.result, 'delta': run['delta'],
-                'run_report': str(rdir / 'RUN.md'), 'latest_ledger': str(store / 'CURRENT.md')}).strip())
+                'run_report': str(rdir / 'RUN.md'), 'latest_ledger': str(store / 'CURRENT.md'),
+                'pdf_reports': pdf, 'pdf_warnings': errors}).strip())
 
 
 def mapping_audit(args):
