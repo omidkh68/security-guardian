@@ -145,7 +145,7 @@ def export_pdf(store, rdir, run, *, cumulative=False, output=None, font=None):
     if not displayed:
         story.append(p('No findings were manually reviewed in this run. This is not a clean security assessment.'))
     for f in displayed[:120]:
-        story.extend([
+        story.append(KeepTogether([
             p(f.get('title','Untitled finding')+'  |  '+f.get('control_id','?')+'  |  '+f.get('severity','UNKNOWN'),'SGHeading'),
             p('Finding: '+f.get('id','?')+'  |  Status: '+f.get('status','UNKNOWN')),
             p('Component: '+f.get('location','Not recorded')),
@@ -153,7 +153,7 @@ def export_pdf(store, rdir, run, *, cumulative=False, output=None, font=None):
             p('Next action: '+(f.get('next_action') or 'No action recorded'),limit=250),
             p('Remediation: '+(f.get('fix') or {}).get('summary','Not documented')),
             p('Verification: '+('Linked test '+str((f.get('verification') or {}).get('test_id')) if (f.get('verification') or {}).get('test_id') else 'No linked passing test recorded'),'SGSmall')
-        ])
+        ]))
     if len(displayed)>120: story.append(p(f'Additional findings omitted from this presentation: {len(displayed)-120}. Consult the private ledger.'))
     story.append(section('Executed tests and limitations'))
     if not d['tests']:
