@@ -16,6 +16,7 @@ spec.loader.exec_module(mapping)
 class MappingTests(unittest.TestCase):
     def test_issue_seven_categories(self):
         cases = [
+            ('JSON-LD script breakout stored XSS','ANG-01'),
             ('Missing CSP HSTS security headers','API-03'),
             ('Malformed cookie triggers decodeURIComponent URIError','API-10'),
             ('Missing CSRF protection on session post','IAM-04'),
@@ -29,6 +30,19 @@ class MappingTests(unittest.TestCase):
         for title, control in cases:
             with self.subTest(title=title):
                 self.assertEqual(mapping.classify(control,title,'')['status'],'MATCHED')
+
+    def test_negated_ssrf_is_not_a_second_finding(self):
+        categories = mapping.matched_categories(
+            'X-Forwarded-For spoofed client IP',
+            'The geocoder uses a fixed URL, so there is no SSRF.')
+        self.assertEqual(categories, ['proxy_client_ip'])
+        self.assertEqual(mapping.classify(
+            'API-15','X-Forwarded-For spoofed client IP',
+            'The geocoder uses a fixed URL, so there is no SSRF.')['status'],'MATCHED')
+        # Host-derived tenant trust needs independent proxy evidence, never a silent pass.
+        self.assertEqual(mapping.classify(
+            'BIZ-01','Untrusted tenant host mapping',
+            'Only safe behind known reverse proxy')['status'],'NEEDS_REVIEW')
 
     def test_mismatch_override_and_ambiguity(self):
         with self.assertRaisesRegex(ValueError,'maps to API-03'):
