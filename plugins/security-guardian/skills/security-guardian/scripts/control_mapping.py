@@ -13,6 +13,7 @@ CATALOG = {x['id']: x for x in json.loads(CATALOG_PATH.read_text(encoding='utf-8
 
 CATEGORY_CONTROL = {
     'security_headers': 'API-03',
+    'script_xss': 'ANG-01',
     'source_map_exposure': 'ANG-12',
     'error_handling': 'API-10',
     'session_csrf': 'IAM-04',
@@ -25,6 +26,7 @@ CATEGORY_CONTROL = {
     'host_patch_management': 'HOST-01',
 }
 HINTS = {
+    'script_xss': [r'\b(?:JSON.LD|script.breakout|stored XSS|reflected XSS|script injection|unsafe innerHTML|bypassSecurityTrustHtml)\b'],
     'security_headers': [r'\b(?:security headers?|content.security.policy|csp|hsts|frame.ancestors|x.content.type.options|nosniff|referrer.policy)\b'],
     'source_map_exposure': [r'\b(?:source[ -]?maps?|sourcemaps?|public production maps?)\b'],
     'error_handling': [r'\b(?:uncaught exceptions?|unhandled exceptions?|unhandled server errors?|bad error handling|malformed cookies?|decodeURIComponent|URIError)\b'],
@@ -41,7 +43,11 @@ HINTS = {k: tuple(re.compile(p, re.I) for p in patterns) for k, patterns in HINT
 
 def matched_categories(title: str, reason: str) -> list[str]:
     """Conservative hints; multiple matches MUST remain ambiguous."""
+    # Treat negated examples (e.g., "no SSRF" in a proxy review) as
+    # background context, not proof of an additional weakness.
     text = f'{title}\n{reason}'
+    text = re.sub(r'\b(?:no|without|not vulnerable to|not an?|rules out|cannot exploit)\s+(?:direct\s+)?SSRF\b',
+                  'server-side URL fetch reviewed as safe', text, flags=re.I)
     return sorted(k for k, patterns in HINTS.items() if any(p.search(text) for p in patterns))
 
 def classify(control_id: str, title: str, reason: str, *, category=None, override=None) -> dict:
