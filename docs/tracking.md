@@ -100,3 +100,12 @@ A legacy record remains as a `SUPERSEDED` tombstone; the replacement carries
 `runs/` remain untouched, and only the new finding is counted as active.
 Keep audits private and check any ambiguous mappings manually. See the
 [tracking workflow](../plugins/security-guardian/skills/security-guardian/references/workflows/tracking.md).
+
+### Legacy SSR host/proxy correction
+
+When `mapping-audit` identifies a legacy BIZ-01 Host routing finding,
+reclassify to `ANG-06` using `--category ssr_host_proxy_trust` **only**
+after reading the original evidence. Do not mark the issue safe without
+testing Host/X-Forwarded-Host handling in an authorized deployment.
+`ANG-06` covers trusted SSR Host/proxy metadata; `BIZ-01` covers object
+authorization; `API-15` covers trusted client IP attribution.
