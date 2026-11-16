@@ -104,6 +104,19 @@ The standard scanner reports excluded files, size and depth limits, and whether 
 
 See the [verification matrix](docs/verification-matrix.md) for runtime installation testing, evidence limitations, release readiness and GitHub settings.
 
+## 🧭 Control classification and safe history migration
+
+Security findings now have optional deterministic category mapping checks. The
+tracker rejects obvious category/control mismatches, marks ambiguous or
+unrecognized findings as needing mapping review, and supports explicit,
+non-destructive reclassification of older findings. Historical runs are never
+silently rewritten; a superseded ID is linked to its replacement and excluded
+from active issue totals. This is **assisted classification**, not an automatic
+semantic guarantee for all 145 controls.
+
+Review an old ledger with `security_tracker.py mapping-audit --root .` and see
+[tracking documentation](docs/tracking.md) for the explicit migration workflow.
+
 ## 🎛️ Commands
 
 | Command in Claude Code | Behavior | Application writes? |

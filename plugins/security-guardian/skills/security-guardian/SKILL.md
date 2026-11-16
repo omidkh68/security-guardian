@@ -39,6 +39,24 @@ If the user permits local tools and Semgrep is already installed, run `python3 <
 
 For `VERIFIED_FIXED`, record a real passing test **first**, with `finding_ids` containing the stable finding ID. The tracker returns a `test_id`. Then record the finding with `verification.test_id`, `executed=true`, `result=PASS` and sanitized evidence. The test must belong to the same run and finding, and Git HEAD must match when available. This is report-consistency enforcement, not independent proof that the external test was executed.
 
+## Mandatory handbook control mapping discipline
+
+Before recording a reviewed finding, compare its reported control ID with the **exact**
+implementation and acceptance criteria in `references/controls.json`. For common categories,
+use the deterministic, conservative `scripts/control_mapping.py` classifier.
+Provide `finding_category` on `security_tracker.py record` when classification is clear.
+A category/control mismatch is rejected. An ambiguous or unknown match is labeled
+`NEEDS_REVIEW` in mapping metadata, **not silently certified**. Split separate flaws:
+missing rate limiting (`API-04`) and spoofable client IPs (`API-15`) are different findings.
+
+For legacy ledgers run `security_tracker.py mapping-audit --root <repo-root>` (read-only).
+Correct a legacy finding in a **new run**, using
+`security_tracker.py reclassify --root <repo-root> --run <run_id> --id <old-finding-id> --new-control-id <control-id> --category <category> --reason "<specific explanation>"`.
+The old record becomes `SUPERSEDED` and links to its new ID; no archived run is rewritten.
+Use `mapping_override` only for a documented reviewer-approved exception
+(`reason` 20+ chars and `approver`). Never invent the approver or rationale.
+Read `references/workflows/tracking.md` for accepted categories and report semantics.
+
 ## Step 1 — Inspect and determine scope
 
 1. Identify project/repository root; establish git branch/status, existing uncommitted edits, workspace layout, installed runtime and whether this is a monorepo. **Preserve existing changes.**

@@ -122,3 +122,46 @@ Commands are plain metadata; they are **never executed by this script**. Log bot
 ### Linked passing test requirement (next release)
 
 The `test` tool returns a generated `test_id`. Provide `finding_ids` on the test record and `verification.test_id` on the following `record` call. `VERIFIED_FIXED` requires a passing test from the same run and finding with sanitized evidence and unchanged Git HEAD (when available). This validates bookkeeping consistency; it is not proof the caller actually executed the test.
+
+## Handbook control classification and reclassification
+
+Use `references/controls.json` and `scripts/control_mapping.py` to match
+finding categories to exact handbook implementation and acceptance.
+A finding's `control_id` must match the actual problem, not merely be a valid ID.
+
+Supported initial `finding_category` values:
+`security_headers` → `API-03`;
+`source_map_exposure` → `ANG-12`;
+`error_handling` → `API-10`;
+`session_csrf` → `IAM-04`;
+`ssrf` → `API-08`;
+`rate_limiting` → `API-04`;
+`proxy_client_ip` → `API-15`;
+`ci_sast` → `SDLC-04`;
+`ci_branch_protection` → `SDLC-01`;
+`ssh_host_trust` → `HOST-02`;
+`host_patch_management` → `HOST-01`.
+
+An unrecognized or ambiguous category is marked `NEEDS_REVIEW` in `mapping`.
+An obvious mismatch causes `record` to reject the entry unless
+`mapping_override: {"reason":"20+ character reviewer justification",
+"approver":"named authorized reviewer"}` is present. Do not invent approvers.
+The rule set covers only explicit categories; absence of a match is **not proof** of correct mapping.
+When two independent problems coexist, record separate findings under their own IDs.
+
+For legacy records run:
+```bash
+python3 "$TRACKER" mapping-audit --root .
+python3 "$TRACKER" begin --root . --mode verify --scope "classification corrections"
+python3 "$TRACKER" reclassify --root . --run "ACTUAL_RUN_ID" \
+  --id "ACTUAL_OLD_ID" --new-control-id API-03 \
+  --category security_headers --reason "Reviewed header finding against API-03 acceptance"
+python3 "$TRACKER" finish --root . --run "ACTUAL_RUN_ID" --result COMPLETED
+```
+
+Reclassification is *explicit and versioned*. The new ID inherits issue evidence,
+status and historical events, with `reclassified_from`. The old ID persists as
+`SUPERSEDED` and has `superseded_by`. Do not alter older run snapshots.
+Only the replacement counts as an active problem. Never record new updates under
+a superseded ID; follow the replacement ID. Re-run the mapping audit afterward.
+The tracker maintains historical references, not a cryptographically immutable record.

@@ -68,3 +68,35 @@ Schema details and exact commands: [tracking workflow](../plugins/security-guard
 ## Linked test evidence for verified fixes (next release)
 
 Before recording `VERIFIED_FIXED`, register the actual regression test with `finding_ids` containing the stable finding ID. The tracker returns a `test_id`. The follow-up verified finding must reference it under `verification.test_id`. The tracker requires a PASS, matching run and finding, and unchanged Git HEAD where available. Record a sanitized CI URL/output reference. This checks report consistency, not authenticity of the actual test execution, and it does not fingerprint uncommitted changes. See [verification matrix](verification-matrix.md).
+
+## Correcting incorrectly classified findings (Issue #7)
+
+Before recording, use the control's real implementation and acceptance criteria;
+the tracker has a narrow category mapping guardrail. Matching is conservative:
+`MATCHED`, `MISMATCH`, `NEEDS_REVIEW`, and reviewer-documented `OVERRIDDEN`.
+The guardrail checks a finite set of common categories, not all security semantics.
+Unrecognized text needs manual classification.
+
+**Read-only legacy audit:**
+
+```bash
+python3 ~/.claude/skills/security-guardian/scripts/security_tracker.py mapping-audit --root .
+```
+
+**Explicit, non-destructive migration (inside a newly created run):**
+
+```bash
+python3 ~/.claude/skills/security-guardian/scripts/security_tracker.py begin --root . --mode verify
+python3 ~/.claude/skills/security-guardian/scripts/security_tracker.py reclassify \
+  --root . --run ACTUAL_RUN_ID --id ACTUAL_OLD_FINDING_ID \
+  --new-control-id API-03 --category security_headers \
+  --reason "Reviewed security header finding and corrected its handbook mapping"
+python3 ~/.claude/skills/security-guardian/scripts/security_tracker.py finish \
+  --root . --run ACTUAL_RUN_ID
+```
+
+A legacy record remains as a `SUPERSEDED` tombstone; the replacement carries
+`reclassified_from`, original status and complete history. Existing archived
+`runs/` remain untouched, and only the new finding is counted as active.
+Keep audits private and check any ambiguous mappings manually. See the
+[tracking workflow](../plugins/security-guardian/skills/security-guardian/references/workflows/tracking.md).
