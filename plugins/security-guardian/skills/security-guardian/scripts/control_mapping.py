@@ -14,6 +14,7 @@ CATALOG = {x['id']: x for x in json.loads(CATALOG_PATH.read_text(encoding='utf-8
 CATEGORY_CONTROL = {
     'security_headers': 'API-03',
     'script_xss': 'ANG-01',
+    'ssr_host_proxy_trust': 'ANG-06',
     'source_map_exposure': 'ANG-12',
     'error_handling': 'API-10',
     'session_csrf': 'IAM-04',
@@ -26,6 +27,7 @@ CATEGORY_CONTROL = {
     'host_patch_management': 'HOST-01',
 }
 HINTS = {
+    'ssr_host_proxy_trust': [r'\b(?:X-Forwarded-Host|tenant host mapping|SSR host allowlists?|host-based tenant routing|untrusted host header|spoofed host header)\b'],
     'script_xss': [r'\b(?:JSON.LD|script.breakout|stored XSS|reflected XSS|script injection|unsafe innerHTML|bypassSecurityTrustHtml)\b'],
     'security_headers': [r'\b(?:security headers?|content.security.policy|csp|hsts|frame.ancestors|x.content.type.options|nosniff|referrer.policy)\b'],
     'source_map_exposure': [r'\b(?:source[ -]?maps?|sourcemaps?|public production maps?)\b'],
