@@ -55,3 +55,10 @@ evidence payloads, and truncates text for a management audience, but **cannot
 guarantee full anonymization**. Review the PDF manually for business-sensitive
 details before sending it externally. All PDF artifacts remain in the local,
 normally git-ignored `.security-guardian/` directory.
+
+## PDF sample verification
+
+CI verifies that generated PDFs have a valid PDF header, reasonable size,
+per-run file paths and preserved old report versions. A final human review
+of typography, pagination, long project names and sensitive descriptions
+remains mandatory before using the PDF in a client meeting.
