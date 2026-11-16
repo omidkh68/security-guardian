@@ -136,3 +136,14 @@ my-project/
 این پروژه تحت **MIT License** منتشر می‌شود. برای مشارکت [CONTRIBUTING.md](CONTRIBUTING.md) و برای گزارش خصوصی ضعف خود ابزار [SECURITY.md](SECURITY.md) را بخوانید.
 
 </div>
+
+## پشتیبانی چندابزاری و گزارش PDF
+
+اکنون بسته استاندارد Agent Skills برای Claude Code، Codex و Gemini CLI قابل نصب
+است. دستور `bash install-agent.sh --agent all --user` بسته واحد را در مسیرهای
+شناخته‌شده ابزارها کپی می‌کند. توضیحات نصب در `docs/multi-agent.md` قرار دارد.
+
+برای ایجاد گزارش PDF مناسب ارائه به کارفرما، وابستگی اختیاری ReportLab را طبق
+`docs/pdf-reporting.md` نصب کنید. بعد از پایان هر اجرای نسخه‌دار، فایل
+`RUN.pdf` و گزارش تجمعی `CURRENT.pdf` ایجاد می‌شود. فایل‌ها خصوصی‌اند و
+پیش از اشتراک‌گذاری باید از نظر اطلاعات حساس بازبینی شوند.
