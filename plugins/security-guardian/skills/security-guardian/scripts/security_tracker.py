@@ -507,6 +507,70 @@ def finish(args):
                 'run_report': str(rdir / 'RUN.md'), 'latest_ledger': str(store / 'CURRENT.md')}).strip())
 
 
+def mapping_audit(args):
+    """Read-only mapping diagnostics for existing v1 ledgers."""
+    _, store = root_and_store(args.root)
+    _, ledger = load_state(store)
+    rows = control_mapping.audit_legacy(ledger['findings'])
+    print(dump({'findings': rows, 'needs_attention': sum(
+        x['status'] in {'MISMATCH', 'NEEDS_REVIEW'} for x in rows)}).strip())
+
+
+def reclassify(args):
+    """Reassign the control in a NEW run while preserving legacy ID/history."""
+    root, store = root_and_store(args.root)
+    new_control = validate_id(args.new_control_id)
+    if not args.reason.strip() or len(args.reason.strip()) < 15:
+        raise ValueError('Reclassification needs a specific 15+ character reason')
+    with locked(store):
+        index, ledger = load_state(store)
+        rdir, run = ensure_run(store, index, args.run)
+        source = ledger['findings'].get(args.id)
+        if not source:
+            raise ValueError('Original finding ID not found')
+        if source['status'] == 'SUPERSEDED':
+            raise ValueError('Finding already reclassified; use its superseded_by ID')
+        if source['control_id'] == new_control:
+            raise ValueError('New control must differ from original control')
+        override = ({'reason': args.override_reason, 'approver': args.approver}
+                    if args.override_reason else None)
+        mapping = control_mapping.classify(new_control, source['title'], source.get('reason',''),
+                                           category=args.category, override=override)
+        new_id = fingerprint(new_control, 'reclassified:' + args.id)
+        if new_id in ledger['findings']:
+            raise ValueError('Target reclassification ID already exists; no changes made')
+        original_status = source['status']
+        imported = dict(source)
+        imported['id'] = new_id
+        imported['control_id'] = new_control
+        imported['finding_category'] = args.category or mapping.get('category')
+        imported['mapping_override'] = override
+        imported['mapping'] = mapping
+        imported['reclassified_from'] = args.id
+        imported['last_reviewed_run'] = args.run
+        imported['last_updated_at'] = now()
+        imported['history'] = list(source.get('history', [])) + [{
+            'run_id': args.run, 'at': now(), 'event': 'RECLASSIFIED_IN',
+            'from_id': args.id, 'from_control': source['control_id'],
+            'to_control': new_control, 'status': original_status, 'reason': args.reason}]
+        source['status'] = 'SUPERSEDED'
+        source['superseded_by'] = new_id
+        source['last_reviewed_run'] = args.run
+        source['last_updated_at'] = now()
+        source['history'] = list(source.get('history', [])) + [{
+            'run_id': args.run, 'at': now(), 'event': 'RECLASSIFIED_OUT',
+            'previous_status': original_status, 'status': 'SUPERSEDED',
+            'superseded_by': new_id, 'reason': args.reason}]
+        ledger['findings'][new_id] = imported
+        append_event(rdir / 'events.jsonl', {'at': now(), 'type': 'RECLASSIFIED',
+                      'from_id': args.id, 'to_id': new_id,
+                      'reason': args.reason, 'mapping_status': mapping['status']})
+        save_state(store, index, ledger)
+        snapshot(store, rdir, run, ledger, read_json(rdir / 'scanner.json'))
+    print(dump({'from_id': args.id, 'to_id': new_id,
+                'status': original_status, 'mapping_status': mapping['status']}).strip())
+
+
 def summary(args):
     _, store = root_and_store(args.root)
     index, ledger = load_state(store)
@@ -551,6 +615,19 @@ def main():
     p.add_argument('--result', choices=['COMPLETED', 'PARTIAL', 'FAILED'], default='COMPLETED')
     p.add_argument('--notes', default='')
     p.set_defaults(fn=finish)
+    p = subs.add_parser('mapping-audit', help='Review existing control classifications without writes')
+    p.add_argument('--root', default='.')
+    p.set_defaults(fn=mapping_audit)
+    p = subs.add_parser('reclassify', help='Migrate a finding to another control in a new run')
+    p.add_argument('--root', default='.')
+    p.add_argument('--run', required=True)
+    p.add_argument('--id', required=True, help='Existing active finding ID')
+    p.add_argument('--new-control-id', required=True)
+    p.add_argument('--category', choices=sorted(control_mapping.CATEGORY_CONTROL), required=True)
+    p.add_argument('--reason', required=True)
+    p.add_argument('--override-reason', default='')
+    p.add_argument('--approver', default='')
+    p.set_defaults(fn=reclassify)
     p = subs.add_parser('summary', help='Show current cumulative history')
     p.add_argument('--root', default='.')
     p.add_argument('--json', action='store_true')
