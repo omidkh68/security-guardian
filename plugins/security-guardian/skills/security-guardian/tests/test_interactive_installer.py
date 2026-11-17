@@ -5,7 +5,7 @@ import tempfile
 import unittest
 import sys
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[5]
 INSTALL = ROOT / "install-agent.sh"
 sys.path.insert(0,str(ROOT / "scripts"))
 from install_agent_wizard import plan
