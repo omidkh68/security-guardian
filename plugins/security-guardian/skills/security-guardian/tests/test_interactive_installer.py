@@ -41,6 +41,29 @@ class InstallerTest(unittest.TestCase):
         for p in paths:
             self.assertTrue((p/"SKILL.md").is_file())
         self.assertEqual(len(list((self.home/".agents/skill-backups").glob("*/SKILL.md"))),1)
+    def test_backup_suffix_and_same_second_upgrades(self):
+        # Freeze the timestamp without mocking the actual shell installer.
+        bin_dir = self.base / "bin"
+        bin_dir.mkdir()
+        fake_date = bin_dir / "date"
+        fake_date.write_text("#!/bin/sh\nprintf '%s\\n' 20261117T140729Z\n")
+        fake_date.chmod(0o755)
+        self.env["PATH"] = str(bin_dir) + os.pathsep + self.env["PATH"]
+        self.invoke("--agent", "codex", "--user")
+        backup_root = self.home / ".agents/skill-backups"
+        legacy = backup_root / "security-guardian-20261117T140729Z-$"
+        legacy.mkdir(parents=True)
+        (legacy / "sentinel").write_text("keep legacy backup")
+        for _ in range(2):
+            self.invoke("--agent", "codex", "--user", "--upgrade")
+        backups = sorted(p for p in backup_root.iterdir() if p != legacy)
+        self.assertEqual(len(backups), 2)
+        for backup in backups:
+            self.assertRegex(backup.name, r"^security-guardian-20261117T140729Z-[0-9]+$")
+            self.assertTrue((backup / "SKILL.md").is_file())
+        self.assertEqual((legacy / "sentinel").read_text(), "keep legacy backup")
+        self.assertTrue((self.home / ".agents/skills/security-guardian/SKILL.md").is_file())
+
     def test_no_tty(self):
         self.invoke(code=2)
         self.assertFalse((self.home/".agents").exists())
