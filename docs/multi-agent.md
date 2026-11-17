@@ -14,7 +14,7 @@ Run from the Security Guardian clone:
 bash install-agent.sh
 ```
 
-The guided wizard supports Claude Code, Codex and Gemini CLI. Use Up/Down to
+The branded three-step wizard displays the package version, author, maintainer, repository link, detected CLI status and selection count. It supports Claude Code, Codex and Gemini CLI. Color is optional (`NO_COLOR=1`); compact terminals use a smaller layout. Use Up/Down to
 navigate, Space to toggle agent selections and Enter to continue. Choose
 Global (user) or Local (project), enter the target project directory if local,
 review the physical destinations and approve the installation. Press q or
