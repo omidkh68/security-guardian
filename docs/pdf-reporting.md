@@ -40,6 +40,15 @@ An explicit `--output /secure/path/report.pdf` is supported. Export is
 English/LTR by default; custom TTF font via `--font` is available but
 does not provide full Arabic/Persian shaping or RTL layout (no false promise).
 
+### Executive layout
+
+The light executive report uses large status KPIs, a severity distribution
+and explicit PASS/FAIL/NOT_RUN tracker-record counts on the opening page.
+Severity colors are accompanied by textual labels. Open findings precede
+closed decisions; ellipses identify shortened evidence excerpts. Catalog
+size is not a verification percentage. A cumulative report uses current
+ledger counts and the selected run's test evidence.
+
 ### Intended reader
 
 Executive summary, run scope/version, assessed stack, recorded work and deltas,
