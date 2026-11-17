@@ -55,6 +55,31 @@ def banner(step):
     print(color(step, "1;36"))
 
 
+def read_prompt(prompt):
+    """Retry malformed terminal input; never transform it into consent."""
+    while True:
+        try:
+            value = input(prompt)
+        except UnicodeDecodeError:
+            print("Invalid text encoding. Please type your response again.")
+            continue
+        if any(0xD800 <= ord(c) <= 0xDFFF for c in value):
+            print("Invalid text encoding. Please type your response again.")
+            continue
+        return value.strip()
+
+
+def confirm_install():
+    prompt = "Apply this plan (including backups for existing copies)? [y/N] "
+    while True:
+        answer = read_prompt(prompt).lower()
+        if answer in ("y", "yes"):
+            return True
+        if answer in ("", "n", "no", "q"):
+            return False
+        print("Please enter y/yes to install, or n/no to cancel (English keyboard).")
+
+
 def choose_plain(title, options, multiple=False, *, step="", detail="", statuses=()):
     banner(step)
     print(title)
@@ -64,7 +89,7 @@ def choose_plain(title, options, multiple=False, *, step="", detail="", statuses
         suffix = f"  [{statuses[i-1]}]" if statuses else ""
         print(f"  {i}. {option}{suffix}")
     while True:
-        raw = input("Numbers (comma-separated, q to cancel): " if multiple else "Number (q to cancel): ").strip()
+        raw = read_prompt("Numbers (comma-separated, q to cancel): " if multiple else "Number (q to cancel): ")
         if raw.lower() == "q":
             raise Cancelled()
         try:
@@ -210,7 +235,7 @@ def main(installer):
         scope = choose("Choose installation scope", ["Global (user) - all projects", "Local (project) - one project"],
                        step="2 / 3", detail="Choose where Security Guardian will be available.")[0]
         if scope:
-            raw = input(f"Project directory [{clean(Path.cwd())}]: ").strip()
+            raw = read_prompt(f"Project directory [{clean(Path.cwd())}]: ")
             if raw.lower() == "q":
                 raise Cancelled()
             base = Path(raw or ".").expanduser().resolve()
@@ -233,7 +258,7 @@ def main(installer):
         if {"codex", "gemini"}.intersection(agents):
             print("Codex and Gemini share one skill directory; both may discover this skill.")
         print("Local installation only. No audit or agent execution.")
-        if input("Apply this plan (including backups for existing copies)? [y/N] ").strip().lower() not in ("y", "yes"):
+        if not confirm_install():
             raise Cancelled()
     except (Cancelled, EOFError, KeyboardInterrupt) as exc:
         print("\nCancelled. No installation changes requested." + (f" {exc}" if str(exc) else ""))
