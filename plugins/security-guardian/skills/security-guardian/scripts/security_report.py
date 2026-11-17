@@ -161,12 +161,20 @@ def export_pdf(store, rdir, run, *, cumulative=False, output=None, font=None):
             ('VALIGN',(0,0),(-1,-1),'MIDDLE'),('TOPPADDING',(0,0),(-1,-1),7),
             ('BOTTOMPADDING',(0,0),(-1,-1),7)]))
         return t
+    status_color = '#166D87' if d['status'] == 'COMPLETED' else '#9A6700'
+    styles.add(ParagraphStyle(name='SGRunStatus', fontName=face, fontSize=11, leading=15,
+                              spaceAfter=5, textColor=colors.HexColor(status_color)))
+    delta = d['delta']
+    change_fields = [('new_findings_or_candidates','New findings / candidates'),
+                     ('new_verified_fixes','New verified fixes'),
+                     ('reopened','Reopened'),('reclassified_findings','Reclassified')]
+    change_summary = '  |  '.join(f'{label}: {delta[key]}' for key,label in change_fields if key in delta)
     story=[p('SECURITY GUARDIAN  /  EXECUTIVE BRIEF','SGSmall'),
            p('Security posture | Management report','SGTitle'),
            p('CONFIDENTIAL - share only with authorized stakeholders','SGSmall'),Spacer(1,9),
            p(f"Report: {'Cumulative overview' if cumulative else 'Versioned run'}  /  v{d['version']:04d}"),
            p('Run ID: '+d['id']),
-           p('Run status: '+d['status']+'  |  Mode: '+d['mode']),
+           p('Run status: '+d['status']+'  |  Mode: '+d['mode'],'SGRunStatus'),
            p('Period (UTC): '+d['start']+'  to  '+d['end']),
            p('Scope: '+(d['scope'] or 'Not specified')),
            p('Stack observed: '+(', '.join(d['stack']) or 'Not determined')),
@@ -185,6 +193,9 @@ def export_pdf(store, rdir, run, *, cumulative=False, output=None, font=None):
                     metric(len(d['tests']),'Total records','#13243B')]),
            p('Counts represent tracker test records, not individual test cases.','SGSmall'),
            p(f"Scope coverage: {d['scanned_files']} source files scanned; {d['catalog_controls']} catalog controls available (NOT all verified)."),
+           section('Changes in this run'),
+           p(change_summary or 'No finalized change statistics recorded.'),
+           p('Run notes / limitations: '+(d['notes'] or 'No additional notes recorded.'), 'SGSmall', 300),
            PageBreak(), section('Work in this version')]
     if d['delta']:
         for key,val in sorted(d['delta'].items()):
