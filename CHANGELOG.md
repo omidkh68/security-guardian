@@ -1,32 +1,27 @@
-## Unreleased — portable agents and management reporting (#9, #10, #11)
-
-- Add stakeholder-ready per-run and cumulative PDF exports from finalized evidence.
-- Auto-attempt PDF exports on each completed run with truthful dependency warnings.
-- Share a single Agent Skills implementation across Claude Code, Codex and Gemini CLI.
-- Add portable safe installer, platform smoke tests and CLI dispatch to avoid fake mapping audit runs.
-- Improve JSON-LD/XSS classification and negate incidental, explicitly dismissed SSRF mentions.
-- Retain tenant-host trust as NEEDS_REVIEW until actual proxy behavior can be verified.
-
-## Unreleased — control classification hardening (#7)
-
-- Validate common security finding category/control mappings against handbook criteria.
-- Flag ambiguous mapping for review and reject obvious incorrect classifications.
-- Add documented reviewer overrides and read-only legacy `mapping-audit` command.
-- Add explicit `reclassify` command preserving archived snapshots and issue history.
-- Exclude superseded records from active finding totals and show lineage in reports.
-- Add mapping, override, legacy migration and repeated-run regression tests.
-
-## Unreleased
-
-- Add optional local Semgrep-based structural candidate detection with sanitized outputs.
-- Record scan coverage exclusions, size/depth limits and truncated scans.
-- Require same-run, same-finding, passing test references before recording VERIFIED_FIXED.
-- Add adversarial tests for missing Semgrep, omitted files and unrelated test evidence.
-- Add native Claude CLI validation instructions and a tag-triggered release workflow.
-
 # Changelog
 
 All notable changes to this open-source distribution are documented here. Dates are UTC and versions follow semantic versioning.
+
+## [1.2.0] — 2026-11-17
+
+### Added
+- One canonical Agent Skills distribution for Claude Code, OpenAI Codex and Gemini CLI, with portable user/project installations and existing Claude Marketplace compatibility (#10, #12).
+- Branded three-step terminal setup with keyboard multi-selection, CLI detection, scope selection, destination preview, explicit confirmation and backup-aware mixed upgrades (#14, #16, #20).
+- Optional local ReportLab PDF export, automatic best-effort reporting after finalized runs, and historical re-export without a new audit (#9, #12).
+- Executive PDF dashboards in both RUN.pdf and CURRENT.pdf: status and test-record KPIs, severity distribution, version deltas, scope limitations and readable finding summaries (#13, #15, #17, #19).
+- Optional local Semgrep candidate detection, explicit scan coverage/exclusions, and same-run passing evidence requirements for verified fixes.
+- Deterministic control-classification checks, explicit reclassification and preserved historical lineage (#7, #11, #12).
+
+### Fixed
+- Malformed UTF-8 or surrogate-escaped terminal input no longer terminates installer confirmation with a traceback; only explicit yes authorizes installation (#21).
+- Improve JSON-LD/XSS and Angular SSR host trust mapping; avoid classification based on negated SSRF mentions. Ambiguous findings remain subject to review.
+- Improving installations does not change target application source or audit evidence.
+
+### Validation and compatibility
+- Python 3.10, 3.12 and 3.13 CI; install smoke and real Linux PTY keyboard, malformed-input and cancellation regression tests.
+- Local Codex audit, Gemini skill activation, original real PDF and final synthetic RUN/CURRENT render reviews. Full Gemini audit and production security verification are not claimed.
+- ReportLab and Semgrep remain optional, and reports stay local and sensitive. Mapping follow-up #11 remains open.
+- Existing non-interactive installer flags and versioned evidence formats are retained.
 
 ## [1.1.0] — 2026-11-15
 

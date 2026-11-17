@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- For agent-driven review: a working **Claude Code** installation and project access.
+- For agent-driven review: a working **Claude Code, Codex or Gemini CLI** installation and project access.
 - For the standalone scanner and tracker: **Python 3.10+**. No pip dependencies.
 - For installation scripts: Bash and standard POSIX utilities; Linux/macOS recommended.
 - Git is useful for cloning and recording the target project's commit metadata.
@@ -10,7 +10,7 @@
 
 ## Install from GitHub marketplace
 
-Once published at `omidkh68/security-guardian`, in an interactive Claude Code session:
+In an interactive Claude Code session:
 
 ```text
 /plugin marketplace add omidkh68/security-guardian
@@ -25,11 +25,17 @@ The explicit plugin skill invocation is:
 
 Restart/reload the Claude Code session if the new plugin does not appear. Update using Claude Code's plugin manager. Do **not** copy the same Skill into `~/.claude/skills/` at the same time unless command conflicts are understood.
 
-## Portable installs: Codex and Gemini CLI
+## Interactive multi-agent installation
 
 The repository now ships a single canonical Agent Skills package for all three.
 For Codex and Gemini, use `.agents/skills/security-guardian` at user or
-project scope. Install from a trusted local clone:
+project scope. Install from a trusted local clone with:
+
+```bash
+bash install-agent.sh
+```
+
+Select agents with Space and arrows, choose Global or Local, review destinations and confirm. Cancel without writing with q or n. For automation:
 
 ```bash
 bash install-agent.sh --agent codex --user
