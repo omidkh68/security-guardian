@@ -66,7 +66,7 @@ for TARGET in "${DESTINATIONS[@]}"; do
   STAGE="$(mktemp -d "$PARENT/.security-guardian-stage.XXXXXXXX")"
   cp -R "$SOURCE/." "$STAGE/"
   if [[ -e "$TARGET" ]]; then
-    BAK="$PARENT/../skill-backups/security-guardian-$(date -u +%Y%m%dT%H%M%SZ)-$"
+    BAK="$PARENT/../skill-backups/security-guardian-$(date -u +%Y%m%dT%H%M%SZ)-$$"
     [[ ! -e "$BAK" && ! -L "$BAK" ]] || { echo "Backup collision: $BAK" >&2; exit 3; }
     mkdir -p "$(dirname "$BAK")"
     mv "$TARGET" "$BAK"
