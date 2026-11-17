@@ -4,11 +4,14 @@ import subprocess
 import tempfile
 import unittest
 import sys
+import io
+from contextlib import redirect_stdout
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[5]
 INSTALL = ROOT / "install-agent.sh"
 sys.path.insert(0,str(ROOT / "scripts"))
-from install_agent_wizard import plan
+from install_agent_wizard import plan, choose_plain, metadata, Cancelled
 
 class InstallerTest(unittest.TestCase):
     def setUp(self):
@@ -49,6 +52,19 @@ class InstallerTest(unittest.TestCase):
         self.invoke("--agent","all","--user","--upgrade-existing",code=3)
         self.assertFalse((self.home/".claude").exists())
         self.assertEqual((path/"SKILL.md").read_text(),"name: foreign\n")
+    def test_metadata_and_numbered_fallback(self):
+        version, author = metadata()
+        self.assertEqual(version, (ROOT/"plugins/security-guardian/skills/security-guardian/VERSION").read_text().strip())
+        self.assertTrue(author)
+        out = io.StringIO()
+        with redirect_stdout(out), patch("builtins.input", side_effect=["0", "1,3"]):
+            picks = choose_plain("Select", ["Claude", "Codex", "Gemini"], True,
+                                 statuses=["CLI detected", "CLI not on PATH", "CLI detected"])
+        self.assertEqual(picks,[0,2])
+        self.assertIn("2. Codex  [CLI not on PATH]",out.getvalue())
+        with redirect_stdout(io.StringIO()), patch("builtins.input", return_value="q"):
+            with self.assertRaises(Cancelled):
+                choose_plain("Select", ["Claude"], True)
     def test_local(self):
         self.invoke("--agent","gemini,codex","--project",str(self.base))
         self.assertTrue((self.base/".agents/skills/security-guardian/SKILL.md").exists())
