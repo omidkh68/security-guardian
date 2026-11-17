@@ -5,6 +5,13 @@ import tempfile
 import unittest
 import sys
 import io
+import errno
+import select
+import time
+import struct
+import pty
+import fcntl
+import termios
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
@@ -82,6 +89,73 @@ class InstallerTest(unittest.TestCase):
     def test_unicode_project_path(self):
         with redirect_stdout(io.StringIO()), patch("builtins.input", side_effect=["\udcd8", "/tmp/پروژه"]):
             self.assertEqual(read_prompt("Path: "), "/tmp/پروژه")
+    def run_terminal(self, term, actions):
+        master, slave = pty.openpty()
+        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 30, 100, 0, 0))
+        env = dict(self.env, TERM=term, PYTHONIOENCODING="utf-8:strict",
+                   NO_COLOR="1", LC_ALL="C.UTF-8")
+        proc = subprocess.Popen(["bash",str(INSTALL)], env=env, cwd=self.base,
+                                stdin=slave, stdout=slave, stderr=slave, close_fds=True)
+        os.close(slave)
+        transcript = bytearray()
+        cursor = 0
+        def expect(marker):
+            nonlocal cursor
+            end = time.monotonic()+12
+            while time.monotonic() < end:
+                pos = transcript.find(marker,cursor)
+                if pos >= 0:
+                    cursor = pos+len(marker)
+                    return
+                if not select.select([master],[],[],0.2)[0]:
+                    if proc.poll() is not None:
+                        break
+                    continue
+                try:
+                    data = os.read(master,65536)
+                except OSError as exc:
+                    if exc.errno == errno.EIO:
+                        break
+                    raise
+                if not data:
+                    break
+                transcript.extend(data)
+            self.fail("Missing terminal marker "+repr(marker)+": "+repr(bytes(transcript[-4000:])))
+        try:
+            for marker, keys in actions:
+                expect(marker)
+                if keys is not None:
+                    os.write(master,keys)
+            self.assertEqual(proc.wait(timeout=12),0,repr(bytes(transcript[-4000:])))
+            self.assertNotIn(b"Traceback",transcript)
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+            os.close(master)
+
+    def test_real_terminal_malformed_input_and_cancel(self):
+        self.run_terminal("dumb",[
+            (b"Numbers (comma-separated",b"1,2,3\n"),
+            (b"Number (q to cancel)",b"1\n"),
+            (b"[y/N]",b"\xd8\n"),
+            (b"Invalid text encoding",None),
+            (b"[y/N]",b"n\n"),
+            (b"Cancelled.",None),
+        ])
+        self.assertFalse((self.home/".agents").exists())
+        self.assertFalse((self.home/".claude").exists())
+
+    def test_real_terminal_keyboard_install(self):
+        self.run_terminal("xterm",[
+            (b"Select AI agents",b" \x1bOB \x1bOB \n"),
+            (b"Choose installation scope",b"\n"),
+            (b"[y/N]",b"y\n"),
+            (b"Installation complete.",None),
+        ])
+        self.assertTrue((self.home/".agents/skills/security-guardian/SKILL.md").is_file())
+        self.assertTrue((self.home/".claude/skills/security-guardian/SKILL.md").is_file())
+
     def test_local(self):
         self.invoke("--agent","gemini,codex","--project",str(self.base))
         self.assertTrue((self.base/".agents/skills/security-guardian/SKILL.md").exists())
