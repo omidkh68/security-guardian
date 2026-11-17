@@ -4,12 +4,12 @@
 
 ### One security skill. Your whole stack. Every finding tracked.
 
-**Stack-aware, evidence-first security auditing and safe remediation for Claude Code.**
+**Stack-aware, evidence-first security auditing and safe remediation for Claude Code, Codex and Gemini CLI.**
 
 [![CI](https://github.com/omidkh68/security-guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/omidkh68/security-guardian/actions/workflows/ci.yml)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB)
-![Version](https://img.shields.io/badge/version-1.1.0-16a085)
+![Version](https://img.shields.io/badge/version-1.2.0-16a085)
 ![Offline Triage](https://img.shields.io/badge/scanner-offline%20%26%20read--only-brightgreen)
 
 **145 controls** · **13 security domains** · **107 playbooks** · **versioned audit history**
@@ -21,7 +21,7 @@
 ---
 
 > [!IMPORTANT]
-> Security Guardian is an **AI-assisted security review workflow**, not an autonomous penetration tester or a security certification. The Python scanner detects heuristics; Claude Code evaluates actual code and can propose or apply **approved** changes. Infrastructure assessments require real, authorized evidence. **Do not run active attacks on systems without permission.**
+> Security Guardian is an **AI-assisted security review workflow**, not an autonomous penetration tester or a security certification. The Python scanner detects heuristics; Your selected AI coding assistant evaluates actual code and can propose or apply **approved** changes. Infrastructure assessments require real, authorized evidence. **Do not run active attacks on systems without permission.**
 
 ## ✨ Why Security Guardian?
 
@@ -40,9 +40,27 @@ Security reviews often fail in the handoff: someone sees an insecure CORS rule o
 
 ## 🚀 Quick start
 
+### Recommended — Interactive multi-agent installation
+
+```bash
+git clone https://github.com/omidkh68/security-guardian.git
+cd security-guardian
+bash install-agent.sh
+```
+
+Use arrow keys and Space to select Claude Code, Codex and/or Gemini CLI; Enter advances to Global or Local scope. Review destinations and approve installation. Existing valid copies are backed up; Codex and Gemini share a destination.
+
+| Agent | Invocation in the target project |
+|---|---|
+| Claude Code | Ask to use the security-guardian skill (Marketplace command below). |
+| Codex | `Use $security-guardian to audit this repository` |
+| Gemini CLI | `Use the security-guardian skill to audit this repository` |
+
+For automation use `bash install-agent.sh --agent all --user` or see [multi-agent installation](docs/multi-agent.md). To enable optional automatic executive PDF exports, install `requirements-pdf.txt` in the Python environment used by the tracker. See [PDF reporting](docs/pdf-reporting.md).
+
 ### Option A — Install from the Claude Code plugin marketplace
 
-Once this GitHub repository is published, in your Claude Code terminal session:
+In your Claude Code terminal session:
 
 ```text
 /plugin marketplace add omidkh68/security-guardian
@@ -134,7 +152,7 @@ Review an old ledger with `security_tracker.py mapping-audit --root .` and see
 In the marketplace variant, prefix commands with `/security-guardian:security-guardian` instead of `/security-guardian`.
 
 > [!NOTE]
-> All invocation modes write a new run under `.security-guardian/` by design, including `audit` and `plan`. `audit` is **read-only with respect to application code**, not the entire repository filesystem.
+> Operational audit modes write a new run under `.security-guardian/`, including `audit` and `plan`. Read-only mapping diagnostics and PDF re-export do not create runs. `audit` is **read-only with respect to application code**, not the entire repository filesystem.
 
 ## 🧩 Supported stacks and coverage
 
@@ -235,7 +253,7 @@ The examples below are **illustrative**, not results from a real customer reposi
 
 ## 🗂️ Versioned findings & audit history
 
-Each invocation creates a new versioned run inside the **target project**, not inside the installed Skill:
+Each operational audit invocation creates a new versioned run inside the **target project**, not inside the installed Skill:
 
 ```text
 my-angular-app/
@@ -319,6 +337,7 @@ GitHub Actions runs the offline test suite on three Python versions, checks the 
 ├── docs/                                # User/admin documentation
 ├── examples/                            # Sanitized demonstration scenarios
 ├── .github/                              # CI and community templates
+├── install-agent.sh                     # Interactive/noninteractive multi-agent installer
 ├── install.sh                           # Standalone Claude Code Skill installer
 └── LICENSE                              # MIT
 ```
@@ -328,6 +347,8 @@ GitHub Actions runs the offline test suite on three Python versions, checks the 
 | Guide | What it explains |
 |---|---|
 | [Installation](docs/installation.md) | Plugin vs standalone, user/project scope, upgrades |
+| [Multi-agent installer](docs/multi-agent.md) | Interactive setup and activation |
+| [Executive PDF reports](docs/pdf-reporting.md) | Optional local reports and sharing limits |
 | [Commands & modes](docs/commands.md) | Command semantics, permissions, exact examples |
 | [Architecture](docs/architecture.md) | Scanner, agent, playbooks, tracker and trust boundaries |
 | [Use cases](docs/use-cases.md) | Eight realistic security scenarios and expected outcomes |

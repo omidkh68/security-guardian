@@ -82,6 +82,9 @@ use or deployments. All platforms must use the same classification, review and
 
 ## Testing status
 
-Offline packaging and install smoke tests run in CI. **Interactive Codex and
-Gemini activation E2E must still be verified** on installations with those CLIs;
-CI without authorized accounts cannot attest to actual agent behavior.
+Offline packaging, install smoke and Linux PTY regression tests run in CI.
+Local maintainer testing confirmed a real Codex CLI 0.169.0 audit and Gemini CLI
+0.68.0 skill activation and reading. A complete Gemini audit and new vendor
+versions still require separate testing. The malformed-input fix was also
+verified in a real isolated Linux PTY; this does not claim a re-test in every
+desktop terminal. CI without authorized accounts cannot attest to actual agent behavior.
