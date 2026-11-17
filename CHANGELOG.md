@@ -1,3 +1,12 @@
+## Unreleased — portable agents and management reporting (#9, #10, #11)
+
+- Add stakeholder-ready per-run and cumulative PDF exports from finalized evidence.
+- Auto-attempt PDF exports on each completed run with truthful dependency warnings.
+- Share a single Agent Skills implementation across Claude Code, Codex and Gemini CLI.
+- Add portable safe installer, platform smoke tests and CLI dispatch to avoid fake mapping audit runs.
+- Improve JSON-LD/XSS classification and negate incidental, explicitly dismissed SSRF mentions.
+- Retain tenant-host trust as NEEDS_REVIEW until actual proxy behavior can be verified.
+
 ## Unreleased — control classification hardening (#7)
 
 - Validate common security finding category/control mappings against handbook criteria.

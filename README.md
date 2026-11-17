@@ -347,3 +347,19 @@ Found a false positive? Need support for a new framework? Want to improve an OWA
 Security Guardian's original implementation, playbooks and project documentation are made available under the [MIT License](LICENSE). Baseline controls were compiled from the user-provided *Defense-in-Depth Software Security Engineering / 2026* handbook. References to OWASP, NIST, SLSA, Angular, NestJS, Flutter, Anthropic and third-party products are informational; those organizations are **not** sponsors or endorsers of this project. Referenced third-party standards retain their own licenses and trademarks.
 
 **Built for defensive engineering. Evaluate locally. Fix deliberately. Verify with evidence. Track every decision.**
+
+## Portable Agent Skills and client PDF reports
+
+One canonical `SKILL.md` serves **Claude Code, OpenAI Codex and Gemini CLI**.
+Use the existing Claude Marketplace or the local `install-agent.sh` for
+`.agents/skills` installations. [Multi-agent instructions](docs/multi-agent.md).
+
+Finalized audit runs optionally generate `RUN.pdf` and `CURRENT.pdf` for
+stakeholder presentation when local ReportLab is installed. They present
+verified facts, work and risks, not invented safety/compliance certification.
+[PDF reporting instructions](docs/pdf-reporting.md).
+
+For direct, read-only mapping diagnostics use
+`python3 <skill-dir>/scripts/security_tracker.py mapping-audit --root .`.
+For PDF re-export without creating a new audit version use
+`python3 <skill-dir>/scripts/security_report.py --root .`.

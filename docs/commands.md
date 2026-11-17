@@ -75,3 +75,18 @@ Explain precise scope, acceptance conditions, relevant files or follow-up questi
 - Claude Code: interprets findings, reads actual source, can run permitted tests and propose/apply changes; results must be reviewed by developers.
 
 See the internal [`SKILL.md`](../plugins/security-guardian/skills/security-guardian/SKILL.md) for the exact agent workflow and the [tracker contract](../plugins/security-guardian/skills/security-guardian/references/workflows/tracking.md) for commands and schemas.
+
+## Agent-neutral tracker operations
+
+These are **direct Python commands** recognized equally by Claude Code,
+Codex and Gemini CLI. The agent must not turn them into audit-mode runs.
+
+```bash
+python3 /path/to/skill/scripts/security_tracker.py mapping-audit --root /path/to/project
+python3 /path/to/skill/scripts/security_report.py --root /path/to/project --run ACTUAL_RUN_ID
+python3 /path/to/skill/scripts/security_report.py --root /path/to/project --cumulative
+```
+
+Inside Claude Marketplace, `/security-guardian:security-guardian mapping-audit`
+must dispatch to the read-only CLI above, **without creating an audit version**.
+The same applies to `export-pdf` and `pdf`.

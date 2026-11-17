@@ -12,3 +12,16 @@ Report:
 7. Each finding maps to a source PDF control ID and one of the 107 playbook IDs for traceability.
 
 Treat scanner risk strings as **review signals** and avoid calling untested code secure/vulnerable conclusively.
+
+## Management PDF deliverables
+
+For every finalized version, the tracker attempts `runs/<run-id>/RUN.pdf`
+and `CURRENT.pdf` (cumulative). These are project-local, git-ignored
+presentation summaries derived from finalized, private JSON evidence.
+PDF rendering requires optional `reportlab` (see `requirements-pdf.txt`).
+If unavailable, report the failure from `finish.pdf_warnings` and do not claim
+a deliverable. Export older runs directly with
+`python3 <skill-dir>/scripts/security_report.py --root <repo> --run <run-id>`.
+Only source-backed status, scoped work, observed tests and true limitations
+may appear in a management document. Manual privacy review before sharing is
+still mandatory; redaction is best-effort. See `docs/pdf-reporting.md`.

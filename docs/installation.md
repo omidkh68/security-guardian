@@ -25,6 +25,22 @@ The explicit plugin skill invocation is:
 
 Restart/reload the Claude Code session if the new plugin does not appear. Update using Claude Code's plugin manager. Do **not** copy the same Skill into `~/.claude/skills/` at the same time unless command conflicts are understood.
 
+## Portable installs: Codex and Gemini CLI
+
+The repository now ships a single canonical Agent Skills package for all three.
+For Codex and Gemini, use `.agents/skills/security-guardian` at user or
+project scope. Install from a trusted local clone:
+
+```bash
+bash install-agent.sh --agent codex --user
+bash install-agent.sh --agent gemini --project /path/to/application
+bash install-agent.sh --agent all --user
+```
+
+See [multi-agent documentation](multi-agent.md) for activation and upgrade.
+PDF reporting needs the optional local `requirements-pdf.txt` installation;
+see [PDF reporting](pdf-reporting.md).
+
 ## Install as standalone Skill
 
 ```bash
