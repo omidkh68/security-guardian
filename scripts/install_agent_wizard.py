@@ -61,7 +61,7 @@ def choose_plain(title, options, multiple=False, *, step="", detail="", statuses
     if detail:
         print(detail)
     for i, option in enumerate(options, 1):
-        suffix = f"  [{statuses[i]}]" if statuses else ""
+        suffix = f"  [{statuses[i-1]}]" if statuses else ""
         print(f"  {i}. {option}{suffix}")
     while True:
         raw = input("Numbers (comma-separated, q to cancel): " if multiple else "Number (q to cancel): ").strip()
