@@ -96,8 +96,6 @@ def export_pdf(store, rdir, run, *, cumulative=False, output=None, font=None):
     output = output.resolve()
     if output.suffix.lower() != '.pdf':
         raise ValueError('Output must be a PDF')
-    if output.exists() and output.is_symlink():
-        raise ValueError('Refusing to overwrite symlinked PDF')
     data = load_json(store / 'ledger.json' if cumulative else rdir / 'findings.json')
     scan = load_json(rdir / 'scanner.json')
     d = build_summary(run,data,scan,cumulative=cumulative)
@@ -124,7 +122,7 @@ def export_pdf(store, rdir, run, *, cumulative=False, output=None, font=None):
     order = {'CRITICAL':0,'HIGH':1,'MEDIUM':2,'LOW':3,'INFO':4}
     status_palette = {'CONFIRMED_OPEN':'#A23636','NEEDS_REVIEW':'#9A6700','VERIFIED_FIXED':'#18734C',
                       'FALSE_POSITIVE':'#526174','FIXED_UNVERIFIED':'#9A6700','SUPERSEDED':'#526174'}
-    content_width = A4[0] - 38*mm
+    content_width = A4[0] - 38*mm - 12  # default Platypus frame padding
     def metric(value, label, color):
         number = Paragraph(escape(str(value)), ParagraphStyle(name='metric', parent=styles['SGMetric'], textColor=colors.HexColor(color)))
         return [number, p(label,'SGMetricLabel')]
@@ -193,7 +191,8 @@ def export_pdf(store, rdir, run, *, cumulative=False, output=None, font=None):
             story.append(p(key.replace('_',' ').capitalize()+': '+str(val)))
     else:
         story.append(p('No finalized change statistics recorded.'))
-    story.append(p('Run notes: '+(d['notes'] or 'No additional notes.')))
+    story.append(p('Run notes: '+(d['notes'] or 'No additional notes.'),limit=700))
+    story.append(p('Ellipses indicate shortened summaries; consult private evidence for full details.','SGSmall'))
     story.append(section('Reviewed findings and decisions' if not cumulative else 'Current risk register'))
     displayed=d['active'] if cumulative else d['reviewed']
     displayed=sorted(displayed,key=lambda x:(x.get('status') in CLOSED,order.get(x.get('severity'),99),x.get('status',''),x.get('id','')))
@@ -204,8 +203,8 @@ def export_pdf(store, rdir, run, *, cumulative=False, output=None, font=None):
             finding_header(f),
             p('Finding: '+f.get('id','?')+'  |  Control: '+f.get('control_id','?')+'  |  Status: '+f.get('status','UNKNOWN')),
             p('Component: '+f.get('location','Not recorded')),
-            p('Decision: '+f.get('reason','Not documented'),limit=350),
-            p('Next action: '+(f.get('next_action') or 'No action recorded'),limit=250),
+            p('Decision: '+f.get('reason','Not documented'),limit=700),
+            p('Next action: '+(f.get('next_action') or 'No action recorded'),limit=500),
             p('Remediation: '+(f.get('fix') or {}).get('summary','Not documented')),
             p('Verification: '+('Linked test '+str((f.get('verification') or {}).get('test_id')) if (f.get('verification') or {}).get('test_id') else 'No linked passing test recorded'),'SGSmall')
         ]))
