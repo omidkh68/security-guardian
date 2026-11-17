@@ -11,6 +11,21 @@ Codex and Gemini CLI all consume the same audited content.
 Run from the Security Guardian clone:
 
 ```bash
+bash install-agent.sh
+```
+
+The guided wizard supports Claude Code, Codex and Gemini CLI. Use Up/Down to
+navigate, Space to toggle agent selections and Enter to continue. Choose
+Global (user) or Local (project), enter the target project directory if local,
+review the physical destinations and approve the installation. Press q or
+decline the confirmation to cancel. Existing valid copies are backed up when
+explicitly approved, including mixed new/existing destinations. No agent is run.
+Python 3 and a standard terminal provide the UI; small or dumb terminals use
+numbered prompts. Non-TTY callers must supply explicit flags.
+
+For automation, the original forms remain available:
+
+```bash
 bash install-agent.sh --agent codex --user
 bash install-agent.sh --agent gemini --project /path/to/target
 bash install-agent.sh --agent claude --user
@@ -25,7 +40,7 @@ installs. Claude standalone uses `.claude/skills`, or the existing Claude
 Marketplace plugin workflow. Don't install standalone and Marketplace copies
 together unless precedence is understood.
 
-Existing installation: `--upgrade` keeps a backup. No remote downloads,
+Existing installation: `--upgrade` keeps a backup. To explicitly allow mixed new/existing targets in scripts, use `--upgrade-existing` instead. Comma-separated targets such as `--agent claude,codex` are supported. No remote downloads,
 plugin execution or scans are done by this installer. Review upstream SKILL.md
 before installing third-party skills.
 
