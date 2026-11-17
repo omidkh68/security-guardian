@@ -11,7 +11,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[5]
 INSTALL = ROOT / "install-agent.sh"
 sys.path.insert(0,str(ROOT / "scripts"))
-from install_agent_wizard import plan, choose_plain, metadata, Cancelled
+from install_agent_wizard import plan, choose_plain, metadata, Cancelled, confirm_install, read_prompt
 
 class InstallerTest(unittest.TestCase):
     def setUp(self):
@@ -65,6 +65,23 @@ class InstallerTest(unittest.TestCase):
         with redirect_stdout(io.StringIO()), patch("builtins.input", return_value="q"):
             with self.assertRaises(Cancelled):
                 choose_plain("Select", ["Claude"], True)
+    def test_confirmation_rejects_malformed_input(self):
+        invalid = UnicodeDecodeError("utf-8", b"\xd8", 0, 1, "invalid continuation byte")
+        with redirect_stdout(io.StringIO()) as out, patch("builtins.input", side_effect=[invalid, "y\udcd8", "غ", "yes"]):
+            self.assertTrue(confirm_install())
+        self.assertEqual(out.getvalue().count("Invalid text encoding"), 2)
+        self.assertIn("Please enter y/yes", out.getvalue())
+        for value in ("", "n", "no", "q"):
+            with patch("builtins.input", return_value=value):
+                self.assertFalse(confirm_install())
+        with redirect_stdout(io.StringIO()), patch("builtins.input", side_effect=[invalid, "n"]):
+            self.assertFalse(confirm_install())
+        with patch("builtins.input", side_effect=EOFError):
+            with self.assertRaises(EOFError):
+                confirm_install()
+    def test_unicode_project_path(self):
+        with redirect_stdout(io.StringIO()), patch("builtins.input", side_effect=["\udcd8", "/tmp/پروژه"]):
+            self.assertEqual(read_prompt("Path: "), "/tmp/پروژه")
     def test_local(self):
         self.invoke("--agent","gemini,codex","--project",str(self.base))
         self.assertTrue((self.base/".agents/skills/security-guardian/SKILL.md").exists())
