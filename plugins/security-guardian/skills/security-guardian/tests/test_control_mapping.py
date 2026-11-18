@@ -70,6 +70,27 @@ class MappingTests(unittest.TestCase):
         self.assertEqual(mapping.classify(
             "CLOUD-05", cases[0][0], cases[2][0])["status"], "NEEDS_REVIEW")
 
+    def test_build_context_mapping_survives_remediation(self):
+        title = "Overly broad Docker build context"
+        reasons = [
+            "No .dockerignore is present; .env.dev can enter the context.",
+            "Dockerfile.dockerignore now excludes .env, .env.* and build output. No build verification performed.",
+            "The .dockerignore excludes environment files; runtime verification remains pending.",
+        ]
+        for reason in reasons:
+            with self.subTest(reason=reason):
+                self.assertEqual(mapping.classify("CLOUD-05", title, reason)["status"], "MATCHED")
+        self.assertEqual(mapping.matched_categories(title, "No .dockerignore present"), [])
+        self.assertEqual(mapping.matched_categories("Docker build performance",
+                         "Added Dockerfile.dockerignore to exclude .env samples"), [])
+        self.assertEqual(mapping.classify("CLOUD-05", title,
+                         reasons[1] + " CI tool image is unpinned.")["status"], "NEEDS_REVIEW")
+        # A mapping audit must not change the underlying security status.
+        records = {"example": {"control_id": "CLOUD-05", "title": title,
+                              "reason": reasons[1], "status": "FIXED_UNVERIFIED"}}
+        self.assertEqual(mapping.audit_legacy(records)[0]["status"], "MATCHED")
+        self.assertEqual(records["example"]["status"], "FIXED_UNVERIFIED")
+
     def test_mismatch_override_and_ambiguity(self):
         with self.assertRaisesRegex(ValueError,'maps to API-03'):
             mapping.classify('ANG-12','Missing security headers','')
