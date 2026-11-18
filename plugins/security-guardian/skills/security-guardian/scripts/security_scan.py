@@ -19,7 +19,7 @@ EXCLUDE_DIRS = {'.security-guardian', '.git', 'node_modules', '.angular', '.next
  '__pycache__', 'vendor', '.turbo', '.output', 'target', 'tmp', 'temp', '.terraform',
  'generated', '.pub-cache', 'ios/Pods', 'android/.gradle'}
 EXCLUDE_FILES = {'.env', '.env.local', '.env.production', '.env.development',
- 'google-services.json', 'GoogleService-Info.plist', 'credentials.json', 'secrets.yaml'}
+ 'google-services.json', 'GoogleService-Info.plist', 'credentials.json', 'secrets.yaml', '.security-guardian-profile.json'}
 SCAN_SUFFIXES = {'.ts','.tsx','.js','.jsx','.mjs','.cjs','.html','.dart','.kt','.java',
  '.xml','.plist','.yaml','.yml','.json','.toml','.sh','.conf','.config','.tf','.sql',
  '.properties','.gradle','.ini','.rb','.go','.vue','.svelte','.py','.cs','.csproj','.php','.swift','.kts'}
