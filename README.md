@@ -2,9 +2,11 @@
 
 # 🛡️ Security Guardian
 
-### One security skill. Your whole stack. Every finding tracked.
+### Security for your stack, inside your agent.
 
-**Stack-aware, evidence-first security auditing and safe remediation for Claude Code, Codex and Gemini CLI.**
+**Find security bugs. Fix them safely. Verify the result. Keep the evidence.**
+
+An open-source, stack-aware security skill for Claude Code, Codex and Gemini CLI.
 
 [![CI](https://github.com/omidkh68/security-guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/omidkh68/security-guardian/actions/workflows/ci.yml)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -14,29 +16,45 @@
 
 **145 controls** · **13 security domains** · **107 playbooks** · **versioned audit history**
 
-[Quick start](#-quick-start) · [How it works](#-how-it-works) · [Use cases](#-real-world-use-cases) · [Tracking](#-versioned-findings--audit-history) · [Documentation](#-documentation) · [فارسی](README.fa.md)
+[Why Security Guardian?](#why-security-guardian) · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [Use cases](#-real-world-use-cases) · [Tracking](#-versioned-findings--audit-history) · [Documentation](#-documentation) · [فارسی](README.fa.md)
 
 </div>
 
 ---
 
-> [!IMPORTANT]
-> Security Guardian is an **AI-assisted security review workflow**, not an autonomous penetration tester or a security certification. The Python scanner detects heuristics; Your selected AI coding assistant evaluates actual code and can propose or apply **approved** changes. Infrastructure assessments require real, authorized evidence. **Do not run active attacks on systems without permission.**
+## Why Security Guardian?
 
-## ✨ Why Security Guardian?
+**Your agent can find a security bug. Security Guardian gives it an engineered way to find, fix, verify and remember security bugs.**
 
-Security reviews often fail in the handoff: someone sees an insecure CORS rule or an IDOR, makes a partial fix, forgets the negative test, and the same issue returns a sprint later. Security Guardian makes that process repeatable and auditable.
+A one-off security prompt can be useful, but the scope, depth, evidence and follow-up depend on how the review is requested and performed. Security Guardian adds a reusable, standards-informed workflow to Claude Code, Codex or Gemini CLI — without replacing your agent.
 
-| Capability | What you get |
+| One-off security review | With Security Guardian |
 |---|---|
-| 🧭 **Automatic stack discovery** | Finds Angular, NestJS, Flutter, Docker and related manifests/configurations. Uses evidence to determine which control areas apply. |
-| 🛡️ **Real control catalog** | 145 source-derived controls with stable IDs (`ANG-01`, `API-01`, `BIZ-01`, etc.), priority, complexity, implementation guidance, acceptance criteria and mapped playbooks. |
-| 🧠 **On-demand specialist playbooks** | 107 files covering authorization, SSR/XSS, API validation, mobile storage, native crypto, PKI, CI/CD, containers, tenancy and more. |
-| 🔬 **Evidence over assumptions** | A regex match means **candidate**, not confirmed vulnerability. An absence of a match is **not** a pass. |
-| 🛠️ **Risk-aware remediation** | Small, reversible code changes when requested. Extra approval for auth, payments, certificates, prod networking, database migrations or other high-impact changes. |
-| 🧾 **Permanent, versioned findings** | Every invocation writes its own run and updates stable finding IDs, status transitions, reasons, test evidence and next actions. |
-| 🧱 **Defensive boundaries** | The scanner makes no network requests or application changes. The tracker records evidence but does not perform tests or fixes. |
-| 🧪 **Useful release decisions** | Build an evidence-backed release gate and prioritized backlog, with unknowns and unresolved risks visible. |
+| Prompt-defined review | Explicit security controls, acceptance criteria and repeatable workflow |
+| Checks may vary or be overlooked | Applicable controls and specialist playbooks guide the review |
+| Broad or generic recommendations | Stack and feature discovery guide relevant checks |
+| A suspicious pattern may be called a vulnerability | Candidate signals separated from confirmed findings |
+| A patch may be proposed without a security regression test | Approved, minimal remediation with linked verification evidence |
+| Results may remain in a chat transcript | Stable finding IDs, versioned JSON/Markdown and optional PDF reports |
+| Unresolved issues may be forgotten | Persistent status, blocker reasons and actionable next steps |
+| Security expertise must be supplied in each prompt | Reusable security knowledge inside your existing agent |
+
+The value is not that a general-purpose agent lacks these abilities; it is that Security Guardian makes them explicit, structured and persistent.
+
+### Five engineering pillars
+
+| Pillar | Product commitment |
+|---|---|
+| **01 · Stack intelligence** | Understand the project and select security checks relevant to its actual stack and scope. |
+| **02 · Practical vulnerability detection** | Prioritize important, common, actionable weaknesses; trace real code and trust boundaries. |
+| **03 · Safe remediation** | Preserve application behavior and architecture; require approval for sensitive changes. |
+| **04 · Evidence-based verification** | Test the security invariant, distinguish verified from unverified fixes, and disclose missing evidence. |
+| **05 · Persistent security memory** | Retain finding history, regressions, unresolved risks and next actions in the target repository. |
+
+**Available in v1.2.1:** portable skill installation, a 145-control knowledge base with 107 playbooks, scoped heuristic triage, six optional Semgrep rules, agent-led review/remediation, linked test records and versioned reports. **In development:** broader framework packs, explicit developer scope profiles and a stronger operational verification engine. [Measured baseline](docs/wiki/SG-Baseline-v1.2.1.md) · [Product vision & guardrails](docs/wiki/SG-Vision.md) · [Roadmap](docs/wiki/SG-Roadmap-and-RFCs.md).
+
+> [!IMPORTANT]
+> A scanner signal is a candidate, not proof of a vulnerability; no signal is not proof of safety. Results depend on actual code, available evidence, authorized tests and your selected agent. Security Guardian is not a certification or an autonomous penetration tester. Audit does not edit application source; remediation requires appropriate authorization.
 
 ## 🚀 Quick start
 
@@ -154,7 +172,7 @@ In the marketplace variant, prefix commands with `/security-guardian:security-gu
 > [!NOTE]
 > Operational audit modes write a new run under `.security-guardian/`, including `audit` and `plan`. Read-only mapping diagnostics and PDF re-export do not create runs. `audit` is **read-only with respect to application code**, not the entire repository filesystem.
 
-## 🧩 Supported stacks and coverage
+## 🧩 Current supported stacks and coverage (v1.2.1)
 
 | Area | Example security questions |
 |---|---|
@@ -387,4 +405,4 @@ For PDF re-export without creating a new audit version use
 
 ## Engineering vision and roadmap
 
-See the [engineering wiki source](docs/wiki/SG-Home.md) for the v1.2.1 baseline, 2026 standards and scope-aware future design. RFCs are proposals pending review, not shipped features. The [GitHub Wiki](https://github.com/omidkh68/security-guardian/wiki) is a separately published copy.
+See the [engineering wiki source](docs/wiki/SG-Home.md) for the v1.2.1 baseline, 2026 standards and scope-aware future design. RFCs are proposals pending review, not shipped features. The [GitHub Wiki](https://github.com/omidkh68/security-guardian/wiki) is maintained separately; see [publication instructions](docs/wiki-publishing.md).

@@ -10,6 +10,12 @@ Thanks for improving the project. We welcome security control mappings, test cas
 4. Add tests for scanner/tracker changes; create only synthetic test data.
 5. Submit a PR describing control IDs, threat model, change, test evidence, and rollback strategy.
 
+## Product design review
+
+Before proposing a new feature, read the [product vision](docs/wiki/SG-Vision.md) and [RFC review gates](docs/wiki/SG-Roadmap-and-RFCs.md). State which pillar it improves: stack intelligence, practical detection, safe remediation, evidence-based verification or persistent security memory. Identify a real developer scenario, smallest feasible solution, relevant scope, non-goals, failure paths and acceptance tests.
+
+Avoid unnecessary services/dependencies, unrelated features, evidence-free security claims and loading unrelated playbooks. Optional tools must stay optional. A feature is not complete merely because its documentation or rule exists; show relevant positive/negative evidence and disclose what could not be verified. Open a design RFC for major changes and obtain maintainer review before implementation.
+
 ## Add or improve a playbook
 
 - Update the canonical `references/controls.json` when altering a baseline control and explain the source/standard rationale.
