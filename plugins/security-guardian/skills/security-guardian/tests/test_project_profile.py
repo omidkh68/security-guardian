@@ -259,6 +259,28 @@ class ProjectProfileTests(unittest.TestCase):
         (self.root/'AGENTS.md').unlink()
         self.assertEqual(project.inspect(self.root)['instruction_sync'],'MISSING')
 
+    def test_markdown_example_markers_and_unclosed_fences_not_rewritten(self):
+        for raw in (
+                (chr(96)*3+'markdown\n'+project.BEGIN+'\n'+project.END+'\n'+chr(96)*3+'\n').encode(),
+                b'~~~markdown\nUnclosed example\n'):
+            p=self.write('AGENTS.md',raw)
+            with self.assertRaises(ValueError):
+                self.preview()
+            self.assertEqual(p.read_bytes(),raw)
+
+    def test_context_inventory_budgets_and_large_context_warning(self):
+        self.write('AGENTS.md',b'# Existing instructions\n'+b'A'*33000+b'\n')
+        plan=self.preview()
+        self.assertTrue(any('Codex instruction budget' in warning for warning in plan['warnings']))
+        self.write('CLAUDE.md',b'Other context\n')
+        with patch.object(project,'MAX_CONTEXT_FILES',1):
+            with self.assertRaises(ValueError):
+                self.preview()
+        with patch.object(project,'MAX_CONTEXT_TOTAL_BYTES',100):
+            with self.assertRaises(ValueError):
+                self.preview()
+        self.assertFalse((self.root/project.PROFILE).exists())
+
     def test_unresolved_or_incomplete_scope_not_persisted(self):
         self.write('package.json',b'{"dependencies":{"react":"1","express":"1"}}')
         with self.assertRaises(ValueError):

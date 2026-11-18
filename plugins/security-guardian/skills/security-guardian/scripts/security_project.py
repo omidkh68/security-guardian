@@ -25,6 +25,8 @@ NATIVE = {'claude':'CLAUDE.md', 'gemini':'GEMINI.md'}
 CONTEXT_NAMES = {'agents.md','agent.md','agents.override.md','claude.md',
                  'claude.local.md','gemini.md'}
 MAX_CONTEXT_BYTES = 256_000
+MAX_CONTEXT_TOTAL_BYTES = 2_000_000
+MAX_CONTEXT_FILES = 128
 MAX_ROOTS = 64
 
 
@@ -187,6 +189,7 @@ def context_inventory(root, decision):
     """Bounded candidate inventory; no interpretation or recursive imports."""
     result = {}
     count = 0
+    total_bytes = 0
     def fail(_):
         raise ValueError('Incomplete instruction-file inventory')
     for base,dirs,names in os.walk(root,topdown=True,followlinks=False,onerror=fail):
@@ -218,9 +221,14 @@ def context_inventory(root, decision):
             file = parent/name
             if name.lower() in CONTEXT_NAMES or ('.claude/rules/' in file.relative_to(root).as_posix() and file.suffix=='.md'):
                 entry = file.relative_to(root).as_posix()
+                if len(result)>=MAX_CONTEXT_FILES:
+                    raise ValueError('Instruction inventory exceeded context-file budget')
                 result[entry] = snapshot(root,entry)
                 if result[entry] is None:
                     raise ValueError('Instruction file disappeared during discovery')
+                total_bytes += len(result[entry][0])
+                if total_bytes>MAX_CONTEXT_TOTAL_BYTES:
+                    raise ValueError('Instruction inventory exceeded context-byte budget')
     return result
 
 
@@ -231,6 +239,18 @@ def decode_text(data):
         raise ValueError('Instruction file is not UTF-8') from None
     if b'\x00' in data:
         raise ValueError('Instruction file contains NUL bytes')
+
+
+def fence_transition(line, fence):
+    match=re.match(r'^[ ]{0,3}('+chr(96)+r'{3,}|~{3,})(.*)$',line)
+    if not match:
+        return fence,False
+    marker,suffix=match.groups()
+    if fence is None:
+        return marker,True
+    if marker[0]==fence[0] and len(marker)>=len(fence) and not suffix.strip():
+        return None,True
+    return fence,False
 
 
 def managed(data, body):
@@ -244,6 +264,13 @@ def managed(data, body):
     nl = b'\r\n' if b'\r\n' in raw else b'\n'
     start,end = BEGIN.encode(),END.encode()
     lines = raw.splitlines(keepends=True)
+    fence=None
+    for line in raw.decode('utf-8').splitlines():
+        fence,_=fence_transition(line,fence)
+        if fence is not None and (BEGIN in line or END in line):
+            raise ValueError('Managed marker inside Markdown code fence; review manually')
+    if fence is not None:
+        raise ValueError('Unclosed Markdown code fence; review manually')
     begins = [i for i,line in enumerate(lines) if line.rstrip(b'\r\n')==start]
     ends = [i for i,line in enumerate(lines) if line.rstrip(b'\r\n')==end]
     if (len(begins)!=len(ends) or len(begins)>1 or raw.count(start)!=len(begins)
@@ -265,17 +292,9 @@ def import_count(data, filename='AGENTS.md'):
     count=0
     fence=None
     for line in data.decode('utf-8-sig').splitlines():
-        stripped=line.strip()
-        for marker in (chr(96)*3,'~~~'):
-            if stripped.startswith(marker):
-                if fence is None:
-                    fence=marker
-                elif fence==marker:
-                    fence=None
-                break
-        else:
-            if fence is None and line.rstrip() in ('@'+filename,'@./'+filename):
-                count+=1
+        fence,is_marker=fence_transition(line,fence)
+        if not is_marker and fence is None and line.rstrip() in ('@'+filename,'@./'+filename):
+            count+=1
     return count
 
 
@@ -352,6 +371,8 @@ def make_plan(root, profile, components, agents):
     expected['AGENTS.md']=snapshot(root,'AGENTS.md')
     guide=guidance(saved,decision)
     agent_data=managed(expected['AGENTS.md'][0] if expected['AGENTS.md'] else None,guide)
+    if len(agent_data)>32*1024:
+        warnings.append('AGENTS.md exceeds the default Codex instruction budget; verify actual loading rather than raising global limits automatically.')
     propose('AGENTS.md',agent_data,BEGIN+'\n'+guide+'\n'+END)
     for agent in sorted(set(agents)):
         if agent not in NATIVE:
