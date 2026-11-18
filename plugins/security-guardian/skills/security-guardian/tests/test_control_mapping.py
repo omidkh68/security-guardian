@@ -48,6 +48,28 @@ class MappingTests(unittest.TestCase):
             'ANG-06','Untrusted tenant host mapping',
             'Only safe behind known reverse proxy')['status'],'MATCHED')
 
+    def test_container_secret_and_ci_image_categories(self):
+        cases = [
+            ("Build environment files enter Docker builder layers", "CLOUD-05"),
+            ("Docker build context includes credentials", "CLOUD-05"),
+            ("CI tool image is mutable and not digest pinned", "SDLC-08"),
+            ("Runner image is unpinned", "SDLC-08"),
+            ("Unpinned pipeline container images", "SDLC-08"),
+        ]
+        for title, control in cases:
+            with self.subTest(title=title):
+                self.assertEqual(mapping.classify(control, title, "")["status"], "MATCHED")
+        with self.assertRaisesRegex(ValueError, "maps to CLOUD-05"):
+            mapping.classify("CLOUD-04", cases[0][0], "")
+        with self.assertRaisesRegex(ValueError, "maps to SDLC-08"):
+            mapping.classify("CLOUD-04", cases[2][0], "")
+        for title in ("Missing .dockerignore", "Docker runtime base image is mutable",
+                      "CI image build completed", "Credentials in a source file"):
+            with self.subTest(title=title):
+                self.assertEqual(mapping.matched_categories(title, ""), [])
+        self.assertEqual(mapping.classify(
+            "CLOUD-05", cases[0][0], cases[2][0])["status"], "NEEDS_REVIEW")
+
     def test_mismatch_override_and_ambiguity(self):
         with self.assertRaisesRegex(ValueError,'maps to API-03'):
             mapping.classify('ANG-12','Missing security headers','')
