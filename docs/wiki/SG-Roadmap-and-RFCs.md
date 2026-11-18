@@ -23,7 +23,21 @@ We prioritize relevance, ease of use and safe fixes before optional enterprise c
 6. Standards crosswalk and unresolved-finding reporting.
 7. Benchmark corpus and release quality gates (starts alongside scope and pack work).
 
-RFC issues will be linked here after creation. Every RFC must describe small default behavior, acceptance tests, backwards compatibility, failure paths, authorization and non-goals. Do not close RFCs merely because they were drafted. Implementation PRs will follow maintainer design review.
+### Registered proposals — open for review
+
+Parent: [#30 — Operational engine vision](https://github.com/omidkh68/security-guardian/issues/30).
+
+| RFC | Proposal | Priority / dependency |
+|---|---|---|
+| [#31](https://github.com/omidkh68/security-guardian/issues/31) | Capability-based discovery and profile scope | P0 · first |
+| [#32](https://github.com/omidkh68/security-guardian/issues/32) | AGENTS.md and native agent instructions | P0 · #31 |
+| [#33](https://github.com/omidkh68/security-guardian/issues/33) | Framework-neutral web and backend packs | P0 · #31 |
+| [#34](https://github.com/omidkh68/security-guardian/issues/34) | Bounded detection and optional adapters | P0 · #31/#33 |
+| [#35](https://github.com/omidkh68/security-guardian/issues/35) | Safe remediation and evidence-bound verification | P0 · #31/#34 |
+| [#36](https://github.com/omidkh68/security-guardian/issues/36) | Standards crosswalk and actionable PDF reports | P1 · #31/#33/#34/#35; mappings can start earlier |
+| [#37](https://github.com/omidkh68/security-guardian/issues/37) | Stack-native benchmark and quality gates | P0 · starts in parallel with #31/#33 |
+
+ Every RFC must describe small default behavior, acceptance tests, backwards compatibility, failure paths, authorization and non-goals. Do not close RFCs merely because they were drafted. Implementation PRs will follow maintainer design review.
 
 ## Decisions still proposed
 
