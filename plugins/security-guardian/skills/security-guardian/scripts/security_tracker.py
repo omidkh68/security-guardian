@@ -252,13 +252,6 @@ def make_current(index, ledger):
              'Generated from versioned run evidence. **No finding auto-closes when a heuristic signal disappears.**', '',
              f"Runs: **{len(index['runs'])}**; last: `{index['runs'][-1]['id'] if index['runs'] else '—'}`", '',
              '## Status totals', '']
-    if run.get('scope_resolution'):
-        decision=run['scope_resolution']
-        lines[lines.index('## Status snapshot (entire project, not just this run)'):lines.index('## Status snapshot (entire project, not just this run)')]=[
-            '## Selected scope','',f"- Profile: {decision['selected_profile']}",
-            f"- Roots: {', '.join(decision['selected_roots'])}",
-            f"- Excluded component roots: {', '.join(decision['excluded_components']) or 'None'}",
-            '- Unselected history remains cumulative; no assertion of assessment for excluded components.','']
     for status in sorted(STATUSES):
         lines.append(f'- {status}: {counts[status]}')
     lines.extend(['', '## Active findings register (superseded records excluded)', '',
@@ -294,6 +287,13 @@ def make_run_report(run, ledger, scan):
              f"- Heuristic signals: {scan['summary']['heuristic_signals']} (unconfirmed)",
              f"- Control catalog: {scan['summary']['catalog_controls']} (never automatically certified)",
              '', '## Status snapshot (entire project, not just this run)', '']
+    if run.get('scope_resolution'):
+        decision=run['scope_resolution']
+        lines[lines.index('## Status snapshot (entire project, not just this run)'):lines.index('## Status snapshot (entire project, not just this run)')]=[
+            '## Selected scope','',f"- Profile: {decision['selected_profile']}",
+            f"- Roots: {', '.join(decision['selected_roots'])}",
+            f"- Excluded component roots: {', '.join(decision['excluded_components']) or 'None'}",
+            '- Unselected history remains cumulative; no assertion of assessment for excluded components.','']
     for status in sorted(STATUSES):
         lines.append(f'- {status}: {counts[status]}')
     lines += ['', '## Reviewed findings and changes in this run', '',
