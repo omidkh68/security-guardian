@@ -109,3 +109,7 @@ after reading the original evidence. Do not mark the issue safe without
 testing Host/X-Forwarded-Host handling in an authorized deployment.
 `ANG-06` covers trusted SSR Host/proxy metadata; `BIZ-01` covers object
 authorization; `API-15` covers trusted client IP attribution.
+
+### Container build and CI image classification
+
+`container_build_secret_exposure` maps to `CLOUD-05` when evidence concerns credentials, secret material or environment files entering the Docker build context or image layers. A missing ignore file alone is not proof of secret exposure. `ci_image_pinning` maps to `SDLC-08` for mutable or unpinned CI/runner images, distinct from production base-image hardening under `CLOUD-04`. The rules are metadata guardrails; matches neither establish vulnerability nor verify remediation. Keep genuinely ambiguous or unrecognized descriptions under manual review.
