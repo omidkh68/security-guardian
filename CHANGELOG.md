@@ -8,8 +8,10 @@ All notable changes to this open-source distribution are documented here. Dates 
 - Read-only project scope preview, manifest-based component inventory and explicit frontend/backend/fullstack/mobile/custom profiles; selected scanner rule families and per-run scope metadata (#31).
 - New framework names are discovery hints only, not expanded vulnerability detection coverage.
 
+- Explicitly approved persistent project scope and concise managed AGENTS.md block with optional native imports, private backups and stale-preview protection (#32).
+
 ### Compatibility
-- Direct commands without scope flags retain legacy scanning. Project instruction persistence and scoped specialist adapters remain future work.
+- Direct commands without scope flags retain legacy scanning. Ordinary audits do not update profiles or instructions; scoped specialist adapters remain future work.
 
 ## [1.2.1] — 2026-11-18
 
