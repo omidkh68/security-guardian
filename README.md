@@ -384,3 +384,7 @@ For direct, read-only mapping diagnostics use
 `python3 <skill-dir>/scripts/security_tracker.py mapping-audit --root .`.
 For PDF re-export without creating a new audit version use
 `python3 <skill-dir>/scripts/security_report.py --root .`.
+
+## Engineering vision and roadmap
+
+See the [engineering wiki source](docs/wiki/SG-Home.md) for the v1.2.1 baseline, 2026 standards and scope-aware future design. RFCs are proposals pending review, not shipped features. The [GitHub Wiki](https://github.com/omidkh68/security-guardian/wiki) is a separately published copy.
