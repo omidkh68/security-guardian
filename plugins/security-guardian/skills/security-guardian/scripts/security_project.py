@@ -80,7 +80,8 @@ def snapshot(root, rel, limit=MAX_CONTEXT_BYTES):
         after = os.fstat(stream.fileno())
         if len(data)>limit or (opened.st_size,opened.st_mtime_ns)!=(after.st_size,after.st_mtime_ns):
             raise ValueError('Project file changed or exceeded limit: '+rel)
-    if p.is_symlink() or p.lstat().st_ino != opened.st_ino:
+    final = p.lstat()
+    if p.is_symlink() or (final.st_dev,final.st_ino,final.st_mtime_ns,final.st_size,final.st_mode)!=(opened.st_dev,opened.st_ino,opened.st_mtime_ns,opened.st_size,opened.st_mode):
         raise ValueError('Project file changed during read: '+rel)
     return (data,stat.S_IMODE(opened.st_mode) & 0o777)
 
@@ -99,16 +100,30 @@ def valid_profile(value):
             or any(not isinstance(p,str) or not p for p in roots)
             or roots!=sorted(set(roots))):
         raise ValueError('Invalid project profile component roots')
+    for rel in roots:
+        p=Path(rel)
+        if (p.is_absolute() or '..' in p.parts or p.as_posix()!=rel
+                or re.search(r'[\x00-\x1f\x7f\\\\]',rel) or re.match(r'^[A-Za-z]:',rel)):
+            raise ValueError('Invalid saved component path')
     if not isinstance(value['inventory_sha256'],str) or not re.fullmatch(r'[0-9a-f]{64}',value['inventory_sha256']):
         raise ValueError('Invalid project profile fingerprint')
     return value
+
+
+def unique_fields(pairs):
+    result={}
+    for key,value in pairs:
+        if key in result:
+            raise ValueError('Duplicate profile field')
+        result[key]=value
+    return result
 
 
 def parse_profile(value):
     if value is None:
         return None
     try:
-        return valid_profile(json.loads(value[0].decode('utf-8')))
+        return valid_profile(json.loads(value[0].decode('utf-8'),object_pairs_hook=unique_fields))
     except (UnicodeError,ValueError,TypeError):
         raise ValueError('Invalid saved profile; review it manually before replacing') from None
 
@@ -259,7 +274,7 @@ def import_count(data, filename='AGENTS.md'):
                     fence=None
                 break
         else:
-            if fence is None and line in ('@'+filename,'@./'+filename):
+            if fence is None and line.rstrip() in ('@'+filename,'@./'+filename):
                 count+=1
     return count
 
@@ -289,17 +304,19 @@ def guidance(saved, decision):
 
 
 def inspect(root):
-    prior=snapshot(root,PROFILE)
-    if prior is None:
-        return {'status':'MISSING','scope_request':None,'message':'No saved scope; resolve current user intent.'}
     try:
+        prior=snapshot(root,PROFILE)
+        if prior is None:
+            return {'status':'MISSING','scope_request':None,'message':'No saved scope; resolve current user intent.'}
         saved=parse_profile(prior)
         decision=security_scan.preview_scope(root,saved['profile'],saved['components'])
         require_complete(decision)
         if inventory_fingerprint(root,decision)!=saved['inventory_sha256']:
             return {'status':'STALE','scope_request':None,'message':'Inventory changed; review scope again before reuse.'}
         context=context_inventory(root,decision)
-        return {'status':'READY','scope_request':{'profile':saved['profile'],'components':saved['components']},
+        common=snapshot(root,'AGENTS.md')
+        sync='MISSING' if common is None else ('MATCHED' if managed(common[0],guidance(saved,decision))==common[0] else 'DRIFTED')
+        return {'status':'READY','instruction_sync':sync,'scope_request':{'profile':saved['profile'],'components':saved['components']},
                 'scope_resolution':decision,'instruction_files':sorted(context),
                 'message':'Saved scope is a default, not authorization; review relevant instruction files.'}
     except (ValueError,OSError):
@@ -412,13 +429,16 @@ def replace_checked(root, rel, old, new):
 
 def apply(root, profile, components, agents, approve):
     report,expected,proposals=make_plan(root,profile,components,agents)
-    if not secrets.compare_digest(report['approval_token'],approve):
+    if not isinstance(approve,str) or not re.fullmatch(r'[0-9a-f]{64}',approve) or not secrets.compare_digest(report['approval_token'],approve):
         raise ValueError('Approval token is stale or invalid; preview again')
     if not proposals:
         return {'status':'UNCHANGED','changed_files':[],'backup':None}
     backup=None
     completed=[]
     try:
+        fresh,_=select(root,profile,components)
+        if fresh!=report['profile']:
+            raise ValueError('Inventory changed after approval')
         for rel,old in expected.items():
             if snapshot(root,rel)!=old:
                 raise ValueError('Project instruction changed after preview: '+rel)

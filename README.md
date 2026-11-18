@@ -143,6 +143,10 @@ python3 plugins/security-guardian/skills/security-guardian/scripts/security_scan
 
 Use `--profile frontend|backend|fullstack|mobile|custom` and repeat `--component <relative-root>` when selecting explicit components. See [scope contract](docs/scope-resolution.md). Existing manual invocations without a profile retain legacy behavior.
 
+## Approved project profile (development — RFC #32)
+
+Save a selected scope and concise shared project security guidance only through an explicit preview and approved apply. Normal audits never modify instructions. Optional Claude/Gemini imports preserve existing native rules. See [project profile and instruction setup](docs/project-profile.md).
+
 ## 🔍 Optional structural scanning and coverage evidence
 
 In addition to its zero-dependency Python triage, Security Guardian offers **optional local Semgrep structural/AST-backed candidate detection**. It never silently installs Semgrep or claims that an unavailable engine has passed. Raw matched source snippets are excluded from the report.
