@@ -4,7 +4,7 @@ The source of truth is `docs/wiki/` in the main repository. GitHub Wikis are sep
 
 ## Maintainer workflow
 
-Enable Wiki under repository settings. If it has never been initialized, first create a Home page via the GitHub Wiki tab. The preparation step below does not push or overwrite the main repository; it uses a temporary directory and clones the existing wiki via your Git credentials. Existing unrelated wiki pages are left intact.
+Enable Wiki under repository settings. If it has never been initialized, first create a Home page via the GitHub Wiki tab. The preparation step below does not push or overwrite the main repository; it uses a temporary directory and clones the existing wiki via your Git credentials. Existing unrelated wiki pages are left intact. Run each block only after the preceding one succeeds.
 
 Run from a clone of Security Guardian:
 
@@ -56,7 +56,7 @@ for target, content in pending.items():
     target.write_bytes(content)
 print("Wiki staged locally; inspect the changes before publishing.")
 PY
-git -C "$WIKI_STAGE/wiki" add -- Home.md SG-*.md assets/sg-*.svg
+git -C "$WIKI_STAGE/wiki" add -- Home.md 'SG-*.md' 'assets/sg-*.svg'
 git -C "$WIKI_STAGE/wiki" diff --cached --stat
 git -C "$WIKI_STAGE/wiki" diff --cached --check
 ```
