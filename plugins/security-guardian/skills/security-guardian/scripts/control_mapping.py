@@ -62,7 +62,22 @@ def matched_categories(title: str, reason: str) -> list[str]:
     text = f'{title}\n{reason}'
     text = re.sub(r'\b(?:no|without|not vulnerable to|not an?|rules out|cannot exploit)\s+(?:direct\s+)?SSRF\b',
                   'server-side URL fetch reviewed as safe', text, flags=re.I)
-    return sorted(k for k, patterns in HINTS.items() if any(p.search(text) for p in patterns))
+    detected = {k for k, patterns in HINTS.items() if any(p.search(text) for p in patterns)}
+    # A subsequent remediation can replace the original reason with an
+    # exclusion summary. Keep the classification when the title identifies
+    # an overly broad build context and the new reason links ignore rules to
+    # environment files or credentials. This is not a remediation verdict.
+    broad_context = re.search(
+        r'\b(?:unrestricted|unfiltered|overly broad)\s+(?:Docker|container)\s+build context\b'
+        r'|\b(?:Docker|container)\s+build context\b[^\n.;]{0,40}\b(?:unrestricted|unfiltered|overly broad)\b',
+        title, re.I)
+    ignore_rule = re.search(r'(?<![\w.])(?:Dockerfile\.)?\.?dockerignore\b', reason, re.I)
+    secret_material = re.search(
+        r'(?<![\w.])\.env(?:\.[\w*-]+)?(?![\w-])|\b(?:environment files?|secrets?|credentials?)\b',
+        reason, re.I)
+    if broad_context and ignore_rule and secret_material:
+        detected.add('container_build_secret_exposure')
+    return sorted(detected)
 
 def classify(control_id: str, title: str, reason: str, *, category=None, override=None) -> dict:
     """Check a claimed control against the catalog and narrowly defined category rules."""
