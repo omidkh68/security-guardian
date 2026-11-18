@@ -252,6 +252,13 @@ def make_current(index, ledger):
              'Generated from versioned run evidence. **No finding auto-closes when a heuristic signal disappears.**', '',
              f"Runs: **{len(index['runs'])}**; last: `{index['runs'][-1]['id'] if index['runs'] else '—'}`", '',
              '## Status totals', '']
+    if run.get('scope_resolution'):
+        decision=run['scope_resolution']
+        lines[lines.index('## Status snapshot (entire project, not just this run)'):lines.index('## Status snapshot (entire project, not just this run)')]=[
+            '## Selected scope','',f"- Profile: {decision['selected_profile']}",
+            f"- Roots: {', '.join(decision['selected_roots'])}",
+            f"- Excluded component roots: {', '.join(decision['excluded_components']) or 'None'}",
+            '- Unselected history remains cumulative; no assertion of assessment for excluded components.','']
     for status in sorted(STATUSES):
         lines.append(f'- {status}: {counts[status]}')
     lines.extend(['', '## Active findings register (superseded records excluded)', '',
@@ -351,7 +358,7 @@ def apply_event(ledger, entry, run):
 
 def begin(args):
     root, store = root_and_store(args.root)
-    scan = security_scan.process(root)
+    scan = security_scan.process(root,args.profile,args.component)
     with locked(store):
         index, ledger = load_state(store)
         version = index['next_version']
@@ -362,6 +369,10 @@ def begin(args):
                'started_at': now(), 'finished_at': None, 'status': 'IN_PROGRESS',
                'git': git_meta(root), 'previous_run_id': index['runs'][-1]['id'] if index['runs'] else None,
                'tests': [], 'delta': {}, 'notes': '', 'scanner_summary': scan['summary']}
+        resolved=scan['summary'].get('scope_resolution')
+        if resolved:
+            run['scope_resolution']=resolved
+            run['scope']=(run['scope'] + ' | ' if run['scope'] else '') + f"Profile: {resolved['selected_profile']}; roots: {', '.join(resolved['selected_roots'])}; excluded roots: {', '.join(resolved['excluded_components']) or 'none'}"
         index['runs'].append(run)
         index['next_version'] = version + 1
         atomic(rdir / 'scanner.json', dump(scan))
@@ -393,6 +404,7 @@ def begin(args):
         snapshot(store, rdir, run, ledger, scan)
     print(dump({'run_id': run_id, 'version': version, 'location': str(rdir),
                'current_report': str(store / 'CURRENT.md'), 'new_candidates': created,
+               'scope_resolution': scan['summary'].get('scope_resolution'),
                'next': f'python3 <skill-dir>/scripts/security_tracker.py record --root <repo-root> --run {run_id} --file <reviewed-findings.json>'}).strip())
 
 
@@ -615,6 +627,8 @@ def main():
     p.add_argument('--root', default='.')
     p.add_argument('--mode', choices=sorted(MODES), default='audit')
     p.add_argument('--scope', default='', help='Short human-readable scope')
+    p.add_argument('--profile', choices=security_scan.PROFILES, help='Explicit scope profile; omitted preserves legacy behavior')
+    p.add_argument('--component', action='append', default=[], help='Repeatable project-relative component root')
     p.set_defaults(fn=begin)
     p = subs.add_parser('record', help='Import manually reviewed findings from JSON file or stdin')
     p.add_argument('--root', default='.')
