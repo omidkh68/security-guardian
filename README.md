@@ -9,7 +9,7 @@
 [![CI](https://github.com/omidkh68/security-guardian/actions/workflows/ci.yml/badge.svg)](https://github.com/omidkh68/security-guardian/actions/workflows/ci.yml)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB)
-![Version](https://img.shields.io/badge/version-1.2.0-16a085)
+![Version](https://img.shields.io/badge/version-1.2.1-16a085)
 ![Offline Triage](https://img.shields.io/badge/scanner-offline%20%26%20read--only-brightgreen)
 
 **145 controls** · **13 security domains** · **107 playbooks** · **versioned audit history**

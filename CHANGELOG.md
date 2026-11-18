@@ -2,6 +2,18 @@
 
 All notable changes to this open-source distribution are documented here. Dates are UTC and versions follow semantic versioning.
 
+## [1.2.1] — 2026-11-18
+
+### Fixed
+- Generate numeric process-ID suffixes in installer backup names; sequential upgrades within the same second retain distinct backups and preserve existing legacy backups (#24, #25).
+- Recognize container build-context secret exposure under CLOUD-05 and unpinned CI runner/tool images under SDLC-08 (#11, #26).
+- Preserve build-context classification when remediation updates the finding reason to describe ignore rules and environment-file exclusions (#27).
+
+### Validation
+- All four CI jobs passed for the fixes, including 34 tests in the final Python 3.12 run.
+- A maintainer-run read-only mapping audit on the merged fixes returned 12 MATCHED and zero entries requiring mapping attention; explicit legacy SSR reclassification retained its security status and history.
+- Mapping correctness does not establish vulnerability remediation, complete control coverage or deployment safety. Existing audit records, installer flags and PDF formats remain compatible.
+
 ## [1.2.0] — 2026-11-17
 
 ### Added
