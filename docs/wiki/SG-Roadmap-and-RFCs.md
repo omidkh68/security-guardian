@@ -13,6 +13,19 @@ We prioritize relevance, ease of use and safe fixes before optional enterprise c
 | Quality / expansion | continuous | Benchmarks from day one; add practical API/mobile/PKI/infra/test adapters based on actual demand and proven scope |
 | Later optional | demand-driven | CI SARIF, full authenticated DAST, deeper taint, SBOM/VEX/signing, fuzzing, APK/IPA for users who need them. Not required for the default quick audit. |
 
+## Mandatory RFC / PR review gates
+
+The [five engineering pillars and four product guardrails](SG-Vision.md) are the review policy for each phase. Do not turn optional integrations into baseline prerequisites or add parallel platform infrastructure without a demonstrated need.
+
+Before accepting an RFC or implementation PR:
+
+- [ ] Identify at least one pillar and a real scoped developer scenario.
+- [ ] Choose the smallest compatible design; describe rejected complexity and explicit non-goals.
+- [ ] Define positive, negative, failure-path and irrelevant-stack acceptance tests.
+- [ ] Limit input/output context and loaded packs to selected capability scope.
+- [ ] Verify authorization, privacy, trust boundaries, backward compatibility and failure/report behavior.
+- [ ] Distinguish implemented, partial, proposed and unverified capabilities; disclose actual test results, limits and remaining blockers.
+
 ## RFC dependency order
 
 1. Operational scope resolver and profile contract.

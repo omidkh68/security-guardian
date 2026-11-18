@@ -33,6 +33,31 @@ Install one portable Agent Skill. Ask it to audit or fix a project or selected l
 - Offline by default; optional advisory databases/tools/network operations require explicit policy. No secret upload, unauthorized remote scans or production deployment.
 - Honest outputs: distinguish candidate, confirmed, fixed-unverified, verified-fixed, blocked, false positive, accepted risk and external ownership.
 
+## Five engineering pillars (maintainer-approved product direction)
+
+| Pillar | A proposed change must improve | Evidence to request |
+|---|---|---|
+| 01 — Stack intelligence | Component/technology discovery and relevance of the selected controls | Scope fixtures, no unrelated packs, unknowns explicitly reported |
+| 02 — Practical vulnerability detection | Detection of important, common, actionable flaws | Positive and safe negative fixtures, measured precision/recall where available |
+| 03 — Safe remediation | A minimal fix that preserves intended behavior and architecture | Focused diff, approval for sensitive changes, regression and rollback evidence |
+| 04 — Evidence-based verification | Confidence grounded in actual security tests | Executed assertion/result, scope and source identity, explicit unverified states |
+| 05 — Persistent security memory | Reliable follow-up across runs, including regressions and blockers | Stable IDs, compatible history, actionable residual-risk reports |
+
+## Design guardrails — prevent product drift
+
+| Risk | Binding review rule | Reject or defer when |
+|---|---|---|
+| Overengineering | Prefer the smallest local, dependency-light solution; reuse existing tools and current tracker. Add architectural layers only for a demonstrated need. | A new service, dependency or engine is mandatory without a concrete developer benefit or simpler alternative analysis. |
+| Feature creep | Every RFC and PR maps to at least one pillar and a real developer scenario, with explicit non-goals and acceptance tests. Prioritize a working detection-to-verified-fix loop. | An optional feature delays the core loop or adds maintenance burden without measurable value. |
+| False confidence | Separate signals, confirmed findings, tests and verified fixes. Publish actual scope, limitations and denominators; use current authoritative requirements, not invented compliance scores. | Missing evidence is treated as a pass; unsupported stack, guaranteed security or accuracy claims appear. |
+| Context overload | Load core guidance plus only relevant, selected capability packs; use progressive disclosure and bounded outputs. | A routine audit requires unrelated playbooks, a full catalog dump, or an unjustified expansion of scope. |
+
+These guardrails are project engineering policy, not a claim that the current runtime enforces every gate. Review security-sensitive changes using least privilege, defense in depth, explicit trust boundaries, abuse cases, small reversible changes and independently reviewable evidence. No affiliation with or endorsement by any company is implied.
+
+## Definition of done for an operational feature
+
+Describe the relevant stack-specific user scenario, mapping to pillars, approach and simpler rejected alternatives; show positive/negative and failure-path tests, scope/consent/privacy controls, backward compatibility, operational limits, and the evidence presented to a user. Do not close an RFC or state a feature is supported until its acceptance gates are demonstrated. Document blockers and what remains unverified rather than widening the scope to hide them.
+
 ## What success means
 
 A new user can install, ask for an audit, understand what is being reviewed, obtain a prioritized actionable report, approve a small fix, and see a meaningful verification result without learning a separate security platform. Benchmark per stack and vulnerability family; track detection precision/recall, fix success, regressions, scope precision, time to first actionable finding and onboarding effort. Set quantitative targets only after baseline measurements.
