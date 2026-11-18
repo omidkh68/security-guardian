@@ -25,8 +25,20 @@ CATEGORY_CONTROL = {
     'ci_branch_protection': 'SDLC-01',
     'ssh_host_trust': 'HOST-02',
     'host_patch_management': 'HOST-01',
+    'container_build_secret_exposure': 'CLOUD-05',
+    'ci_image_pinning': 'SDLC-08',
 }
 HINTS = {
+    # Require a specific build-context/secret relationship, not merely Docker
+    # or .dockerignore. CI image pinning is distinct from runtime image pinning.
+    'container_build_secret_exposure': [
+        r'\b(?:environment files?|secrets?|credentials?|\.env(?:\.[\w-]+)?)\b[^\n.;]{0,100}\b(?:Docker (?:build(?:er)?(?: context)?|image)|builder layers?|image layers?|container build context)\b',
+        r'\b(?:Docker (?:build(?:er)?(?: context)?|image)|builder layers?|image layers?|container build context)\b[^\n.;]{0,100}(?:\b(?:environment files?|secrets?|credentials?)\b|\.env(?:\.[\w-]+)?)',
+    ],
+    'ci_image_pinning': [
+        r'\b(?:CI(?:/CD)?|pipeline|runner)\s+(?:tool\s+)?(?:container\s+)?images?\b[^\n.;]{0,90}\b(?:mutable|unpinned|not (?:digest[ -])?pinned|without (?:a )?digest|missing (?:a )?digest)\b',
+        r'\b(?:mutable|unpinned|non[ -]digest[ -]pinned)\s+(?:CI(?:/CD)?|pipeline|runner)\s+(?:tool\s+)?(?:container\s+)?images?\b',
+    ],
     'ssr_host_proxy_trust': [r'\b(?:X-Forwarded-Host|tenant host mapping|SSR host allowlists?|host-based tenant routing|untrusted host header|spoofed host header)\b'],
     'script_xss': [r'\b(?:JSON.LD|script.breakout|stored XSS|reflected XSS|script injection|unsafe innerHTML|bypassSecurityTrustHtml)\b'],
     'security_headers': [r'\b(?:security headers?|content.security.policy|csp|hsts|frame.ancestors|x.content.type.options|nosniff|referrer.policy)\b'],
