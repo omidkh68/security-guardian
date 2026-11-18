@@ -2,6 +2,15 @@
 
 All notable changes to this open-source distribution are documented here. Dates are UTC and versions follow semantic versioning.
 
+## [Unreleased]
+
+### Added
+- Read-only project scope preview, manifest-based component inventory and explicit frontend/backend/fullstack/mobile/custom profiles; selected scanner rule families and per-run scope metadata (#31).
+- New framework names are discovery hints only, not expanded vulnerability detection coverage.
+
+### Compatibility
+- Direct commands without scope flags retain legacy scanning. Project instruction persistence and scoped specialist adapters remain future work.
+
 ## [1.2.1] — 2026-11-18
 
 ### Fixed

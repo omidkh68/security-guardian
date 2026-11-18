@@ -92,7 +92,7 @@ def project_files(root:Path, stats=None):
         depth=len(Path(base).relative_to(root).parts)
         kept=[]
         for f in sorted(folders):
-            if f in EXCLUDE_DIRS or f.startswith('.git') or (Path(base).name=='.claude' and f in {'skills', 'plugins'}):
+            if f in EXCLUDE_DIRS or f.startswith('.git') or (Path(base).name in {'.claude','.agents','.gemini'} and f in {'skills', 'plugins'}):
                 skipped('excluded_directory')
             elif (Path(base)/f).is_symlink():
                 skipped('symlink_directory')
@@ -115,7 +115,8 @@ def project_files(root:Path, stats=None):
                 skipped('excluded_sensitive_or_lockfile'); continue
             try:
                 size=p.stat().st_size
-            except OSError: skipped('unreadable_stat'); continue
+            except OSError:
+                skipped('unreadable_stat'); stats['truncated']=True; continue
             if size > MAX_FILE_BYTES: skipped('oversized_file'); stats['truncated']=True; continue
             count+=1
             stats['scanned_files'] += 1
@@ -320,7 +321,7 @@ def resolve_scope(root, files, coverage, profile='auto', requested=()):
     if explicit:
         selected = [x for x in rows if x['root'] in explicit]
     elif profile == 'auto':
-        if len(active) == 1 and not coverage.get('truncated') and not any(x['errors'] for x in rows):
+        if len(active) == 1 and len(active[0]['roles']) <= 1 and not coverage.get('truncated') and not any(x['errors'] for x in rows):
             selected = active
         else:
             reasons.append('Choose a profile or explicit component roots; auto discovery is ambiguous or incomplete.')
@@ -356,7 +357,7 @@ def resolve_scope(root, files, coverage, profile='auto', requested=()):
             'selected_roots':selected_roots,'components':rows,
             'selected_components':selected,'excluded_components':[x['root'] for x in rows if x['root'] not in selected_roots],
             'selected_domains':sorted({d for x in selected for d in _domains(x)}),
-            'reasons':reasons,'limitations':limitations,'discovery_coverage':dict(coverage)}
+            'reasons':reasons,'limitations':limitations,'discovery_coverage':{**coverage,'skipped':dict(coverage.get('skipped',{}))}}
 
 
 def preview_scope(root, profile='auto', components=()):
@@ -386,6 +387,7 @@ def process(root:Path, profile=None, components=()):
             if _owner(p.relative_to(root).as_posix(),scope['components']) in selected_by_root:
                 included.append(p)
         coverage['skipped']['outside_selected_scope']=len(files)-len(included)
+        coverage['scanned_files']=len(included)
         files=included
     rels={p.relative_to(root).as_posix():p for p in files}
     names=set(rels)

@@ -47,9 +47,9 @@ Read applicable existing project instructions (AGENTS.md and native context) as 
 
 1. Determine **repository root** (monorepo root when appropriate). Run at the beginning, *before* auditing or editing code:
 
-   `python3 <skill-dir>/scripts/security_tracker.py begin --root <repo-root> --mode <mode> --scope "<short-scope>" --profile <resolved-profile> [--component <selected-root> ...]`
+   `python3 <skill-dir>/scripts/security_tracker.py begin --root <repo-root> --mode <mode> --scope "<short-scope>" --profile <requested-profile> [--component <explicit-root> ...]`
 
-   Use the preview's requested profile and same explicit roots (not a guessed replacement). Parse the JSON response to capture exact `run_id`, `version`, report location and current finding IDs. The tracker **automatically performs offline preliminary triage and stores candidate indicators**, but does not execute tests or fix code. Reuse the same run ID throughout this invocation.
+   Use the preview's requested profile and same explicit roots (not a guessed replacement). Compare the returned scope resolution to the preview; if it changed, finalize PARTIAL without editing and resolve scope again. Parse the JSON response to capture exact `run_id`, `version`, report location and current finding IDs. The tracker **automatically performs offline preliminary triage and stores candidate indicators**, but does not execute tests or fix code. Reuse the same run ID throughout this invocation.
 2. Read `references/workflows/tracking.md` before recording results. Review historical `<repo>/.security-guardian/ledger.json` or `CURRENT.md` to prioritize `CONFIRMED_OPEN`, `BLOCKED`, `DEFERRED`, `FIXED_UNVERIFIED`, `CANDIDATE`, and regression candidates. **Link every confirmed finding, fix, and unresolved decision to the original stable finding ID**, preferably by explicitly passing `id` from the ledger. Never use line numbers alone as IDs.
 3. As you find and review issues, write reviewed finding data to a *temporary JSON file outside the project* (or standard input) using the documented schema, then run:
 

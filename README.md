@@ -132,6 +132,17 @@ python3 plugins/security-guardian/skills/security-guardian/scripts/security_scan
 
 The scanner is **triage**, not an independent confirmation of all 145 controls. It cannot inspect a live server, cloud IAM, actual production secrets policies, or non-repository settings.
 
+## Scope preview (development — RFC #31)
+
+The current development branch adds a read-only manifest inventory and explicit component profiles. This is discovery, **not new framework-specific rule coverage**; v1.2.1 releases do not contain these commands yet.
+
+```bash
+python3 plugins/security-guardian/skills/security-guardian/scripts/security_scan.py \
+  --root /path/to/project --discover --profile auto
+```
+
+Use `--profile frontend|backend|fullstack|mobile|custom` and repeat `--component <relative-root>` when selecting explicit components. See [scope contract](docs/scope-resolution.md). Existing manual invocations without a profile retain legacy behavior.
+
 ## 🔍 Optional structural scanning and coverage evidence
 
 In addition to its zero-dependency Python triage, Security Guardian offers **optional local Semgrep structural/AST-backed candidate detection**. It never silently installs Semgrep or claims that an unavailable engine has passed. Raw matched source snippets are excluded from the report.
