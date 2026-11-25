@@ -7,7 +7,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ### Added
 - Add structured PDF/JSON/Markdown management and technical reporting with residual risk and privacy boundaries (#98, #109).
 - Expand bounded semantic flow (Python v5, DOM v4, Node SQL v2) and replay the pinned external context (#107, #110).
-- Extend Python SQL AST to v6 and compare frozen scanners on identical external inputs; report residual misses (#111, #112, #116).
+- Extend Python SQL AST to v6/v7 with named and absolute-import factories, bounded logging and explicit finally paths; preserve frozen benchmark evidence and report residual limitations (#111, #112, #116, #117).
 - Add authorized Node 22/24 verification adapter and synthetic before/after tenant/state-race tests (#35, #113, #115).
 - Complete legacy Persian documentation inventory and paired architecture index/backfill (#54, #114).
 - Add pinned external CWE-89 evaluation and separate post-freeze semantic holdout reporting (#96).

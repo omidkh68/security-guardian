@@ -314,10 +314,36 @@ class SemanticFlowTests(unittest.TestCase):
             self.assertEqual(len(self.hits(result)),count)
             self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
             self.assertGreater(result['summary']['python_sql_flow']['try_normal_paths'],0)
-        self.assertFalse(self.hits(self.run_scan('    try:\n        return "fixed"\n    finally:\n        db.execute(request.args["q"])\n',header,prefix)))
+        self.assertEqual(len(self.hits(self.run_scan('    try:\n        return "fixed"\n    finally:\n        db.execute(request.args["q"])\n',header,prefix))),1)
         self.assertFalse(self.hits(self.run_scan('    db.execute(request.args["q"]).unknown()\n',header,prefix)))
         self.assertFalse(self.hits(self.run_scan('    db.execute(request.args["q"])\n',header+'sqlite3.connect=unknown\n',prefix)))
         self.assertFalse(self.hits(self.run_scan('    db.execute(request.args["q"])\n',header,prefix.replace('view()','view(connect)'))))
+
+    def test_absolute_factory_and_builtin_logging(self):
+        self.write('api/storage/db.py','import sqlite3\nimport os\ndef connection():\n    return sqlite3.connect("fixture.db")\n')
+        header='from flask import request\nfrom storage.db import connection as open_db\n'
+        prefix='def view():\n    db=open_db()\n    c=db.cursor()\n'
+        body='    value=request.form["q"]\n    print("fixture",value)\n    c.execute(value)\n'
+        result=self.run_scan(body,header,prefix)
+        self.assertEqual(len(self.hits(result)),1)
+        self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertFalse(self.hits(self.run_scan(body.replace('c.execute(value)','c.execute("SELECT ?",(value,))'),header,prefix)))
+        self.assertFalse(self.hits(self.run_scan(body,header+'print=unknown\n',prefix)))
+        self.assertFalse(self.hits(self.run_scan(body,header,prefix.replace('view()','view(open_db)'))))
+        self.assertFalse(self.hits(self.run_scan(body,header,prefix.replace('view()','view(print)'))))
+        self.write('api/storage/db.py','import sqlite3\nsqlite3.connect=unknown\ndef connection():\n    return sqlite3.connect("fixture.db")\n')
+        self.assertFalse(self.hits(self.run_scan(body,header,prefix)))
+
+    def test_explicit_finally_and_normal_else(self):
+        for exit_stmt in ('return "fixed"','raise ValueError("fixture")'):
+            body='    try:\n        '+exit_stmt+'\n    finally:\n        cur.execute(request.args["q"])\n    cur.execute(request.args["unreachable"])\n'
+            result=self.run_scan(body)
+            self.assertEqual(len(self.hits(result)),1)
+            self.assertGreater(result['summary']['python_sql_flow']['explicit_finally_paths'],0)
+        body='    try:\n        return "fixed"\n    except ValueError:\n        pass\n    else:\n        cur.execute(request.args["unreachable"])\n    finally:\n        cur.execute("SELECT 1")\n'
+        self.assertFalse(self.hits(self.run_scan(body)))
+        body='    try:\n        try:\n            return "fixed"\n        finally:\n            return "changed"\n    finally:\n        cur.execute(request.args["q"])\n'
+        self.assertEqual(len(self.hits(self.run_scan(body))),1)
 
 if __name__=='__main__':
     unittest.main()
