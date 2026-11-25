@@ -96,7 +96,13 @@ class ProfessionalReportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store=Path(tmp);rd=store/'run';rd.mkdir()
             (rd/'findings.json').write_text(json.dumps(ledger));(rd/'scanner.json').write_text(json.dumps(scan))
-            with patch.dict(sys.modules,{'reportlab':None}):
+            import builtins
+            original_import=builtins.__import__
+            def without_reportlab(name,*args,**kwargs):
+                if name=='reportlab' or name.startswith('reportlab.'):
+                    raise ImportError('Simulated missing ReportLab')
+                return original_import(name,*args,**kwargs)
+            with patch('builtins.__import__',side_effect=without_reportlab):
                 with self.assertRaisesRegex(RuntimeError,'PDF_UNAVAILABLE'):r.export_report(store,rd,run)
                 self.assertFalse((rd/'RUN.pdf').exists())
                 self.assertFalse(list(rd.glob('.sg-report-*')))
