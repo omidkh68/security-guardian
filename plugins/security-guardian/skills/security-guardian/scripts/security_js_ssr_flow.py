@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Optional scoped Next.js server-render trust-boundary AST review. Explicit trusted parser; no target execution."""
+"""Optional scoped Next.js and Angular server-render trust-boundary AST review. Explicit trusted parser; no target execution."""
 import argparse
 import json
 import os
@@ -31,12 +31,12 @@ def review(root, profile, components, parser):
                 and set(c['frameworks']) & {'Next.js','Angular','Nuxt','SvelteKit'}}
     roots = set(selected)
     stats = Counter()
-    result = {'schema_version':1, 'pack_id':'js-ssr-flow', 'pack_version':1,
-              'rule_id':RULE, 'legacy_control_id':'ANG-01', 'status':'NOT_AVAILABLE',
+    result = {'schema_version':1, 'pack_id':'js-ssr-flow', 'pack_version':2,
+              'rule_id':RULE, 'rule_ids':[RULE,'JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT'], 'legacy_control_id':'ANG-01', 'status':'NOT_AVAILABLE',
               'selected_roots':sorted(roots), 'signals':[],
-              'unsupported_frameworks':sorted({f for fs in selected.values() for f in fs if f!='Next.js'}),
+              'unsupported_frameworks':sorted({f for fs in selected.values() for f in fs if f not in {'Next.js','Angular'}}),
               'limitations':['Optional syntactic AST flow, not exploit proof or full taint analysis.',
-                             'Next.js Pages Router only: same-file getServerSideProps to default page raw HTML. App Router, Angular SSR, Nuxt, SvelteKit, caching, helpers and cross-module flow require manual review.',
+                             'Next.js Pages Router and direct Angular CommonEngine document inputs only. App Router, Angular TransferState/templates/other server engines, Nuxt, SvelteKit, caching, helpers and cross-module flow require manual review.',
                              'Trusted parser execution is not an OS sandbox; no project code or config loaded.',
                              'No ledger update; review and record candidates manually.']}
     def finish(status):
@@ -66,8 +66,10 @@ def review(root, profile, components, parser):
         owner = scan._owner(rel,scope['components'])
         parts = p.relative_to(root / owner).parts
         route = parts[2:] if parts[:2] == ('src','pages') else parts[1:] if parts[:1] == ('pages',) else ()
-        if ('Next.js' not in selected[owner] or not route or route[0]=='api'
-                or route[-1].split('.')[0] in {'_app','_document','_error'}):
+        pages_route = ('Next.js' in selected[owner] and bool(route) and route[0]!='api'
+                       and route[-1].split('.')[0] not in {'_app','_document','_error'})
+        angular_server = ('Angular' in selected[owner] and parts in {('server.ts',),('src','server.ts'),('server.js',),('src','server.js')})
+        if not pages_route and not angular_server:
             stats['unmodeled_files'] += 1
             continue
         if len(inputs) >= MAX_FILES:
@@ -85,7 +87,7 @@ def review(root, profile, components, parser):
             continue
         total += len(raw)
         inputs.append({'suffix':p.suffix,'content':content,
-                       'frameworks':selected[owner], 'pages_route':True})
+                       'frameworks':selected[owner], 'pages_route':pages_route, 'angular_server':angular_server})
         paths.append(rel)
         sizes.append(len(content.splitlines())+1)
     try:
@@ -115,12 +117,16 @@ def review(root, profile, components, parser):
                 line, source = hit['line'], hit['source_lines']
                 if type(line) is not int or not 1<=line<=limit or not isinstance(source,list) or not source or len(source)>16 or any(type(n) is not int or not 1<=n<=limit for n in source):
                     raise ValueError('Invalid parser evidence')
+                rule = hit.get('rule_id', RULE)
+                if rule not in result['rule_ids']:
+                    raise ValueError('Unknown parser rule')
                 stats['matches'] += 1
                 if len(result['signals'])>=MAX_HITS:
                     stats['omitted_matches'] += 1
                     continue
-                result['signals'].append({'rule_id':RULE,'control_id':'ANG-01',
-                    'signal':'Next.js server-derived page prop reaches raw HTML render',
+                result['signals'].append({'rule_id':rule,'control_id':'ANG-01',
+                    'signal':('Angular request input reaches CommonEngine HTML document' if rule!=RULE else
+                              'Next.js server-derived page prop reaches raw HTML render'),
                     'path':rel,'line':line,'source_lines':source,
                     'source_lines_truncated':hit['source_lines_truncated'] is True,
                     'status':'HEURISTIC_REVIEW_ONLY','technique':'BOUNDED_AST_FLOW',

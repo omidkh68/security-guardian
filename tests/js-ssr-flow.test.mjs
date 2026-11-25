@@ -71,3 +71,35 @@ test('unsupported frameworks and invalid syntax never certify',{skip:!parser},t=
   const bad=run(fixture(t,'export function broken( {'));
   assert.equal(bad.status,'PARTIAL');assert.equal(bad.coverage.parse_errors,1);
 });
+
+const ng=(body)=>'import express from "express";\nimport {CommonEngine as Engine} from "@angular/ssr/node";\nconst app=express();\nconst engine=new Engine();\napp.get("/", async (input,res)=>{\n'+body+'\n});';
+test('Angular SSR document and JSON-LD candidates; bounded negatives', {skip:!parser}, t=>{
+  const cases=[
+    ['direct',true,ng('return engine.render({document: "<main>"+input.query.name+"</main>"});')],
+    ['json-ld',true,ng('const data=JSON.stringify({name:input.query.name}); const html="<script type=application/ld+json>"+data+"</script>"; return await engine.render({document:html});')],
+    ['params-alias',true,ng('const n=input.params["slug"]; return engine.render({document:"<p>"+n+"</p>"});')],
+    ['constant',false,ng('return engine.render({document:"<main>PRIVATE_SYNTHETIC_TEXT</main>"});')],
+    ['unknown-engine',false,ng('return other.render({document:input.query.name});')],
+    ['shadow',false,ng('const JSON="fixed"; return engine.render({document:JSON.stringify(input.query.name)});')],
+    ['other-option',false,ng('return engine.render({document:"<main></main>",url:input.query.name});')],
+    ['helper',true,ng('return engine.render({document:build(input.query.name)});')]
+  ];
+  const counts={tp:0,tn:0,fp:0,fn:0};let partial=0;
+  for(const [label,positive,code] of cases){
+    const r=run(fixture(t,code,'@angular/core','src/server.ts'));
+    assert.deepEqual(r.selected_roots,['web'],label);
+    assert.ok(r.signals.every(s=>s.path==='web/src/server.ts'&&s.rule_id==='JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT'&&s.status==='HEURISTIC_REVIEW_ONLY'),label);
+    assert.ok(!JSON.stringify(r).includes('PRIVATE_SYNTHETIC_TEXT'),label);
+    counts[positive?(r.signals.length?'tp':'fn'):(r.signals.length?'fp':'tn')]++;
+    if(r.status==='PARTIAL')partial++;
+    if(['unknown-engine','shadow','helper'].includes(label))assert.equal(r.status,'PARTIAL',label);
+    if(label==='direct')assert.deepEqual(r.signals.map(s=>[s.line,s.source_lines]),[[6,[6]]]);
+  }
+  assert.deepEqual(counts,{tp:3,tn:4,fp:0,fn:1});
+  const client=run(fixture(t,ng('return engine.render({document:input.query.name});'),'@angular/core','src/app.ts'));
+  assert.equal(client.status,'PARTIAL');assert.deepEqual(client.signals,[]);
+  console.log(JSON.stringify({kind:'SYNTHETIC_ANGULAR_SSR_DOCUMENT_BASELINE',cases:cases.length,...counts,partial,
+    precision:{numerator:counts.tp,denominator:counts.tp+counts.fp,value:counts.tp/(counts.tp+counts.fp)},
+    recall:{numerator:counts.tp,denominator:counts.tp+counts.fn,value:counts.tp/(counts.tp+counts.fn)},
+    scope_isolation:{passed:cases.length,total:cases.length}}));
+});

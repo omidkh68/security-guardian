@@ -444,7 +444,7 @@ For contributors: [private npm/npx distribution preview](docs/npm-distribution.m
 
 [Optional Node API SQL AST review](docs/js-sql-flow.md) ([فارسی](docs/js-sql-flow-FA.md)): bounded Express/Fastify/NestJS to pg query-text review.
 
-[Optional SSR AST review](docs/js-ssr-flow.md) ([فارسی](docs/js-ssr-flow-FA.md)): bounded Next.js Pages Router request-to-raw-render flow; other SSR paths require review.
+[Optional SSR AST review](docs/js-ssr-flow.md) ([فارسی](docs/js-ssr-flow-FA.md)): bounded Next.js Pages Router raw-render and Angular CommonEngine document flows; other SSR paths require review.
 
 JS/TS DOM AST v2 adds bounded branches and same-file helper summaries (#88).
 
