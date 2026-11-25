@@ -35,6 +35,69 @@ class CoverageTests(unittest.TestCase):
             self.assertGreaterEqual(coverage['skipped']['depth_limit_directory'], 1)
             self.assertEqual(coverage['scanned_files'], 1)
 
+    def test_invalid_encoding_is_incomplete_not_counted_as_read(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'bad.ts').write_bytes(b'\xff\xfe')
+            (root / 'safe.ts').write_text('const safe = true;\n')
+            (root / 'safe.test.ts').write_text('element.innerHTML = payload;\n')
+            result = scan.process(root)
+            coverage = result['summary']['scan_coverage']
+            self.assertEqual(coverage.get('selected_files'), 3)
+            self.assertEqual(coverage.get('read_files'), 2)
+            self.assertEqual(coverage.get('inspected_files'), 1)
+            self.assertEqual(coverage['skipped'].get('invalid_source_encoding'), 1)
+            self.assertEqual(coverage['skipped'].get('test_fixture'), 1)
+            self.assertTrue(coverage['truncated'])
+            self.assertFalse(result['signals'])
+
+    def test_unreadable_selected_source_is_counted_without_leaking_error(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'bad.ts').write_text('element.innerHTML = payload;')
+            (root / 'safe.ts').write_text('const safe = true;')
+            read_text = Path.read_text
+
+            def guarded_read(path, *args, **kwargs):
+                if path.name == 'bad.ts':
+                    raise PermissionError('PRIVATE_ERROR_DETAIL')
+                return read_text(path, *args, **kwargs)
+
+            with patch.object(Path, 'read_text', guarded_read):
+                result = scan.process(root)
+            coverage = result['summary']['scan_coverage']
+            self.assertTrue(coverage['truncated'])
+            self.assertEqual(coverage['skipped']['unreadable_source'], 1)
+            self.assertEqual(coverage['selected_files'], 2)
+            self.assertEqual(coverage['read_files'], 1)
+            self.assertEqual(coverage['inspected_files'], 1)
+            self.assertFalse(result['signals'])
+            self.assertNotIn('PRIVATE_ERROR_DETAIL', json.dumps(result))
+
+    def test_global_and_per_control_signal_caps_are_explicit(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'app.ts').write_text(
+                'element.innerHTML = payload;\n' * 5
+                + 'localStorage.setItem("access_token", value);\n' * 2
+            )
+            with patch.object(scan, 'MAX_SIGNALS', 3, create=True), \
+                 patch.object(scan, 'MAX_CONTROL_SIGNALS', 2, create=True):
+                result = scan.process(root)
+            summary = result['summary']
+            self.assertEqual(summary['heuristic_signals'], 7)
+            self.assertEqual(len(result['signals']), 3)
+            caps = summary.get('signal_coverage', {})
+            self.assertEqual(caps.get('omitted_global'), 4)
+            self.assertEqual(caps.get('omitted_per_control'), 3)
+            self.assertTrue(caps.get('truncated'))
+            control = next(c for c in result['controls'] if c['id'] == 'ANG-01')
+            self.assertEqual(len(control['signals']), 2)
+            self.assertEqual(control.get('signal_count'), 5)
+            self.assertIn('Evidence list truncated', scan.markdown(result))
+
     def test_missing_semgrep_is_not_misreported_as_pass(self):
         with tempfile.TemporaryDirectory() as temp:
             result = semgrep.run(Path(temp), executable='no-such-semgrep-executable')

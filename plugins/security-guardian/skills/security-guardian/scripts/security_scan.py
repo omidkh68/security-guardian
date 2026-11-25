@@ -31,6 +31,9 @@ TEXT_NAMES = {'Dockerfile','Containerfile','Caddyfile','.gitlab-ci.yml',
  'requirements.txt','pyproject.toml','pom.xml','go.mod','composer.json','Gemfile','Cargo.toml'}
 MAX_FILE_BYTES = 900_000
 MAX_FILES = 25000
+MAX_SIGNALS = 2000
+MAX_CONTROL_SIGNALS = 100
+MAX_MARKDOWN_SIGNALS = 150
 
 # id, label, regex, file suffix/name scope, confidence, severity suggestion.
 # Review these indicators in context; they are NOT exploit proofs.
@@ -416,6 +419,9 @@ def process(root:Path, profile=None, components=()):
     rels={p.relative_to(root).as_posix():p for p in files}
     names=set(rels)
     evidence=[]
+    control_evidence=defaultdict(list)
+    signal_counts=Counter()
+    coverage.update({'selected_files': len(files), 'read_files': 0, 'inspected_files': 0})
     stack=set()
     features=set()
     if any(x.endswith('/angular.json') or x=='angular.json' for x in names):stack.add('Angular')
@@ -435,11 +441,13 @@ def process(root:Path, profile=None, components=()):
         features.update(cap for c in scope['selected_components'] for cap in c['capabilities'])
     for fn,p in rels.items():
         # Avoid secret-like config values; scan only for matched patterns, never emit line text.
-        try: content=p.read_text(encoding='utf-8',errors='replace')
-        except OSError:
-            coverage['skipped']['unreadable_source']=coverage['skipped'].get('unreadable_source',0)+1
+        try: content=p.read_text(encoding='utf-8',errors='strict')
+        except (OSError, UnicodeError) as exc:
+            reason = 'invalid_source_encoding' if isinstance(exc, UnicodeError) else 'unreadable_source'
+            coverage['skipped'][reason]=coverage['skipped'].get(reason,0)+1
             coverage['truncated']=True
             continue
+        coverage['read_files'] += 1
         if Path(fn).name=='package.json':
             try:
                 pkg=json.loads(content)
@@ -466,7 +474,10 @@ def process(root:Path, profile=None, components=()):
         # Skip test fixtures where suspicious examples are intentional; keep real source.
         is_test=_test_file(fn)
         allowed_domains=_domains(selected_by_root[_owner(fn,scope['components'])]) if scope else None
-        if not is_test:
+        if is_test:
+            coverage['skipped']['test_fixture']=coverage['skipped'].get('test_fixture',0)+1
+        else:
+            coverage['inspected_files'] += 1
             source_lines = content.splitlines()
             for lineno,line in enumerate(source_lines,1):
                 if not line.strip() or line.lstrip().startswith(('*','//','#','<!--')):continue
@@ -482,9 +493,15 @@ def process(root:Path, profile=None, components=()):
                         matched = any(m.start() < len(line) < m.end()
                                       for m in regex.finditer(window))
                     if matched:
-                        evidence.append({'control_id':cid,'signal':label,'path':fn,'line':lineno,
-                            'confidence':confidence,'suggested_severity':severity,
-                            'status':'HEURISTIC_REVIEW_ONLY'})
+                        signal_counts[cid] += 1
+                        if len(evidence) < MAX_SIGNALS or len(control_evidence[cid]) < MAX_CONTROL_SIGNALS:
+                            entry={'control_id':cid,'signal':label,'path':fn,'line':lineno,
+                                'confidence':confidence,'suggested_severity':severity,
+                                'status':'HEURISTIC_REVIEW_ONLY'}
+                            if len(evidence) < MAX_SIGNALS:
+                                evidence.append(entry)
+                            if len(control_evidence[cid]) < MAX_CONTROL_SIGNALS:
+                                control_evidence[cid].append(entry)
                         # A line may contain independent security signals. Do not
                         # discard later matching rules; each requires separate triage.
     if any(x.startswith('android/') or '/android/' in x for x in names) and 'Flutter' in stack:stack.add('Android target')
@@ -524,19 +541,25 @@ def process(root:Path, profile=None, components=()):
             required=special[id]
             found=('Kubernetes' in stack if required=='k8s' else required in features)
             if not found:status,reason='NEEDS_DISCOVERY',f'Feature not detected in visible code: {required}.'
-        entries=[e for e in evidence if e['control_id']==id]
+        entries=control_evidence[id]
         result.append({**c,'applicability':status,'applicability_reason':reason,
-           'verification':'STATIC_SIGNAL_NEEDS_REVIEW' if entries else 'NOT_VERIFIED',
-           'signals':entries[:100]})
+           'verification':'STATIC_SIGNAL_NEEDS_REVIEW' if signal_counts[id] else 'NOT_VERIFIED',
+           'signal_count':signal_counts[id], 'signals':entries})
+    total_signals=sum(signal_counts.values())
+    omitted_global=total_signals-len(evidence)
+    omitted_per_control=total_signals-sum(len(items) for items in control_evidence.values())
+    signal_coverage={'global_limit':MAX_SIGNALS, 'per_control_limit':MAX_CONTROL_SIGNALS,
+        'omitted_global':omitted_global, 'omitted_per_control':omitted_per_control,
+        'truncated':bool(omitted_global or omitted_per_control)}
     summary={'catalog_controls':len(catalog),'scanned_source_files':len(files),
       'discovered_stack':sorted(stack),'feature_hints':sorted(features),
       'applicability':dict(Counter(c['applicability'] for c in result)),
-      'heuristic_signals':len(evidence),'scan_coverage':coverage,
+      'heuristic_signals':total_signals,'scan_coverage':coverage,'signal_coverage':signal_coverage,
       'indicator_rules':len(PATTERNS),'status':'NO_CONTROLS_CERTIFIED_BY_THIS_SCANNER',
       'timestamp_utc':datetime.now(timezone.utc).isoformat()}
     if scope:
         summary['scope_resolution']=scope
-    return {'summary':summary,'signals':evidence[:2000],'controls':result,
+    return {'summary':summary,'signals':evidence,'controls':result,
       'limitations':['Regex signatures are not vulnerability proof.',
       'No network requests or dynamic tests were executed.',
       'Missing an indicator does not mean the application is secure.',
@@ -546,7 +569,7 @@ def process(root:Path, profile=None, components=()):
 
 def markdown(result):
     s=result['summary']; lines=['# Security Guardian - read-only preliminary triage','',
-      f"- Source files examined: **{s['scanned_source_files']}**",f"- Handbook controls: **{s['catalog_controls']}** (not automatically verified)",
+      f"- Selected source files: **{s['scanned_source_files']}**",f"- Files read: **{s['scan_coverage']['read_files']}**; inspected for indicators: **{s['scan_coverage']['inspected_files']}**",f"- Handbook controls: **{s['catalog_controls']}** (not automatically verified)",
       f"- Stacks detected: {', '.join(s['discovered_stack']) or 'None confirmed'}",
       f"- Feature hints: {', '.join(s['feature_hints']) or 'None detected'}",
       f"- Heuristic patterns matched: **{s['heuristic_signals']}** (unconfirmed)",
@@ -562,14 +585,17 @@ def markdown(result):
     for status,qty in sorted(s['applicability'].items()):lines.append(f'- {status}: {qty}')
     lines+=['', '## Scan coverage and limitations', '']
     lines += [f'- {key}: {value}' for key,value in sorted(s['scan_coverage']['skipped'].items())]
+    caps=s['signal_coverage']
+    if caps['truncated']:
+        lines.append(f"- Evidence list truncated: {caps['omitted_global']} omitted from global list; {caps['omitted_per_control']} omitted from per-control lists. These counts can overlap.")
     lines+=['','## Review signals (source location only; no secret values)','',
       '| Control | Candidate issue | Location | Confidence | Suggested triage |',
       '|---|---|---|---|---|']
-    for e in result['signals'][:150]:
+    for e in result['signals'][:MAX_MARKDOWN_SIGNALS]:
         label=e['signal'].replace('|','/')
         lines.append(f"| {e['control_id']} | {label} | `{e['path']}:{e['line']}` | {e['confidence']} | {e['suggested_severity']} |")
     if not result['signals']:lines.append('| — | No signatures matched; this is NOT an audit pass | — | — | — |')
-    if len(result['signals'])>150:lines.append(f'... {len(result["signals"])-150} more signals (use JSON for details).')
+    if len(result['signals'])>MAX_MARKDOWN_SIGNALS:lines.append(f'... {len(result["signals"])-MAX_MARKDOWN_SIGNALS} more stored signals (use JSON for details).')
     lines+=['','## Full 145-control applicability ledger','','| ID | P | Applies | Verification | PDF page |', '|---|---|---|---|---|']
     for c in result['controls']:lines.append(f"| {c['id']} | {c['priority']} | {c['applicability']} | {c['verification']} | {c['pdf_page']} |")
     lines+=['','## Limitations',''] + [f'- {x}' for x in result['limitations']]

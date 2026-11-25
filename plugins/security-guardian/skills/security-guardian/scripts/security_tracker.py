@@ -283,10 +283,25 @@ def make_run_report(run, ledger, scan):
              f"- Run status: **{run['status']}**", f"- Git branch: `{run['git'].get('branch') or 'unknown'}`",
              f"- Git start commit: `{run['git'].get('commit') or 'unknown'}`",
              f"- Stack: {', '.join(scan['summary']['discovered_stack']) or 'Unknown'}",
-             f"- Source files scanned: {scan['summary']['scanned_source_files']}",
+             f"- Selected source files: {scan['summary']['scanned_source_files']}",
              f"- Heuristic signals: {scan['summary']['heuristic_signals']} (unconfirmed)",
              f"- Control catalog: {scan['summary']['catalog_controls']} (never automatically certified)",
              '', '## Status snapshot (entire project, not just this run)', '']
+    scan_coverage=scan['summary'].get('scan_coverage', {})
+    signal_coverage=scan['summary'].get('signal_coverage', {})
+    coverage_lines=['## Scanner coverage','']
+    if 'read_files' in scan_coverage:
+        coverage_lines.append(f"- Files read: {scan_coverage['read_files']}; inspected for indicators: {scan_coverage['inspected_files']}")
+    if scan_coverage.get('truncated'):
+        coverage_lines.append('- **Scanner coverage incomplete:** some eligible files could not be fully assessed.')
+    if signal_coverage.get('truncated'):
+        coverage_lines.append(f"- **Evidence list truncated:** {signal_coverage['omitted_global']} omitted globally; {signal_coverage['omitted_per_control']} omitted from per-control lists (counts may overlap).")
+    for reason, count in sorted(scan_coverage.get('skipped', {}).items()):
+        if count:
+            coverage_lines.append(f'- {reason}: {count}')
+    coverage_lines.extend(['- Workflow completion does not establish complete scanner coverage or verified safety.',''])
+    marker=lines.index('## Status snapshot (entire project, not just this run)')
+    lines[marker:marker]=coverage_lines
     if run.get('scope_resolution'):
         decision=run['scope_resolution']
         lines[lines.index('## Status snapshot (entire project, not just this run)'):lines.index('## Status snapshot (entire project, not just this run)')]=[
@@ -405,6 +420,8 @@ def begin(args):
     print(dump({'run_id': run_id, 'version': version, 'location': str(rdir),
                'current_report': str(store / 'CURRENT.md'), 'new_candidates': created,
                'scope_resolution': scan['summary'].get('scope_resolution'),
+               'scan_coverage': scan['summary'].get('scan_coverage', {}),
+               'signal_coverage': scan['summary'].get('signal_coverage', {}),
                'next': f'python3 <skill-dir>/scripts/security_tracker.py record --root <repo-root> --run {run_id} --file <reviewed-findings.json>'}).strip())
 
 
