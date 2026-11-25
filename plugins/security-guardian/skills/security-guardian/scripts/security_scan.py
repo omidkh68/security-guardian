@@ -155,8 +155,35 @@ def _react_next_rules(p, next_component):
         yield cid, label, regex, confidence, severity, REACT_NEXT_PACK, rule_id
 
 
+VUE_NUXT_PACK = 'vue-nuxt'
+VUE_NUXT_VERSION = 1
+VUE_NUXT_RULES = (
+    ('VUE.DOM.RAW_HTML', 'ANG-01', 'Vue v-html rendering requires trusted-input review',
+     re.compile(r'(?<![\w:-])v-html\s*='), 'medium', 'high'),
+    ('NUXT.CONFIG.PUBLIC_SECRET_NAME', 'ANG-12', 'Nuxt public runtime config with secret-like property name',
+     re.compile(r'(?:\buseRuntimeConfig\s*\(\s*\)|\$config)\s*\.public\s*\.\s*[A-Za-z0-9_]*(?:secret|private_?key|password|access_?token|refresh_?token|api_?key)[A-Za-z0-9_]*\b', re.I), 'medium', 'high'),
+)
+VUE_NUXT_SUFFIXES = WEB_CORE_SUFFIXES | {'.vue'}
+
+
+def _vue_nuxt(component):
+    return ('frontend' in component['roles']
+            and bool({'Vue', 'Nuxt'}.intersection(component['frameworks'])))
+
+
+def _vue_nuxt_rules(p, nuxt_component):
+    if p.suffix not in VUE_NUXT_SUFFIXES:
+        return
+    for rule_id, cid, label, regex, confidence, severity in VUE_NUXT_RULES:
+        if rule_id.startswith('NUXT.') and not nuxt_component:
+            continue
+        if rule_id == 'VUE.DOM.RAW_HTML' and p.suffix != '.vue':
+            continue
+        yield cid, label, regex, confidence, severity, VUE_NUXT_PACK, rule_id
+
+
 def _rules_for_file(p, allowed_domains, web_core, backend_core=False, nest=False,
-                    react_next=False, next_component=False):
+                    react_next=False, next_component=False, vue_nuxt=False, nuxt_component=False):
     """Select scoped pack rules once per file; retain unscoped legacy matching."""
     for cid, label, regex, extensions, confidence, severity in PATTERNS:
         if allowed_domains is not None and not nest and label in NEST_ONLY_LABELS:
@@ -183,6 +210,8 @@ def _rules_for_file(p, allowed_domains, web_core, backend_core=False, nest=False
         yield cid, label, regex, confidence, severity, pack_id, pack_rule
     if react_next:
         yield from _react_next_rules(p, next_component)
+    if vue_nuxt:
+        yield from _vue_nuxt_rules(p, nuxt_component)
 
 
 def _multiline_window(line, following):
@@ -523,6 +552,10 @@ def process(root:Path, profile=None, components=()):
     next_roots = {r for r in react_roots if 'Next.js' in selected_by_root[r]['frameworks']}
     react_files = 0
     react_counts = Counter()
+    vue_roots = {r for r, c in selected_by_root.items() if _vue_nuxt(c)}
+    nuxt_roots = {r for r in vue_roots if 'Nuxt' in selected_by_root[r]['frameworks']}
+    vue_files = 0
+    vue_counts = Counter()
     rels={p.relative_to(root).as_posix():p for p in files}
     names=set(rels)
     evidence=[]
@@ -590,7 +623,10 @@ def process(root:Path, profile=None, components=()):
         else:
             coverage['inspected_files'] += 1
             rules = tuple(_rules_for_file(p, allowed_domains, web_core, backend_core, nest,
-                                         owner in react_roots, owner in next_roots))
+                                         owner in react_roots, owner in next_roots,
+                                         owner in vue_roots, owner in nuxt_roots))
+            if owner in vue_roots and (p.suffix == '.vue' or (owner in nuxt_roots and p.suffix in WEB_CORE_SUFFIXES)):
+                vue_files += 1
             if owner in react_roots and p.suffix in WEB_CORE_SUFFIXES:
                 react_files += 1
             if web_core and p.suffix in WEB_CORE_SUFFIXES:
@@ -619,12 +655,14 @@ def process(root:Path, profile=None, components=()):
                             backend_counts[pack_rule] += 1
                         elif pack_id == REACT_NEXT_PACK:
                             react_counts[pack_rule] += 1
+                        elif pack_id == VUE_NUXT_PACK:
+                            vue_counts[pack_rule] += 1
                         if len(evidence) < MAX_SIGNALS or len(control_evidence[cid]) < MAX_CONTROL_SIGNALS:
                             entry={'control_id':cid,'signal':label,'path':fn,'line':lineno,
                                 'confidence':confidence,'suggested_severity':severity,
                                 'status':'HEURISTIC_REVIEW_ONLY'}
                             if pack_rule:
-                                entry.update({'pack_id': pack_id, 'pack_version': {WEB_CORE_PACK: WEB_CORE_VERSION, BACKEND_CORE_PACK: BACKEND_CORE_VERSION, REACT_NEXT_PACK: REACT_NEXT_VERSION}[pack_id],
+                                entry.update({'pack_id': pack_id, 'pack_version': {WEB_CORE_PACK: WEB_CORE_VERSION, BACKEND_CORE_PACK: BACKEND_CORE_VERSION, REACT_NEXT_PACK: REACT_NEXT_VERSION, VUE_NUXT_PACK: VUE_NUXT_VERSION}[pack_id],
                                               'rule_id': pack_rule, 'control_mapping': 'LEGACY_COMPATIBILITY'})
                             if len(evidence) < MAX_SIGNALS:
                                 evidence.append(entry)
@@ -660,6 +698,8 @@ def process(root:Path, profile=None, components=()):
                         reason='Common web-core indicator maps to this legacy control for triage; review actual applicability, not Angular-specific acceptance.'
                     if react_roots and id in {r[1] for r in REACT_NEXT_RULES}:
                         reason='React/Next review indicator maps to this legacy control; assess actual render/build boundaries.'
+                    if vue_roots and id in {r[1] for r in VUE_NUXT_RULES}:
+                        reason='Vue/Nuxt review indicator maps to this legacy control; assess actual render and runtime config boundaries.'
                 elif d in {'API','BIZ'} and 'NestJS' not in stack:
                     status,reason='NEEDS_DISCOVERY','Non-Nest backend: verify applicable controls in actual framework; no dedicated framework pack in this revision.'
                     if backend_roots and id in {key[0] for key in BACKEND_CORE_RULES}:
@@ -689,7 +729,7 @@ def process(root:Path, profile=None, components=()):
       'discovered_stack':sorted(stack),'feature_hints':sorted(features),
       'applicability':dict(Counter(c['applicability'] for c in result)),
       'heuristic_signals':total_signals,'scan_coverage':coverage,'signal_coverage':signal_coverage,
-      'indicator_rules':len(PATTERNS),'scoped_additional_indicator_rules': (3 if next_roots else 1 if react_roots else 0),'status':'NO_CONTROLS_CERTIFIED_BY_THIS_SCANNER',
+      'indicator_rules':len(PATTERNS),'scoped_additional_indicator_rules': ((3 if next_roots else 1 if react_roots else 0) + (2 if nuxt_roots else 1 if vue_roots else 0)),'status':'NO_CONTROLS_CERTIFIED_BY_THIS_SCANNER',
       'timestamp_utc':datetime.now(timezone.utc).isoformat()}
     if scope:
         summary['scope_resolution']=scope
@@ -723,6 +763,17 @@ def process(root:Path, profile=None, components=()):
                       for rid, cid, *_ in REACT_NEXT_RULES],
             'limitations': ['Text indicators only; no JSX parser, taint analysis, SSR cache or server authorization proof.',
                             'Public variable names are heuristic; values and built artifacts are not inspected by this pack.'],
+        }
+        summary['vue_nuxt'] = {
+            'pack_id': VUE_NUXT_PACK, 'pack_version': VUE_NUXT_VERSION,
+            'selected_roots': sorted(vue_roots), 'nuxt_roots': sorted(nuxt_roots),
+            'status': 'HEURISTIC_REVIEW_ONLY' if vue_roots else 'NOT_SELECTED',
+            'inspected_eligible_files': vue_files,
+            'rules': [{'rule_id': rid, 'legacy_control_id': cid, 'matches': vue_counts[rid],
+                       'enabled': bool(nuxt_roots if rid.startswith('NUXT.') else vue_roots)}
+                      for rid, cid, *_ in VUE_NUXT_RULES],
+            'limitations': ['Text indicators only; no template parser, data-flow, SSR or server authorization proof.',
+                            'Direct public config access only; aliases, computed properties and nested config require manual review.'],
         }
     return {'summary':summary,'signals':evidence,'controls':result,
       'limitations':['Regex signatures are not vulnerability proof.',
@@ -765,6 +816,12 @@ def markdown(result):
                   f"- React/Next component roots: {', '.join(pack['selected_roots']) or 'None'}",
                   f"- React/Next eligible files inspected: {pack['inspected_eligible_files']}",
                   '- React/Next indicators require manual render/build and server authorization review.', '']
+    if s.get('vue_nuxt'):
+        pack = s['vue_nuxt']
+        lines += [f"- Vue/Nuxt core v{pack['pack_version']}: {pack['status']}",
+                  f"- Vue/Nuxt component roots: {', '.join(pack['selected_roots']) or 'None'}",
+                  f"- Vue/Nuxt eligible files inspected: {pack['inspected_eligible_files']}",
+                  '- Vue/Nuxt indicators require manual render, config and server authorization review.', '']
     for status,qty in sorted(s['applicability'].items()):lines.append(f'- {status}: {qty}')
     lines+=['', '## Scan coverage and limitations', '']
     lines += [f'- {key}: {value}' for key,value in sorted(s['scan_coverage']['skipped'].items())]

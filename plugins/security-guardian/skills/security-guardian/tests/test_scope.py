@@ -133,7 +133,8 @@ class ScopeTests(unittest.TestCase):
         self.package('.','vue')
         self.write('View.vue','<div v-html="value"></div>')
         result=scan.process(self.root,'frontend')
-        self.assertFalse(result['signals'])
+        self.assertEqual([x['rule_id'] for x in result['signals']], ['VUE.DOM.RAW_HTML'])
+        self.assertTrue(all(x['pack_id'] == 'vue-nuxt' for x in result['signals']))
         self.assertEqual(result['summary']['web_core']['inspected_eligible_files'],0)
         self.assertIn('no template',result['summary']['web_core']['limitations'][0])
 
