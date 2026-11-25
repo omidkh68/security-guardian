@@ -36,11 +36,11 @@ def validate():
         assert row['difficulty_pct'] + row['ease_pct'] == 100
         assert (SKILL/'references/domains'/f"{row['domain'].lower()}.md").is_file(), row['id']
         assert (SKILL/'references/playbooks'/f"{row['playbook']}.md").is_file(), row['id']
-    assert len(list((SKILL/'references/playbooks').glob('*.md'))) == 107
-    assert len(list((SKILL/'references/domains').glob('*.md'))) == 13
+    assert len([p for p in (SKILL/'references/playbooks').glob('*.md') if not p.name.endswith('-FA.md')]) == 107
+    assert len([p for p in (SKILL/'references/domains').glob('*.md') if not p.name.endswith('-FA.md')]) == 13
     assert (ROOT/'LICENSE').read_text().startswith('MIT License')
     assert (ROOT/'install.sh').is_file()
-    for essential in ['README.md','README.fa.md','SECURITY.md','CONTRIBUTING.md',
+    for essential in ['README.md','README-FA.md','SECURITY.md','CONTRIBUTING.md',
                       '.github/workflows/ci.yml','docs/installation.md','docs/use-cases.md']:
         assert (ROOT/essential).is_file(), essential
     # Check tracked files only; unittest creates ignored __pycache__ locally.

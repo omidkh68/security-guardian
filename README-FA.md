@@ -388,11 +388,11 @@ GitHub Actions مجموعه تست آفلاین را روی سه نسخه Python
 | [سناریوهای کاربردی](docs/use-cases.md) | هشت سناریوی واقع‌گرایانه امنیتی و نتیجه‌های مورد انتظار |
 | [پیگیری](docs/tracking.md) | معنای وضعیت‌ها، نسخه‌بندی، دلایل، اصلاح ناموفق و شناسه‌های رگرسیون |
 | [مدل امنیتی](docs/security-model.md) | اجرای امن، فایل‌های حساس و محدودیت‌ها |
-| اثرانگشت راستی‌آزمایی ([EN](docs/verification-fingerprint.md)، [FA](docs/verification-fingerprint.fa.md)) | اتصال شواهد به فایل‌های انتخاب‌شده؛ نه اجرای مستقل تست |
+| اثرانگشت راستی‌آزمایی ([EN](docs/verification-fingerprint.md)، [FA](docs/verification-fingerprint-FA.md)) | اتصال شواهد به فایل‌های انتخاب‌شده؛ نه اجرای مستقل تست |
 | [رفع اشکال](docs/troubleshooting.md) | مشکلات رایج نصب یا پیگیری |
 | [مشارکت در Playbookها](docs/contributing-playbook.md) | افزودن یا بهبود امن کنترل‌ها |
 | [منشأ و منابع](docs/provenance.md) | استانداردها، خط مبنا و تفسیر امتیازهای دشواری |
-| [فارسی](README.fa.md) | ترجمه کامل همین README به فارسی |
+| [فارسی](README-FA.md) | ترجمه کامل همین README به فارسی |
 
 ## 🤝 مشارکت
 
