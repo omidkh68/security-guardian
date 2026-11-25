@@ -1,11 +1,5 @@
 {
   "schema_version": 1,
   "issue": 54,
-  "missing_persian": [
-    "docs/wiki/SG-Baseline-v1.2.1.md",
-    "docs/wiki/SG-Roadmap-and-RFCs.md",
-    "docs/wiki/SG-Stack-Profiles.md",
-    "docs/wiki/SG-Standards-and-Coverage.md",
-    "docs/wiki/SG-Vision.md"
-  ]
+  "missing_persian": []
 }
