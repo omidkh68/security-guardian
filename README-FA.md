@@ -420,3 +420,9 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 فرمان [شواهد اجرای متصل به Tracker](docs/tracker-execution-evidence-FA.md) اجرای مستقیم محلی را از شواهد دستی تفکیک می‌کند. [English](docs/tracker-execution-evidence.md).
 
 برای مشارکت‌کنندگان: [پیش‌نمایش خصوصی توزیع npm/npx](docs/npm-distribution-FA.md) ([English](docs/npm-distribution.md)) — فقط tarball محلی؛ در این مرحله بسته عمومی در رجیستری منتشر نشده است.
+
+[بسته نشانه‌های هسته وب](docs/web-core-FA.md) ([English](docs/web-core.md)): Candidateهای مشترک مرورگر در محدوده فریم‌ورک‌های کشف‌شده؛ نه تأیید اختصاصی فریم‌ورک.
+
+[بسته نشانه‌های هسته بک‌اند](docs/backend-core-FA.md) ([English](docs/backend-core.md)): Candidateهای HTTP/API محدوده‌دار Node؛ نه اثبات مجوز یا تأیید اختصاصی فریم‌ورک.
+
+[بسته بازبینی React/Next.js](docs/react-next-FA.md) ([English](docs/react-next.md)): نشانه‌های HTML خام، نام عمومی حساس‌نما و Source Map مرورگر در محدوده انتخاب‌شده؛ SSR و مجوز سرور نیازمند بازبینی هستند.

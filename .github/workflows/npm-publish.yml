@@ -1,0 +1,94 @@
+name: npm trusted publish
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Require approved stable tag on main history
+        run: |
+          node scripts/check-npm-release.mjs
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - name: Validate and test release
+        run: |
+          python scripts/validate_package.py
+          python -m pip install -r requirements-pdf.txt
+          python -m unittest discover -s plugins/security-guardian/skills/security-guardian/tests -v
+          npm test
+          node scripts/verify-npm-package.mjs
+      - name: Pack release artifact
+        run: |
+          mkdir -p "$RUNNER_TEMP/npm-release"
+          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/npm-release"
+          cd "$RUNNER_TEMP/npm-release"
+          sha256sum -- *.tgz > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-release
+          path: ${{ runner.temp }}/npm-release/
+          if-no-files-found: error
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-release
+          path: release-artifact
+      - name: Publish verified tarball using OIDC
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release-artifact
+          sha256sum -c SHA256SUMS
+          shopt -s nullglob
+          packages=(*.tgz)
+          test "${#packages[@]}" -eq 1
+          npm publish "./${packages[0]}" --access public --tag latest --ignore-scripts
+  registry-smoke:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Check exact registry version and CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          package="@omidkh68/security-guardian@$version"
+          for attempt in 1 2 3 4 5 6; do
+            if test "$(npm view "$package" version --registry https://registry.npmjs.org/)" = "$version"; then
+              break
+            fi
+            test "$attempt" -lt 6
+            sleep 10
+          done
+          test "$(npx --yes --ignore-scripts --registry https://registry.npmjs.org/ --package "$package" -- security-guardian --version)" = "$version"
