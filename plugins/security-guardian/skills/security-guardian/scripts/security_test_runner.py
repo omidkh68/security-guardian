@@ -118,7 +118,8 @@ def _execute(root, test_file, timeout):
                     'expected_failures', 'unexpected_successes'}
             if (not isinstance(payload, dict) or set(payload) != keys
                     or any(type(v) is not int or v < 0 for v in payload.values())
-                    or any(payload[k] > payload['tests_run'] for k in keys - {'tests_run'})):
+                    or any(payload[k] > payload['tests_run'] for k in
+                           ('failures', 'expected_failures', 'unexpected_successes'))):
                 raise ValueError('invalid adapter counts')
             counts = payload
         except (ValueError, UnicodeError):

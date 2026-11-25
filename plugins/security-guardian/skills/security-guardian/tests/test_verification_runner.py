@@ -68,6 +68,25 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual(receipt['result'], status)
                 self.assertFalse(receipt['independently_verified_fix'])
 
+    def test_class_setup_error_is_real_failure_and_class_skip_is_incomplete(self):
+        cases = [
+            ('import unittest\nclass Tests(unittest.TestCase):\n'
+             '    @classmethod\n'
+             '    def setUpClass(cls): raise RuntimeError("PRIVATE_FIXTURE_OUTPUT")\n'
+             '    def test_never_runs(self): pass\n', 'FAIL', 1, 'errors'),
+            ('import unittest\nclass Tests(unittest.TestCase):\n'
+             '    @classmethod\n'
+             '    def setUpClass(cls): raise unittest.SkipTest("not available")\n'
+             '    def test_never_runs(self): pass\n', 'INCOMPLETE', 2, 'skipped'),
+        ]
+        for body, status, expected_code, counter in cases:
+            with self.subTest(status=status):
+                code, receipt = self.execute(body)
+                self.assertEqual(code, expected_code)
+                self.assertEqual(receipt['result'], status)
+                self.assertEqual(receipt['counts']['tests_run'], 0)
+                self.assertEqual(receipt['counts'][counter], 1)
+
     def test_no_consent_or_missing_test_in_scope_prevents_execution(self):
         body = 'from pathlib import Path\nPath("ran").write_text("yes")\n'
         for options in ({'authorize': False}, {'files': ['app.py']}):
