@@ -428,3 +428,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 [بسته بازبینی React/Next.js](docs/react-next-FA.md) ([English](docs/react-next.md)): نشانه‌های HTML خام، نام عمومی حساس‌نما و Source Map مرورگر در محدوده انتخاب‌شده؛ SSR و مجوز سرور نیازمند بازبینی هستند.
 
 [بسته بازبینی Vue/Nuxt](docs/vue-nuxt-FA.md) ([English](docs/vue-nuxt.md)): نشانه‌های محدوده‌دار v-html و تنظیم عمومی؛ بازبینی دستی SSR و مجوز سرور.
+
+[بسته بازبینی Svelte/SvelteKit](docs/svelte-kit-FA.md) ([English](docs/svelte-kit.md)): نشانه‌های محدوده‌دار HTML خام و Import محیطی عمومی؛ بازبینی دستی SSR و مجوز سرور.
