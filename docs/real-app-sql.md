@@ -24,3 +24,14 @@ The pinned public BackdoorAli/sql-injection-demo lab covers all seven SQL execut
 ```bash
 python scripts/benchmark_semantic_context.py --external-lab
 ```
+
+## v7 follow-up (#111)
+
+Source-only absolute from-imports of zero-argument SQLite connection factories are resolved under the selected component root, never through runtime sys.path. Explicit unshadowed builtin print calls over recognized values no longer terminate a path; possible formatting/IO effects are not modeled. Explicit return and raise paths can reach pending finally blocks without executing unreachable normal tails; raise through an intervening handler remains unsupported. All these paths remain PARTIAL. Tests include safe parameters, shadowing, module mutation and nested finally. Existing external lab is a regression, not a fresh cohort; no generic exception or whole-program coverage claim.
+
+```mermaid
+flowchart LR
+ A[Selected module source] --> B[Bound factory and logging model] --> C[SQL argument candidate]
+ D[Explicit exit] --> E[Pending finally] --> C
+ E --> F[PARTIAL exception semantics]
+```

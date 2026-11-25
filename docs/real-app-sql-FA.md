@@ -24,3 +24,14 @@ flowchart TD
 ```bash
 python scripts/benchmark_semantic_context.py --external-lab
 ```
+
+## پیگیری نسخه ۷ (#111)
+
+Import مطلق تابع Factory بدون آرگومان از سورس ریشه Component منتخب حل می‌شود، نه sys.path واقعی. فراخوانی print بدون Shadowing روی مقادیر شناخته‌شده مسیر را قطع نمی‌کند؛ اثر Formatting و IO مدل نمی‌شود. مسیر return و raise صریح می‌تواند به finally معلق برسد بدون اجرای ادامه عادی غیرقابل دسترس؛ raise با Handler میانی خارج مدل است. همه مسیرها PARTIAL هستند. تست‌ها پارامتر امن، Shadowing، تغییر ماژول و finally تودرتو را پوشش می‌دهند. آزمایشگاه خارجی قبلی رگرسیون است، نه مجموعه مستقل تازه؛ ادعای پوشش عمومی Exception یا کل برنامه وجود ندارد.
+
+```mermaid
+flowchart LR
+ A[سورس منتخب] --> B[Factory و مدل محدود Log] --> C[Candidate آرگومان SQL]
+ D[خروج صریح] --> E[finally معلق] --> C
+ E --> F[معنای استثنا PARTIAL]
+```
