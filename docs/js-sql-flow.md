@@ -1,0 +1,11 @@
+# Bounded Node API request-to-SQL review
+
+P0 · #91 · [فارسی](js-sql-flow-FA.md)
+
+The opt-in rule `JS.NODE.SQL.REQUEST_FLOW` maps to API-07. It emits review candidates when a syntactically recognized HTTP input reaches the SQL text argument of a module-local PostgreSQL `pg` Pool or Client query. It recognizes direct Express/Fastify default-import factory and literal route registrations with inline handlers; NestJS controller methods require direct imported Controller, HTTP method and Query/Body/Param decorators. Import aliases are supported. Scope must select an identified backend component. No inference from request variable names alone.
+
+Run `python3 <skill-dir>/scripts/security_js_sql_flow.py --root . --profile backend --typescript-module <absolute-trusted-parser-path>` with the approved component roots. TypeScript 5.9.3 must be trusted, outside the target tree and explicitly authorized. Neither target source nor configuration is executed; no database/network calls are made. This standalone review does not change the ledger.
+
+Simple local assignments, literal concatenation, template expressions and direct query calls (including await/return) are modeled. Taint in a separate parameter array alone does not trigger a SQL text candidate. Unknown statements stop the affected handler, with PARTIAL coverage. Module-local imports and receivers are syntactic evidence only; runtime binding, reachability, parameter correctness and actual database behavior are not verified. DI, ORM, middleware, branch/loop flow, helpers, CommonJS, arbitrary factories, cross-module and dynamic dispatch remain unsupported. No result is evidence of safety. Limits: 128 files, 128 KB/file, 2 MB/batch, 10,000 AST nodes/file, 100 signals; 20-second parser timeout. Evidence contains paths and line numbers, not query text.
+
+The synthetic benchmark in tests/js-sql-flow.test.mjs includes 12 labeled scenarios, one intentionally unsupported helper, parameter arrays, shadowing and excluded components. Run npm test with SG_TEST_TYPESCRIPT set to the trusted compiler. Expected counts are test assertions, not measured results until CI executes. Review every candidate separately. Rollback: revert the PR; no ledger migration.
