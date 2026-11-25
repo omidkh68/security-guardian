@@ -16,7 +16,7 @@ An open-source, stack-aware security skill for Claude Code, Codex and Gemini CLI
 
 **145 controls** · **13 security domains** · **107 playbooks** · **versioned audit history**
 
-[Why Security Guardian?](#why-security-guardian) · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [Use cases](#-real-world-use-cases) · [Tracking](#-versioned-findings--audit-history) · [Documentation](#-documentation) · [فارسی](README.fa.md)
+[Why Security Guardian?](#why-security-guardian) · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [Use cases](#-real-world-use-cases) · [Tracking](#-versioned-findings--audit-history) · [Documentation](#-documentation) · [فارسی](README-FA.md)
 
 </div>
 
@@ -383,11 +383,11 @@ GitHub Actions runs the offline test suite on three Python versions, checks the 
 | [Use cases](docs/use-cases.md) | Eight realistic security scenarios and expected outcomes |
 | [Tracking](docs/tracking.md) | Status meanings, versioning, reasons, failed fixes and regression IDs |
 | [Security model](docs/security-model.md) | Safe operation, sensitive artifacts and limits |
-| Verification fingerprints ([EN](docs/verification-fingerprint.md), [FA](docs/verification-fingerprint.fa.md)) | Selected-file evidence binding; not an independent runner |
+| Verification fingerprints ([EN](docs/verification-fingerprint.md), [FA](docs/verification-fingerprint-FA.md)) | Selected-file evidence binding; not an independent runner |
 | [Troubleshooting](docs/troubleshooting.md) | Common installation or tracking problems |
 | [Playbook contribution](docs/contributing-playbook.md) | Add or improve controls safely |
 | [Source and provenance](docs/provenance.md) | Standards, baseline and interpretation of difficulty scores |
-| [فارسی](README.fa.md) | Complete Persian translation of this README |
+| [فارسی](README-FA.md) | Complete Persian translation of this README |
 
 ## 🤝 Contribute
 

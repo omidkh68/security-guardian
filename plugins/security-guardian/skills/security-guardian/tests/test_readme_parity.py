@@ -10,7 +10,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[5]
 EN = ROOT / 'README.md'
-FA = ROOT / 'README.fa.md'
+FA = ROOT / 'README-FA.md'
 
 FENCE = re.compile(r'^```([\w-]*)[ \t]*\n(.*?)^```[ \t]*$', re.M | re.S)
 HEADING = re.compile(r'^(#{2,3}) .+$', re.M)

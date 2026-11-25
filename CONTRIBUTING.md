@@ -32,3 +32,7 @@ Do **not** upload live vulnerabilities, tokens, confidential architectures, priv
 ## Licensing
 
 By contributing, you agree your contribution can be distributed under this repository's MIT license. Third-party standards and brand names retain their respective ownership and license terms.
+
+## Bilingual documentation
+
+Follow [AGENTS.md](AGENTS.md): English `topic.md`, complete Persian `topic-FA.md`. Update both in the same PR for any affected Skill behavior or structure. Remove completed entries from `docs/translation-backlog.json`; do not add exceptions.

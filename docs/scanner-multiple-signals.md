@@ -2,7 +2,7 @@
 
 **Status:** Implementation proposed in a PR; not independently validated until CI succeeds.  
 **Priority:** P0 · **Parent RFC:** [#34](https://github.com/omidkh68/security-guardian/issues/34) · **Maintainer:** [@omidkh68](https://github.com/omidkh68)  
-**Persian:** [فارسی](scanner-multiple-signals.fa.md)
+**Persian:** [فارسی](scanner-multiple-signals-FA.md)
 
 ## Problem
 Before this patch, the offline triage scanner stopped checking a source line after the first matching regular-expression rule. A second independent heuristic on that line was omitted from the candidate report. This caused an avoidable **false negative in heuristic discovery**, not a verified undetected vulnerability.

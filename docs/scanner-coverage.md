@@ -1,6 +1,6 @@
 # Scanner coverage and bounded evidence
 
-Priority: P0. Maintainer: [@omidkh68](https://github.com/omidkh68). Related: [#49](https://github.com/omidkh68/security-guardian/issues/49), RFC #34 and #37. [فارسی](scanner-coverage.fa.md)
+Priority: P0. Maintainer: [@omidkh68](https://github.com/omidkh68). Related: [#49](https://github.com/omidkh68/security-guardian/issues/49), RFC #34 and #37. [فارسی](scanner-coverage-FA.md)
 
 ## Coverage contract
 

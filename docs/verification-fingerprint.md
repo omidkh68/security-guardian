@@ -1,6 +1,6 @@
 # Verification foundation: selected-file fingerprints
 
-Maintainer: [@omidkh68](https://github.com/omidkh68). P0; [milestone v1.3.0](https://github.com/omidkh68/security-guardian/milestone/1). Related: #51 and RFC #35. [فارسی](verification-fingerprint.fa.md)
+Maintainer: [@omidkh68](https://github.com/omidkh68). P0; [milestone v1.3.0](https://github.com/omidkh68/security-guardian/milestone/1). Related: #51 and RFC #35. [فارسی](verification-fingerprint-FA.md)
 
 ## Purpose
 Detect changes to explicitly selected source, configuration and test inputs before accepting test evidence. This component is a read-only building block, not the test runner, complete dependency inventory, or a finding verification decision.
