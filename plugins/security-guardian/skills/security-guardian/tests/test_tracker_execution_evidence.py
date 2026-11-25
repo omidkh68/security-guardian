@@ -266,5 +266,35 @@ class SecurityTests(unittest.TestCase):
                   'status':'VERIFIED_FIXED','verification':payload['verification']},expected=2)
         self.assertEqual((self.other/'other.py').read_text(),'pass\n')
 
+
+    def test_changed_component_inventory_blocks_execution_and_receipt(self):
+        result=self.execute()
+        self.assertEqual(result['result'],'PASS')
+        (self.api/'nested').mkdir()
+        (self.api/'nested'/'package.json').write_text('{"dependencies":{"react":"19"}}')
+        self.verified(result['test_id'],review='Reviewed fixture assertion',expected=2)
+        (self.api/'test_security.py').write_text('from pathlib import Path\nPath("ran").write_text("unexpected")\n')
+        self.execute(expected=2)
+        self.assertFalse((self.root/'ran').exists())
+        self.assertEqual(len(self.run_data()['tests']),1)
+
+    def test_dirty_git_index_and_unrelated_worktree_are_preserved(self):
+        def git(*args):
+            return subprocess.run(['git','-C',str(self.root),*args],check=True,capture_output=True).stdout
+        git('init','-q')
+        git('add','api','web')
+        git('-c','user.name=SG fixture','-c','user.email=fixture@example.invalid','commit','-qm','fixture')
+        file=self.other/'other.py'
+        file.write_text('staged user edit\n')
+        git('add','web/other.py')
+        file.write_text('unstaged user edit\n')
+        staged=git('diff','--cached','--binary','--','web/other.py')
+        unstaged=git('diff','--binary','--','web/other.py')
+        result=self.execute()
+        self.assertEqual(result['result'],'PASS')
+        self.assertEqual(git('diff','--cached','--binary','--','web/other.py'),staged)
+        self.assertEqual(git('diff','--binary','--','web/other.py'),unstaged)
+        self.assertEqual(file.read_text(),'unstaged user edit\n')
+
 if __name__ == '__main__':
     unittest.main()

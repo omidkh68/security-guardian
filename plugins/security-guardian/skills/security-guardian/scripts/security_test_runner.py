@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Explicitly authorized local unittest execution; not a sandbox or fix verifier."""
+"""Explicitly authorized local Python/Node test execution; not a sandbox or fix verifier."""
 from __future__ import annotations
 
 import argparse
