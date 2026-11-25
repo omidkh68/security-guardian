@@ -2,10 +2,7 @@
   "schema_version": 1,
   "issue": 54,
   "missing_persian": [
-    "docs/use-cases.md",
-    "docs/wiki/SG-Architecture.md",
     "docs/wiki/SG-Baseline-v1.2.1.md",
-    "docs/wiki/SG-Evidence-and-Reporting.md",
     "docs/wiki/SG-Roadmap-and-RFCs.md",
     "docs/wiki/SG-Stack-Profiles.md",
     "docs/wiki/SG-Standards-and-Coverage.md",
