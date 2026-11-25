@@ -9,3 +9,12 @@ Use `security_scan.py --root /path/to/project --discover --framework React` for 
 Synthetic tests cover exact scope, ambiguity, missing and mixed framework evidence, malformed manifests and workspace containers. This is not a sandbox, installed-version certification, or proof of vendor agent activation. Revert this isolated PR to roll back; existing histories and direct commands are unchanged.
 
 Unresolved previews list all discovered components as excluded; the CLI rejects `--framework` without `--discover`.
+
+## Architecture and testing value (#76)
+
+```mermaid
+flowchart LR
+ A["User intent / framework request"] --> B["Explicit mode and scope resolution"] --> C["Preview / approval or unresolved"]
+```
+
+Fixtures check ambiguous, absent, mixed and malformed framework evidence; agent language interpretation requires runtime testing.

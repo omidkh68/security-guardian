@@ -113,3 +113,12 @@ Validation results depend on the installed Claude Code version. Also run `python
 ## npm local preview (unpublished)
 
 See [npm distribution](npm-distribution.md) for the private tarball preview, explicit consent, safe upgrade and offline npx tests. Registry installation is not available or claimed yet.
+
+## Architecture and testing value (Installer)
+
+```mermaid
+flowchart LR
+ A["Explicit destination and consent"] --> B["Canonical Skill copy / backup"] --> C["Local installation smoke tests check destinations and copy integrity, not authenticated agent loading."]
+```
+
+Smoke نصب محلی مقصد و سلامت کپی را می‌سنجد، نه بارگذاری Agent احرازشده.

@@ -9,3 +9,12 @@
 تست مصنوعی محدوده دقیق، ابهام، نبود و اختلاط شواهد، Manifest نامعتبر و Containerهای Workspace را پوشش می‌دهد. این ابزار Sandbox، تأیید نسخه نصب‌شده یا اثبات فعال‌سازی Agent فروشنده نیست. برای بازگردانی PR مستقل را Revert کنید؛ تاریخچه و فرمان‌های مستقیم قبلی بدون تغییر هستند.
 
 پیش‌نمایش حل‌نشده همه مؤلفه‌های کشف‌شده را حذف‌شده نشان می‌دهد؛ CLI گزینه `--framework` بدون `--discover` را رد می‌کند.
+
+## معماری و ارزش تست (#76)
+
+```mermaid
+flowchart LR
+ A["User intent / framework request"] --> B["Explicit mode and scope resolution"] --> C["Preview / approval or unresolved"]
+```
+
+نمونه‌ها شواهد مبهم، غایب، مختلط و نامعتبر فریم‌ورک را می‌سنجند؛ تفسیر زبان Agent تست Runtime می‌خواهد.

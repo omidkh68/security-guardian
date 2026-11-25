@@ -88,3 +88,12 @@ Local maintainer testing confirmed a real Codex CLI 0.169.0 audit and Gemini CLI
 versions still require separate testing. The malformed-input fix was also
 verified in a real isolated Linux PTY; this does not claim a re-test in every
 desktop terminal. CI without authorized accounts cannot attest to actual agent behavior.
+
+## Architecture and testing value (Canonical Skill package)
+
+```mermaid
+flowchart LR
+ A["Agent selection and approved installation"] --> B["Claude / Codex / Gemini destination"] --> C["Installation and update tests protect existing files and preserve one canonical package; real loader checks remain separate."]
+```
+
+تست نصب و Update از فایل موجود محافظت و بسته مرجع واحد را حفظ می‌کند؛ تست Loader واقعی جداست.

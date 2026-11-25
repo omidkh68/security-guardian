@@ -113,3 +113,12 @@ authorization; `API-15` covers trusted client IP attribution.
 ### Container build and CI image classification
 
 `container_build_secret_exposure` maps to `CLOUD-05` when evidence concerns credentials, secret material or environment files entering the Docker build context or image layers. A missing ignore file alone is not proof of secret exposure. `ci_image_pinning` maps to `SDLC-08` for mutable or unpinned CI/runner images, distinct from production base-image hardening under `CLOUD-04`. The rules are metadata guardrails; matches neither establish vulnerability nor verify remediation. Keep genuinely ambiguous or unrecognized descriptions under manual review.
+
+## Architecture and testing value (Ledger lifecycle)
+
+```mermaid
+flowchart LR
+ A["Candidate / reviewed finding"] --> B["Versioned run / cumulative ledger"] --> C["Tracker regression tests check identity, explicit lifecycle transitions and snapshot immutability; evidence still needs review."]
+```
+
+رگرسیون Tracker هویت، گذار صریح و تغییرناپذیری Snapshot را می‌سنجد؛ شواهد همچنان بازبینی می‌خواهند.

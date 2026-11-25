@@ -104,3 +104,12 @@ python3 ~/.claude/skills/security-guardian/scripts/security_tracker.py finish \
 ### طبقه‌بندی Build کانتینر و Image CI
 
 `container_build_secret_exposure` به `CLOUD-05` نگاشت می‌شود وقتی شواهد مربوط به Credential، Secret یا فایل Environment وارد Context ساخت Docker یا لایه Image است. نبود فایل Ignore به‌تنهایی اثبات افشای Secret نیست. `ci_image_pinning` برای Imageهای CI/Runner قابل تغییر یا Pinنشده به `SDLC-08` نگاشت می‌شود، متمایز از سخت‌سازی Base Image تولید در `CLOUD-04`. Ruleها محافظ فراداده‌اند؛ Match نه آسیب‌پذیری را اثبات می‌کند نه اصلاح را تأیید. توصیف واقعاً مبهم/ناشناخته را دستی بررسی کنید.
+
+## معماری و ارزش تست (Ledger lifecycle)
+
+```mermaid
+flowchart LR
+ A["Candidate / reviewed finding"] --> B["Versioned run / cumulative ledger"] --> C["Tracker regression tests check identity, explicit lifecycle transitions and snapshot immutability; evidence still needs review."]
+```
+
+undefined

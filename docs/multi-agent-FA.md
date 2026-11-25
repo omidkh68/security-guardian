@@ -52,3 +52,12 @@ Codex و Gemini **هر دو** `.agents/skills/security-guardian/SKILL.md` را �
 ## وضعیت تست
 
 تست بسته‌بندی آفلاین، Install Smoke و رگرسیون Linux PTY در CI اجرا می‌شوند. تست محلی نگهدارنده Audit واقعی Codex CLI 0.169.0 و فعال‌سازی/خواندن Skill در Gemini CLI 0.68.0 را تأیید کرد. Audit کامل Gemini و نسخه‌های تازه Vendor هنوز تست جداگانه می‌خواهند. اصلاح ورودی نامعتبر نیز در Linux PTY واقعی و ایزوله تأیید شد؛ ادعای تست مجدد همه ترمینال‌های Desktop نیست. CI بدون حساب مجاز نمی‌تواند رفتار واقعی Agent را اثبات کند.
+
+## معماری و ارزش تست (Canonical Skill package)
+
+```mermaid
+flowchart LR
+ A["Agent selection and approved installation"] --> B["Claude / Codex / Gemini destination"] --> C["Installation and update tests protect existing files and preserve one canonical package; real loader checks remain separate."]
+```
+
+undefined
