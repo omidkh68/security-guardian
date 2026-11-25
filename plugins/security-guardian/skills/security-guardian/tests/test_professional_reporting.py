@@ -76,16 +76,21 @@ class ProfessionalReportTests(unittest.TestCase):
             store=Path(tmp)/'.security-guardian';rd=store/'runs'/run['id'];rd.mkdir(parents=True)
             paths={rd/'findings.json':ledger,rd/'scanner.json':scan,rd/'manifest.json':run,store/'ledger.json':{'findings':{}},store/'index.json':{'runs':[run]}}
             for p,d in paths.items():p.write_text(json.dumps(d))
-            original={p:p.read_bytes() for p in paths}
+            (rd/'RUN.md').write_text('private original run')
+            (store/'CURRENT.md').write_text('private original current')
+            original={p:p.read_bytes() for p in [*paths,rd/'RUN.md',store/'CURRENT.md']}
             j=r.export_report(store,rd,run,format='json')
             m=r.export_report(store,rd,run,format='md',view='technical')
             self.assertEqual(json.loads(j.read_text())['counts']['findings'],10)
             self.assertIn('implementation',m.read_text())
+            self.assertEqual(r.export_report(store,rd,run,format='md').name,'RUN-REPORT.md')
+            self.assertEqual(r.export_report(store,rd,run,format='md',cumulative=True).name,'CURRENT-REPORT.md')
+            with self.assertRaises(ValueError):r.export_report(store,rd,run,format='md',output=rd/'RUN.md')
             self.assertEqual(j.read_bytes(),r.export_report(store,rd,run,format='json').read_bytes())
             self.assertEqual(r.export_report(store,rd,run,format='json',cumulative=True).name,'CURRENT.json')
             with self.assertRaises(ValueError):r.export_report(store,rd,run,format='json',output=store/'ledger.json')
             with self.assertRaises(ValueError):r.export_report(store,rd,dict(run,status='IN_PROGRESS'),format='json')
-            self.assertEqual(original,{p:p.read_bytes() for p in paths})
+            self.assertEqual(original,{p:p.read_bytes() for p in original})
     def test_missing_renderer_does_not_leave_partial_artifact(self):
         run,ledger,scan=fixture()
         with tempfile.TemporaryDirectory() as tmp:

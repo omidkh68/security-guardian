@@ -51,7 +51,10 @@ def resolve_paths(root: Path, run_id=None):
     rdir = store / 'runs' / run['id']
     if rdir.is_symlink():
         raise ValueError('Refusing symlinked run directory')
-    return store, rdir, run
+    manifest=read_evidence(rdir/'manifest.json')
+    if manifest.get('id')!=run['id'] or manifest.get('version')!=run['version'] or manifest.get('status')!=run['status']:
+        raise ValueError('Finalized manifest and index disagree')
+    return store, rdir, manifest
 
 def build_summary(run, ledger, scan, *, cumulative=False):
     findings = ledger.get('findings', {})
@@ -311,6 +314,7 @@ def export_report(store,rdir,run,*,cumulative=False,output=None,font=None,view='
     base='CURRENT' if cumulative else 'RUN'
     if view=='technical':base+='-TECHNICAL'
     if private_details:base+='-PRIVATE'
+    if format=='md':base+='-REPORT'
     default=(store if cumulative else rdir)/(base+'.'+format)
     target=Path(output).expanduser() if output is not None else default
     if target.is_symlink() or any(p.is_symlink() for p in target.parents):raise ValueError('Refusing symlinked output path')

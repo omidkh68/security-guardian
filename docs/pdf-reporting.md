@@ -39,7 +39,7 @@ python3 <skill-dir>/scripts/security_report.py --root /path/to/project --view ma
 python3 <skill-dir>/scripts/security_report.py --root /path/to/project --view technical --format md
 ```
 
-Default export names are RUN.pdf, RUN.json, RUN-TECHNICAL.md etc.; cumulative names start CURRENT. An explicit destination with matching extension is accepted; existing private evidence paths inside storage are protected. Atomic output avoids a partial file after renderer failure. PDF_UNAVAILABLE is explicit and JSON/Markdown remain available. English/LTR PDF; optional --font does not implement Persian RTL shaping.
+Default export names are RUN.pdf, RUN.json, RUN-REPORT.md and RUN-TECHNICAL-REPORT.md etc.; cumulative names start CURRENT. The separate -REPORT suffix prevents overwriting original private RUN.md and CURRENT.md. The CLI reads the finalized manifest and checks its identity/status against the index. An explicit destination with matching extension is accepted; existing private evidence paths inside storage are protected. Atomic output avoids a partial file after renderer failure. PDF_UNAVAILABLE is explicit and JSON/Markdown remain available. English/LTR PDF; optional --font does not implement Persian RTL shaping.
 
 ## Privacy and limitations
 

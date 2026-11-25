@@ -39,7 +39,7 @@ python3 <skill-dir>/scripts/security_report.py --root /path/to/project --view ma
 python3 <skill-dir>/scripts/security_report.py --root /path/to/project --view technical --format md
 ```
 
-نام پیش‌فرض RUN.pdf، RUN.json، RUN-TECHNICAL.md و مانند آن است؛ cumulative با CURRENT آغاز می‌شود. مقصد صریح با پسوند منطبق پذیرفته می‌شود؛ مسیر شواهد خصوصی در فضای ثبت محافظت می‌شود. نوشتن اتمیک از فایل نیمه‌کاره جلوگیری می‌کند. PDF_UNAVAILABLE صریح است و JSON/Markdown قابل استفاده‌اند. PDF انگلیسی LTR است؛ --font شکل‌دهی فارسی RTL فراهم نمی‌کند.
+نام پیش‌فرض RUN.pdf، RUN.json، RUN-REPORT.md، RUN-TECHNICAL-REPORT.md و مانند آن است؛ cumulative با CURRENT آغاز می‌شود. پسوند جداگانه REPORT از بازنویسی RUN.md و CURRENT.md خصوصی جلوگیری می‌کند. CLI سازگاری هویت و وضعیت Manifest نهایی با Index را بررسی می‌کند. مقصد صریح با پسوند منطبق پذیرفته می‌شود؛ مسیر شواهد خصوصی در فضای ثبت محافظت می‌شود. نوشتن اتمیک از فایل نیمه‌کاره جلوگیری می‌کند. PDF_UNAVAILABLE صریح است و JSON/Markdown قابل استفاده‌اند. PDF انگلیسی LTR است؛ --font شکل‌دهی فارسی RTL فراهم نمی‌کند.
 
 ## حریم خصوصی و محدودیت
 
