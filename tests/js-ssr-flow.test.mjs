@@ -67,7 +67,7 @@ test('SSR synthetic benchmark and scope',{skip:!parser},t=>{
 });
 test('unsupported frameworks and invalid syntax never certify',{skip:!parser},t=>{
   const unsupported=run(fixture(t,page(direct,raw),'nuxt'));
-  assert.equal(unsupported.status,'PARTIAL');assert.deepEqual(unsupported.unsupported_frameworks,['Nuxt']);
+  assert.equal(unsupported.status,'PARTIAL');assert.deepEqual(unsupported.unsupported_frameworks,[]); assert.equal(unsupported.coverage.unmodeled_files,1);
   const bad=run(fixture(t,'export function broken( {'));
   assert.equal(bad.status,'PARTIAL');assert.equal(bad.coverage.parse_errors,1);
 });
@@ -142,4 +142,56 @@ test('Angular TransferState explicit credential boundary, redaction and scope',{
   }
   const client=run(fixture(t,cases[0][1],'@angular/core','src/copy.ts'));
   assert.equal(client.status,'PARTIAL');assert.deepEqual(client.signals,[]);
+});
+
+const app=body=>'export default async function Page(props){\n'+body+'\n}';
+const nuxt=body=>'import {defineEventHandler as handler,getQuery as query,getRouterParam as param,send as reply} from "h3";\nexport default handler((event)=>{\n'+body+'\n});';
+const kit=body=>'export function GET(event){\n'+body+'\n}';
+const appStart='const q=await props.searchParams; ';
+const nuxtStart='const q=query(event); ';
+const kitStart='const q=event.url.searchParams.get("name"); ';
+const kitHTML=expr=>'return new Response('+expr+',{headers:{"content-type":"text/html"}});';
+test('SSR app router, Nitro/H3 and SvelteKit server endpoints: separate synthetic fixtures',{skip:!parser},t=>{
+  const groups=[
+    {name:'NEXT_APP',dep:'next',file:'app/page.tsx',rule:'JS.NEXT.APP.REQUEST_TO_RAW_HTML',cases:[
+      ['query',true,app(appStart+'return <div dangerouslySetInnerHTML={{__html:q.name}} />;')],
+      ['params',true,app('const p=await props.params; return <div dangerouslySetInnerHTML={{__html:p.slug}} />;')],
+      ['text',false,app(appStart+'return <div>{q.name}</div>;')],
+      ['literal',false,app(appStart+'return <div dangerouslySetInnerHTML={{__html:"PRIVATE_SYNTHETIC_TEXT"}} />;')],
+      ['client',false,'"use client";\n'+app(appStart+'return <div dangerouslySetInnerHTML={{__html:q.name}} />;'),true],
+      ['helper',true,app(appStart+'return <div dangerouslySetInnerHTML={{__html:build(q.name)}} />;'),true]
+    ]},
+    {name:'NUXT',dep:'nuxt',file:'server/routes/example.ts',rule:'JS.NUXT.SSR.REQUEST_TO_HTML',cases:[
+      ['query',true,nuxt(nuxtStart+'return reply(event,"<p>"+q.name+"</p>","text/html");')],
+      ['param',true,nuxt('return reply(event,param(event,"name"),"text/html");')],
+      ['static',false,nuxt(nuxtStart+'return reply(event,"PRIVATE_SYNTHETIC_TEXT","text/html");')],
+      ['plain',false,nuxt(nuxtStart+'return reply(event,q.name,"text/plain");'),true],
+      ['unknown',false,nuxt(nuxtStart+'return other(event,q.name,"text/html");'),true],
+      ['helper',true,nuxt(nuxtStart+'return reply(event,build(q.name),"text/html");'),true]
+    ]},
+    {name:'SVELTEKIT',dep:'@sveltejs/kit',file:'src/routes/example/+server.ts',rule:'JS.SVELTEKIT.SSR.REQUEST_TO_HTML',cases:[
+      ['query',true,kit(kitStart+kitHTML('"<p>"+q+"</p>"'))],
+      ['params',true,kit(kitHTML('event.params.slug'))],
+      ['static',false,kit(kitStart+kitHTML('"PRIVATE_SYNTHETIC_TEXT"'))],
+      ['plain',false,kit(kitStart+'return new Response(q,{headers:{"content-type":"text/plain"}});'),true],
+      ['shadow',false,kit('const Response="fake"; '+kitHTML('event.params.slug')),true],
+      ['helper',true,kit(kitStart+kitHTML('build(q)')),true]
+    ]}
+  ];
+  for(const g of groups){
+    const counts={tp:0,tn:0,fp:0,fn:0};let partial=0;
+    for(const [label,positive,code,expectPartial=false] of g.cases){
+      const r=run(fixture(t,code,g.dep,g.file));
+      assert.deepEqual(r.selected_roots,['web'],g.name+label);
+      assert.ok(r.signals.every(s=>s.path==='web/'+g.file&&s.rule_id===g.rule&&s.status==='HEURISTIC_REVIEW_ONLY'),g.name+label);
+      assert.equal(r.status==='PARTIAL',expectPartial,g.name+label);
+      assert.ok(!JSON.stringify(r).includes('PRIVATE_SYNTHETIC_TEXT'),g.name+label);
+      counts[positive?(r.signals.length?'tp':'fn'):(r.signals.length?'fp':'tn')]++;
+      if(r.status==='PARTIAL')partial++;
+    }
+    assert.deepEqual(counts,{tp:2,tn:3,fp:0,fn:1},g.name);
+    console.log(JSON.stringify({kind:'SYNTHETIC_'+g.name+'_SSR_BASELINE',cases:g.cases.length,...counts,partial,precision:{numerator:2,denominator:2,value:1},recall:{numerator:2,denominator:3,value:2/3}}));
+    const outside=run(fixture(t,g.cases[0][2],g.dep,'src/unrelated.tsx'));
+    assert.equal(outside.status,'PARTIAL');assert.deepEqual(outside.signals,[]);
+  }
 });

@@ -31,12 +31,12 @@ def review(root, profile, components, parser):
                 and set(c['frameworks']) & {'Next.js','Angular','Nuxt','SvelteKit'}}
     roots = set(selected)
     stats = Counter()
-    result = {'schema_version':1, 'pack_id':'js-ssr-flow', 'pack_version':3,
-              'rule_id':RULE, 'rule_ids':[RULE,'JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT','JS.ANGULAR.SSR.REQUEST_TO_RESPONSE_HTML','JS.ANGULAR.SSR.CREDENTIAL_TO_TRANSFER_STATE'], 'legacy_control_id':'ANG-01', 'status':'NOT_AVAILABLE',
+    result = {'schema_version':1, 'pack_id':'js-ssr-flow', 'pack_version':4,
+              'rule_id':RULE, 'rule_ids':[RULE,'JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT','JS.ANGULAR.SSR.REQUEST_TO_RESPONSE_HTML','JS.ANGULAR.SSR.CREDENTIAL_TO_TRANSFER_STATE','JS.NEXT.APP.REQUEST_TO_RAW_HTML','JS.NUXT.SSR.REQUEST_TO_HTML','JS.SVELTEKIT.SSR.REQUEST_TO_HTML'], 'legacy_control_id':'ANG-01', 'status':'NOT_AVAILABLE',
               'selected_roots':sorted(roots), 'signals':[],
-              'unsupported_frameworks':sorted({f for fs in selected.values() for f in fs if f not in {'Next.js','Angular'}}),
+              'unsupported_frameworks':[],
               'limitations':['Optional syntactic AST flow, not exploit proof or full taint analysis.',
-                             'Next.js Pages Router, bounded Angular CommonEngine and NodeAppEngine response flow, and explicit credential headers to TransferState. Other templates, DI paths, App Router, Nuxt, SvelteKit, caching, helpers and cross-module flow require manual review.',
+                             'Bounded Next.js Pages/App Router, Angular render and credential transfer, Nuxt H3 server HTML and SvelteKit endpoint HTML. Other templates, DI, server load, caching, helpers and cross-module flow require manual review.',
                              'Trusted parser execution is not an OS sandbox; no project code or config loaded.',
                              'No ledger update; review and record candidates manually.']}
     def finish(status):
@@ -70,7 +70,15 @@ def review(root, profile, components, parser):
                        and route[-1].split('.')[0] not in {'_app','_document','_error'})
         angular_server = ('Angular' in selected[owner] and parts in {('server.ts',),('src','server.ts'),('server.js',),('src','server.js')})
         angular_transfer = ('Angular' in selected[owner] and p.name.endswith('.server.ts') and not angular_server)
-        if not pages_route and not angular_server and not angular_transfer:
+        app_parts = parts[2:] if parts[:2] == ('src','app') else parts[1:] if parts[:1] == ('app',) else ()
+        server_entry = None
+        if ('Next.js' in selected[owner] and app_parts and p.name in {'page.tsx','page.jsx'}):
+            server_entry = 'next_app'
+        elif ('Nuxt' in selected[owner] and len(parts)>=3 and parts[:2] in {('server','routes'),('server','api')}):
+            server_entry = 'nuxt'
+        elif ('SvelteKit' in selected[owner] and parts[:2]==('src','routes') and p.name in {'+server.ts','+server.js'}):
+            server_entry = 'kit'
+        if not pages_route and not angular_server and not angular_transfer and not server_entry:
             stats['unmodeled_files'] += 1
             continue
         if len(inputs) >= MAX_FILES:
@@ -88,7 +96,7 @@ def review(root, profile, components, parser):
             continue
         total += len(raw)
         inputs.append({'suffix':p.suffix,'content':content,
-                       'frameworks':selected[owner], 'pages_route':pages_route, 'angular_server':angular_server, 'angular_transfer':angular_transfer})
+                       'frameworks':selected[owner], 'pages_route':pages_route, 'angular_server':angular_server, 'angular_transfer':angular_transfer, 'server_entry':server_entry})
         paths.append(rel)
         sizes.append(len(content.splitlines())+1)
     try:
@@ -128,7 +136,10 @@ def review(root, profile, components, parser):
                 labels = {RULE: 'Next.js server-derived page prop reaches raw HTML render',
                           'JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT': 'Angular request input reaches CommonEngine HTML document',
                           'JS.ANGULAR.SSR.REQUEST_TO_RESPONSE_HTML': 'Angular request input reaches post-render Express HTML response',
-                          'JS.ANGULAR.SSR.CREDENTIAL_TO_TRANSFER_STATE': 'Angular request credential header reaches client transfer state'}
+                          'JS.ANGULAR.SSR.CREDENTIAL_TO_TRANSFER_STATE': 'Angular request credential header reaches client transfer state',
+                          'JS.NEXT.APP.REQUEST_TO_RAW_HTML': 'Next.js App Router request data reaches raw JSX render',
+                          'JS.NUXT.SSR.REQUEST_TO_HTML': 'Nuxt H3 request data reaches HTML response',
+                          'JS.SVELTEKIT.SSR.REQUEST_TO_HTML': 'SvelteKit request data reaches HTML Response'}
                 result['signals'].append({'rule_id':rule,
                     'control_id':'ANG-04' if rule.endswith('CREDENTIAL_TO_TRANSFER_STATE') else 'ANG-01',
                     'signal':labels[rule],

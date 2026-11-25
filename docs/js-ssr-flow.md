@@ -11,10 +11,10 @@ Run `python3 <skill-dir>/scripts/security_js_ssr_flow.py --root . --profile fron
 | Context | Current evidence |
 |---|---|
 | Next.js Pages Router | Bounded same-file request-to-raw-render candidate |
-| Next.js App Router | Manual review of server components and serialization |
+| Next.js App Router | Bounded async page request-to-JSX flow; other paths manual |
 | Angular SSR | Bounded CommonEngine, NodeAppEngine response and explicit credential-to-TransferState flow; other paths manual |
-| Nuxt | Manual review of server routes, v-html and payload serialization |
-| SvelteKit | Manual review of server load, raw HTML and serialized data |
+| Nuxt | Bounded H3 HTML endpoint flow; Vue v-html and payload manual |
+| SvelteKit | Bounded +server HTML response; page load and template manual |
 | Cache isolation | Manual two-account authorized tests; inspect cache keys, cookies, personalization and response headers |
 
 Review actual source reachability, output-context escaping, HTML/script boundary and per-user response isolation before recording a finding. Branches, imported helpers, complex props, sanitizers, framework templates outside the modeled JSX and cross-file data flow are unsupported. Benchmark tests/js-ssr-flow.test.mjs includes 12 synthetic cases (one intentional unsupported helper); baseline measured in CI run 45628382963. Revert PR for rollback, no migration.
@@ -81,3 +81,38 @@ flowchart TD
 Positive fixtures target direct postprocessing and credential headers; negatives target native forwarding, constant content and ordinary locale headers; unsupported receivers, missing guards and shadowed imports remain PARTIAL. The 8-case CommonEngine baseline measured in CI 45631179074 was TP 3, TN 4, FP 0, FN 1, partial 3, precision 3/3 and recall 3/4. Existing benchmarks remain unchanged. New regression fixtures are not measurements until CI executes. For manual testing, inspect actual response content type and context-aware encoding; verify credentials are absent from serialized HTML and compare authorized isolated sessions. Never emit credential values in evidence.
 
 API references: [Angular SSR](https://angular.dev/guide/ssr), [AngularNodeAppEngine](https://angular.dev/api/ssr/node/AngularNodeAppEngine), [REQUEST](https://angular.dev/api/core/REQUEST), [TransferState](https://angular.dev/api/core/TransferState). Promise chains, generic middleware, component injection, HTTP transfer cache, custom headers and cross-file flow remain outside this subset.
+
+## App Router, Nuxt and SvelteKit server response analysis (pack v4)
+
+```mermaid
+flowchart TD
+  A["Approved component and conventional server route"] --> B{"Framework entry"}
+  B --> C["Next.js app/page: async default function"]
+  B --> D["Nuxt server/routes or server/api: explicit h3 handler"]
+  B --> E["SvelteKit src/routes/+server: exported HTTP method"]
+  C --> F["Await params or searchParams"]
+  D --> G["Imported getQuery or getRouterParam"]
+  E --> H["event.params or event.url.searchParams.get"]
+  F --> I["Bounded local AST flow"]
+  G --> I
+  H --> I
+  I --> J["JSX raw HTML"]
+  I --> K["h3 send with explicit text/html"]
+  I --> L["Response with literal text/html header"]
+  J --> M["Review candidate"]
+  K --> M
+  L --> M
+  I --> N["Unsupported expression or ownership: PARTIAL"]
+  M --> O["Stable rule, source and sink lines, scope"]
+  N --> O
+```
+
+| Rule | Supported positive path | Negative / partial test |
+|---|---|---|
+| JS.NEXT.APP.REQUEST_TO_RAW_HTML | async default function in app or src/app page.tsx/jsx; await props.params/searchParams; raw JSX | ordinary text, literal HTML; client directive and helpers partial |
+| JS.NUXT.SSR.REQUEST_TO_HTML | explicit h3 defineEventHandler, getQuery/getRouterParam and send with literal text/html (H3 send API subset) | static HTML, text/plain and unknown sinks; auto-imports and Vue SFC v-html SSR flow manual |
+| JS.SVELTEKIT.SSR.REQUEST_TO_HTML | exported named HTTP function in src/routes/**/+server.ts/js; event params or URL query to new Response with explicit text/html | static body, non-HTML and shadowed Response; +page.server load to .svelte {@html} manual |
+
+The three new fixture groups each contain six cases and an outside-route scope test. All are candidates, not confirmed vulnerabilities; unsupported helper positives count as misses. No target app runs. Framework/version/configuration and actual response reachability/content type must be verified manually. Nuxt Vue SSR payloads and SvelteKit page hydration are not covered by the endpoint models. Next.js client/server module graphs, custom route directories, middleware, caching and data across modules are not modeled. Verify cache isolation separately with authorized distinct accounts and identical route requests, inspecting response body, cache headers and variation; syntax alone cannot certify isolation. No real runtime test is claimed.
+
+The preceding Angular v3 CI run 45632019323 passed all six jobs. New group measurements require the final head CI.

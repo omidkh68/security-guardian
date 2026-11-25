@@ -207,6 +207,148 @@ function analyzeTransfer(ts,file,sf,r){
   r.hits=hits;return r;
 }
 
+
+/* Explicit server entry subsets. Never infer server ownership from a variable name. */
+function analyzeServerEntry(ts,file,sf,r){
+  const fail=()=>({...r,partial:true,reason:'unmodeled_server_entry',hits:[]});
+  const line=n=>sf.getLineAndCharacterOfPosition(n.getStart(sf)).line+1;
+  const id=n=>n&&ts.isIdentifier(n)?n.text:null;
+  const prop=n=>n&&ts.isPropertyAccessExpression(n)&&!n.questionDotToken?n.name.text:null;
+  const str=n=>n&&ts.isStringLiteral(n);
+  const key=n=>prop(n)??(n&&ts.isElementAccessExpression(n)&&!n.questionDotToken&&str(n.argumentExpression)?n.argumentExpression.text:null);
+  const recv=n=>n&&(ts.isPropertyAccessExpression(n)||ts.isElementAccessExpression(n))?n.expression:null;
+  const mode=file.server_entry;
+  const rules={next_app:'JS.NEXT.APP.REQUEST_TO_RAW_HTML',nuxt:'JS.NUXT.SSR.REQUEST_TO_HTML',kit:'JS.SVELTEKIT.SSR.REQUEST_TO_HTML'};
+  const names=new Set(['JSON','Response']),imports=new Map();
+  const mod=(n,k)=>!!n.modifiers?.some(m=>m.kind===k);
+  const call=(n,member)=>n&&ts.isCallExpression(n)&&!n.questionDotToken&&imports.get(id(n.expression))===member;
+  let handler=null;
+  for(const s of sf.statements){
+    if(ts.isImportDeclaration(s)&&str(s.moduleSpecifier)&&s.importClause){
+      const c=s.importClause;
+      if(c.name){const n=id(c.name);if(names.has(n))return fail();names.add(n);}
+      if(c.namedBindings){
+        if(!ts.isNamedImports(c.namedBindings))return fail();
+        for(const e of c.namedBindings.elements){
+          const n=id(e.name);if(names.has(n))return fail();names.add(n);
+          if(!c.isTypeOnly&&!e.isTypeOnly&&s.moduleSpecifier.text==='h3')imports.set(n,(e.propertyName||e.name).text);
+        }
+      }
+      continue;
+    }
+    if(ts.isEmptyStatement(s))continue;
+    if(mode==='nuxt'&&ts.isExportAssignment(s)&&!s.isExportEquals&&call(s.expression,'defineEventHandler')&&s.expression.arguments.length===1&&!handler){
+      const fn=s.expression.arguments[0];
+      if((ts.isArrowFunction(fn)||ts.isFunctionExpression(fn))&&ts.isBlock(fn.body)&&!fn.asteriskToken){handler=fn;continue;}
+    }
+    if(ts.isFunctionDeclaration(s)&&s.name&&s.body&&!s.asteriskToken&&!handler&&mod(s,ts.SyntaxKind.ExportKeyword)){
+      if(mode==='next_app'&&mod(s,ts.SyntaxKind.DefaultKeyword)&&mod(s,ts.SyntaxKind.AsyncKeyword)){
+        handler=s;continue;
+      }
+      if(mode==='kit'&&!mod(s,ts.SyntaxKind.DefaultKeyword)&&['GET','POST','PUT','PATCH','DELETE'].includes(id(s.name))){
+        handler=s;continue;
+      }
+    }
+    // Includes use client, use server directives, unknown exports and configuration.
+    return fail();
+  }
+  if(!handler||handler.parameters.length!==1)return fail();
+  const p=handler.parameters[0],param=id(p.name);
+  if(!param||names.has(param)||param===id(handler.name)||p.initializer||p.dotDotDotToken)return fail();
+  if(handler.name)names.add(id(handler.name));
+  const env=new Map(),objects=new Set(),bindings=new Set([param]);
+  const union=xs=>[...new Set(xs.flat())].sort((a,b)=>a-b);
+  function fields(n){
+    if(!n||!ts.isObjectLiteralExpression(n))return null;
+    const out=new Map();
+    for(const p of n.properties){
+      if(!ts.isPropertyAssignment(p))return null;
+      const k=id(p.name)??(str(p.name)?p.name.text:null);
+      if(!k||k==='__proto__'||out.has(k))return null;
+      out.set(k,p.initializer);
+    }
+    return out;
+  }
+  function value(n,depth=0){
+    if(!n||depth>64)return null;
+    if(ts.isParenthesizedExpression(n))return value(n.expression,depth+1);
+    if(str(n)||ts.isNoSubstitutionTemplateLiteral(n)||ts.isNumericLiteral(n)||[ts.SyntaxKind.TrueKeyword,ts.SyntaxKind.FalseKeyword,ts.SyntaxKind.NullKeyword].includes(n.kind))return [];
+    if(id(n))return env.get(id(n))??null;
+    if(key(n)&&objects.has(id(recv(n))))return [line(n)];
+    if(mode==='kit'){
+      if(key(n)&&prop(recv(n))==='params'&&id(recv(n).expression)===param)return [line(n)];
+      if(ts.isCallExpression(n)&&!n.questionDotToken&&prop(n.expression)==='get'&&prop(n.expression.expression)==='searchParams'&&
+         prop(n.expression.expression.expression)==='url'&&id(n.expression.expression.expression.expression)===param&&
+         n.arguments.length===1&&str(n.arguments[0]))return [line(n)];
+    }
+    if(mode==='nuxt'&&call(n,'getRouterParam')&&n.arguments.length===2&&id(n.arguments[0])===param&&str(n.arguments[1]))return [line(n)];
+    let children;
+    if(ts.isBinaryExpression(n)&&n.operatorToken.kind===ts.SyntaxKind.PlusToken)children=[n.left,n.right];
+    else if(ts.isTemplateExpression(n))children=n.templateSpans.map(s=>s.expression);
+    else if(ts.isArrayLiteralExpression(n))children=[...n.elements];
+    else if(ts.isObjectLiteralExpression(n)){const f=fields(n);if(!f)return null;children=[...f.values()];}
+    else if(ts.isCallExpression(n)&&!n.questionDotToken&&prop(n.expression)==='stringify'&&id(n.expression.expression)==='JSON'&&n.arguments.length===1)children=[n.arguments[0]];
+    else return null;
+    const vals=children.map(c=>value(c,depth+1));
+    return vals.some(v=>v===null)?null:union(vals);
+  }
+  function sourceObject(n){
+    if(mode==='next_app'&&ts.isAwaitExpression(n)&&['searchParams','params'].includes(prop(n.expression))&&id(n.expression.expression)===param)return true;
+    if(mode==='nuxt'&&call(n,'getQuery')&&n.arguments.length===1&&id(n.arguments[0])===param)return true;
+    return false;
+  }
+  function result(n){
+    if(mode==='next_app'){
+      if(!(ts.isJsxSelfClosingElement(n)||ts.isJsxElement(n)))return null;
+      const opening=ts.isJsxElement(n)?n.openingElement:n,tag=id(opening.tagName),attrs=opening.attributes.properties;
+      if(!tag||!/^[a-z][a-z0-9]*$/.test(tag))return null;
+      if(!attrs.length){
+        if(!['div','span','p','main','section','article','h1','h2'].includes(tag))return null;
+        if(ts.isJsxElement(n)&&n.children.some(c=>!ts.isJsxText(c)&&(!ts.isJsxExpression(c)||value(c.expression)===null)))return null;
+        return [];
+      }
+      if(attrs.length!==1||!ts.isJsxAttribute(attrs[0])||id(attrs[0].name)!=='dangerouslySetInnerHTML'||!attrs[0].initializer||!ts.isJsxExpression(attrs[0].initializer))return null;
+      if(ts.isJsxElement(n)&&n.children.some(c=>!ts.isJsxText(c)||c.getText(sf).trim()))return null;
+      const f=fields(attrs[0].initializer.expression);if(!f||f.size!==1||!f.has('__html'))return null;
+      return value(f.get('__html'));
+    }
+    if(mode==='nuxt'){
+      if(ts.isAwaitExpression(n))n=n.expression;
+      if(!call(n,'send')||n.arguments.length!==3||id(n.arguments[0])!==param||!str(n.arguments[2])||!/^text\/html(?:\s*;.*)?$/i.test(n.arguments[2].text))return null;
+      return value(n.arguments[1]);
+    }
+    if(mode==='kit'){
+      if(!ts.isNewExpression(n)||id(n.expression)!=='Response'||n.arguments?.length!==2)return null;
+      const opts=fields(n.arguments[1]);if(!opts||opts.size!==1||!opts.has('headers'))return null;
+      const headers=fields(opts.get('headers'));if(!headers||headers.size!==1)return null;
+      const h=[...headers][0];if(h[0].toLowerCase()!=='content-type'||!str(h[1])||!/^text\/html(?:\s*;.*)?$/i.test(h[1].text))return null;
+      return value(n.arguments[0]);
+    }
+    return null;
+  }
+  const ss=handler.body.statements;
+  for(let i=0;i<ss.length;i++){
+    const s=ss[i];
+    if(ts.isEmptyStatement(s))continue;
+    if(ts.isVariableStatement(s)&&(s.declarationList.flags&ts.NodeFlags.Const)){
+      for(const d of s.declarationList.declarations){
+        const n=id(d.name),v=d.initializer;if(!n||!v||names.has(n)||bindings.has(n))return fail();
+        bindings.add(n);
+        if(sourceObject(v)){objects.add(n);continue;}
+        const a=value(v);if(a===null)return fail();env.set(n,a);
+      }
+      continue;
+    }
+    if(ts.isReturnStatement(s)&&s.expression&&i===ss.length-1){
+      const a=result(s.expression);if(a===null)return fail();
+      r.hits=a.length?[{rule_id:rules[mode],line:line(s.expression),source_lines:a.slice(0,16),source_lines_truncated:a.length>16}]:[];
+      return r;
+    }
+    return fail();
+  }
+  return fail();
+}
+
 function analyze(ts,file){
   const sf=ts.createSourceFile('fixture'+file.suffix,file.content,ts.ScriptTarget.Latest,true);
   const r={parsed:true,partial:false,reason:null,hits:[]};
@@ -216,6 +358,7 @@ function analyze(ts,file){
   const fail=()=>({...r,partial:true,reason:'unmodeled_page',hits:[]});
   if(file.angular_server)return analyzeAngular(ts,file,sf,r);
   if(file.angular_transfer)return analyzeTransfer(ts,file,sf,r);
+  if(file.server_entry)return analyzeServerEntry(ts,file,sf,r);
   if(!file.frameworks?.includes('Next.js')||!file.pages_route)return fail();
   const line=n=>sf.getLineAndCharacterOfPosition(n.getStart(sf)).line+1;
   const id=n=>n&&ts.isIdentifier(n)?n.text:null;

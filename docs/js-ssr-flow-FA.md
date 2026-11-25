@@ -9,10 +9,10 @@
 | زمینه | وضعیت |
 |---|---|
 | Next.js Pages Router | جریان محدود در همان فایل |
-| Next.js App Router | بازبینی دستی Server Component و Serialization |
+| Next.js App Router | جریان محدود صفحه async تا JSX؛ سایر مسیرها دستی |
 | Angular SSR | جریان محدود CommonEngine، پاسخ NodeAppEngine و انتقال مشخص اعتبارنامه به TransferState؛ سایر مسیرها دستی |
-| Nuxt | بازبینی دستی v-html و Payload |
-| SvelteKit | بازبینی دستی Server Load و رندر خام |
+| Nuxt | جریان محدود Endpoint HTML در H3؛ v-html و Payload دستی |
+| SvelteKit | جریان محدود پاسخ HTML در +server؛ Server Load و Template دستی |
 | جداسازی Cache | تست مجاز دو حساب، بررسی Cache Key و Header |
 
 قبل از ثبت یافته، دسترسی واقعی به مسیر، Escape متناسب با زمینه خروجی و جداسازی پاسخ کاربران بررسی شود. شاخه، Helper، Sanitizer و جریان میان فایل‌ها مدل نشده‌اند. Benchmark مصنوعی ۱۲ سناریویی شامل Helper عمداً پشتیبانی‌نشده است؛ خط مبنا در CI شماره 45628382963 اندازه‌گیری شد. بازگردانی با Revert و بدون مهاجرت انجام می‌شود.
@@ -79,3 +79,38 @@ flowchart TD
 تست مثبت تغییر پاسخ و انتقال هدر اعتبارنامه را بررسی می‌کند؛ تست منفی ارسال عادی، محتوای ثابت و هدر زبان را پوشش می‌دهد؛ گیرنده ناشناخته، نبود Guard و Shadowing وضعیت PARTIAL دارند. Benchmark قبلی CommonEngine در CI شماره 45631179074: TP برابر ۳، TN برابر ۴، FP صفر، FN یک، Partial برابر ۳، Precision برابر ۳ از ۳ و Recall برابر ۳ از ۴. Benchmarkهای قبلی ثابت مانده‌اند. نتیجه تست‌های جدید تا اجرای CI تأیید نشده است. در تست دستی نوع محتوا و Escape متناسب با زمینه، نبود اعتبارنامه در HTML سریال‌شده و جداسازی حساب‌های مجاز بررسی شوند. مقدار اعتبارنامه در شواهد درج نمی‌شود.
 
 مراجع API: [Angular SSR](https://angular.dev/guide/ssr)، [AngularNodeAppEngine](https://angular.dev/api/ssr/node/AngularNodeAppEngine)، [REQUEST](https://angular.dev/api/core/REQUEST)، [TransferState](https://angular.dev/api/core/TransferState). زنجیره Promise، Middleware عمومی، تزریق در Component، HTTP Transfer Cache، هدرهای سفارشی و جریان میان فایل‌ها خارج از این دامنه‌اند.
+
+## معماری App Router، Nuxt و SvelteKit (نسخه ۴ Pack)
+
+```mermaid
+flowchart TD
+  A["محدوده تأییدشده و مسیر متعارف سرور"] --> B{"مسیر ورودی فناوری"}
+  B --> C["تابع async پیش‌فرض Next.js app/page"]
+  B --> D["Handler صریح h3 در مسیر سرور Nuxt"]
+  B --> E["متد HTTP در مسیر +server مربوط به SvelteKit"]
+  C --> F["await روی params یا searchParams"]
+  D --> G["getQuery یا getRouterParam واردشده"]
+  E --> H["پارامتر یا URL Query درخواست"]
+  F --> I["جریان محلی محدود AST"]
+  G --> I
+  H --> I
+  I --> J["رندر خام JSX"]
+  I --> K["ارسال h3 با text/html صریح"]
+  I --> L["Response با هدر ثابت text/html"]
+  J --> M["یافته پیشنهادی بازبینی"]
+  K --> M
+  L --> M
+  I --> N["عبارت یا مالکیت پشتیبانی‌نشده: PARTIAL"]
+  M --> O["شناسه قانون، خطوط منبع و مقصد و محدوده"]
+  N --> O
+```
+
+| شناسه قانون | مسیر مثبت مدل‌شده | تست منفی یا ناقص |
+|---|---|---|
+| JS.NEXT.APP.REQUEST_TO_RAW_HTML | تابع async پیش‌فرض در page.tsx/jsx در app یا src/app؛ await روی props.params/searchParams و رندر خام JSX | متن عادی، HTML ثابت؛ دستور Client و Helper ناقص |
+| JS.NUXT.SSR.REQUEST_TO_HTML | defineEventHandler، getQuery/getRouterParam و send با text/html ثابت و Import صریح h3 | HTML ثابت، text/plain و گیرنده ناشناخته؛ Auto-import و جریان SSR در Vue SFC نیازمند بازبینی دستی |
+| JS.SVELTEKIT.SSR.REQUEST_TO_HTML | تابع HTTP صادرشده در src/routes و +server.ts/js؛ ورودی Params یا URL تا Response با text/html صریح | بدنه ثابت، محتوای غیر HTML و Shadowing؛ جریان +page.server تا {@html} دستی |
+
+هر مجموعه جدید شش سناریو و یک تست جداگانه خارج از مسیر دارد. خروجی Candidate است، نه آسیب‌پذیری تأییدشده؛ Helper پشتیبانی‌نشده در موارد مثبت به‌عنوان خطای عدم تشخیص محاسبه می‌شود. برنامه هدف اجرا نمی‌شود. نسخه فناوری، تنظیمات، دسترسی واقعی و نوع پاسخ باید بررسی شوند. Payload مربوط به Vue SSR و Hydration صفحه SvelteKit در مدل Endpoint پوشش ندارند. گراف ماژول Client/Server در Next.js، مسیرهای سفارشی، Middleware، Cache و جریان میان فایل‌ها مدل نشده‌اند. جداسازی Cache با دو حساب مجاز، درخواست یکسان، بررسی بدنه، هدرها و Variation باید مستقل آزموده شود؛ AST امنیت Cache را تأیید نمی‌کند.
+
+مرحله قبلی Angular v3 در CI شماره 45632019323 هر شش Job را گذراند. نتایج مجموعه‌های جدید باید از CI آخرین Commit استخراج شوند.
