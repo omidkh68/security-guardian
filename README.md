@@ -443,3 +443,5 @@ For contributors: [private npm/npx distribution preview](docs/npm-distribution.m
 [Optional JS/TS AST DOM flow](docs/js-dom-flow.md) ([فارسی](docs/js-dom-flow-FA.md)): explicitly authorized external parser; scoped location-to-innerHTML candidates, not exploit proof.
 
 JS/TS DOM AST v2 adds bounded branches and same-file helper summaries (#88).
+
+Python SQL AST v4 adds direct SQLite context-manager normal-path review (#90), with transaction/exception semantics marked partial.

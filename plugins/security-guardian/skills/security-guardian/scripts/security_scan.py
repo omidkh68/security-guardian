@@ -762,6 +762,27 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
             if steps > PY_SQL_MAX_STEPS:
                 stats['path_limited_functions'] += 1
                 return sources_by_sink, True
+            if isinstance(stmt, ast.With):
+                # sqlite3.Connection.__enter__ returns the connection. Its
+                # context manager commits/rolls back, not closes or scopes it.
+                item = stmt.items[0] if len(stmt.items) == 1 else None
+                call = item.context_expr if item else None
+                if (item is None or not isinstance(item.optional_vars, ast.Name)
+                        or not isinstance(call, ast.Call) or not _attr(call.func, 'connect')
+                        or not isinstance(call.func.value, ast.Name) or call.func.value.id not in db_names
+                        or call.keywords or len(call.args) != 1
+                        or not isinstance(call.args[0], ast.Constant) or not isinstance(call.args[0].value, str)):
+                    partial = True
+                    break
+                target = item.optional_vars.id
+                values[target] = frozenset()
+                receivers[target] = 'connection'
+                stats['context_manager_paths'] += 1
+                # Follow the normal path only; transaction/exception behavior
+                # is not modeled. Preserve Python function-local bindings.
+                partial = True
+                pending.append((tuple(stmt.body) + statements[index + 1:], values.copy(), receivers.copy()))
+                break
             if isinstance(stmt, ast.If):
                 if not _sql_condition(stmt.test):
                     partial = True
@@ -1000,7 +1021,7 @@ def process(root:Path, profile=None, components=()):
                     entry = {'control_id':cid, 'signal':'Flask request value reaches SQLite SQL argument',
                              'path':fn, 'confidence':'medium', 'suggested_severity':'high',
                              'status':'HEURISTIC_REVIEW_ONLY', 'technique':'BOUNDED_AST_FLOW',
-                             'pack_id':PY_SQL_PACK, 'pack_version':3, 'rule_id':PY_SQL_RULE,
+                             'pack_id':PY_SQL_PACK, 'pack_version':4, 'rule_id':PY_SQL_RULE,
                              'control_mapping':'LEGACY_COMPATIBILITY', **hit}
                     if len(evidence) < MAX_SIGNALS:
                         evidence.append(entry)
@@ -1199,11 +1220,11 @@ def process(root:Path, profile=None, components=()):
         }
         partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions','path_limited_functions')
         summary['python_sql_flow'] = {
-            'pack_id': PY_SQL_PACK, 'pack_version':3, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
+            'pack_id': PY_SQL_PACK, 'pack_version':4, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
             'selected_roots':sorted(python_sql_roots),
             'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
-            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases',*partial_keys)},
-            'limitations':['Bounded local AST, if/else and one-hop helper summaries; no loops, exceptions, context managers, helper chains, cross-module or exploit analysis.',
+            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths',*partial_keys)},
+            'limitations':['Bounded local AST, if/else and one-hop helper summaries; direct SQLite context normal paths only; no loops, exception semantics, arbitrary context managers, helper chains, cross-module or exploit analysis.',
                            'Unmodeled statements and imports are not proof of safety; no target code is executed.'],
         }
     return {'summary':summary,'signals':evidence,'controls':result,
@@ -1267,12 +1288,12 @@ def markdown(result):
                   '- Proxy trust and validation indicators require manual deployment/handler review.', '']
     if s.get('python_sql_flow'):
         flow = s['python_sql_flow']
-        lines += [f"- Python SQL AST flow v3: {flow['status']}",
+        lines += [f"- Python SQL AST flow v4: {flow['status']}",
                   f"- Eligible/parsed Python files: {flow['eligible_files']}/{flow['parsed_files']}; candidates: {flow['matches']}",
                   f"- Unsupported functions: {flow['unsupported_functions']}; unmodeled imports: {flow['unmodeled_import_files']}; parse errors: {flow['parse_errors']}",
                   f"- Unmodeled module statements: {flow['unmodeled_module_statements']}; size/complexity-limited files: {flow['size_limited_files']}/{flow['complexity_limited_files']}",
                   f"- Path-budget-limited functions: {flow['path_limited_functions']}",
-                  f"- Recognized helper definitions: {flow['recognized_helpers']}; resolved direct import aliases: {flow['resolved_import_aliases']}",
+                  f"- Recognized helper definitions: {flow['recognized_helpers']}; resolved direct import aliases: {flow['resolved_import_aliases']}; SQLite context paths: {flow['context_manager_paths']}",
                   '- AST source-to-sink candidates require manual confirmation; missing candidates are not safety.', '']
     for status,qty in sorted(s['applicability'].items()):lines.append(f'- {status}: {qty}')
     lines+=['', '## Scan coverage and limitations', '']
