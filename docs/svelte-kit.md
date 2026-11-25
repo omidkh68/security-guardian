@@ -28,3 +28,13 @@ Review the actual HTML source and sanitization, public environment declarations 
 No Svelte parser, data-flow, alias resolution, dynamic/namespace imports, multiline named imports, declaration analysis, actual bundle scan or framework version certification. Regex matching can also flag comments/literals or aliases. No target code execution, network or excluded .env inspection. Missing indicators never establish safety. Run package validation, regression tests and npm tarball checks. Synthetic fixtures cover positive/negative, scope, Kit-only filtering, legacy compatibility and redaction. Revert this isolated PR to roll back.
 
 References: [Svelte raw HTML](https://svelte.dev/docs/svelte/@html), [SvelteKit environment variables](https://svelte.dev/docs/kit/environment-variables), [legacy public module](https://svelte.dev/docs/kit/$env-static-public).
+
+## Architecture and testing value (#72)
+
+```mermaid
+flowchart LR
+ A["Svelte / Kit manifest roots"] --> B["Raw HTML / Kit public import"] --> C["Legacy mapping and coverage"]
+ C --> D["Manual evidence review"]
+```
+
+Fixtures check Kit-only matching, negatives, scope and redaction; no runtime proof.

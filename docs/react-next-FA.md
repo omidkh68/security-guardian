@@ -29,3 +29,13 @@ python3 <skill-dir>/scripts/security_scan.py --root . --profile frontend --forma
 مراجع: [React DOM](https://react.dev/reference/react-dom/components/common)، [متغیرهای محیطی Next](https://nextjs.org/docs/app/guides/environment-variables)، [Source Map تولید Next](https://nextjs.org/docs/pages/api-reference/config/next-config-js/productionBrowserSourceMaps)، [چک‌لیست تولید Next](https://nextjs.org/docs/app/guides/production-checklist).
 
 اعتبارسنجی بسته، تست‌های رگرسیون Python و تست بسته‌بندی npm را اجرا کنید. Fixtureهای مصنوعی موارد مثبت/منفی، محدوده، فیلتر اختصاصی Next، سازگاری قدیمی و عدم افشای سورس را پوشش می‌دهند. در صورت نیاز تغییر مستقل را Revert کنید؛ مهاجرت Ledger لازم نیست.
+
+## معماری و ارزش تست (#68)
+
+```mermaid
+flowchart LR
+ A["React / Next manifest roots"] --> B["Raw HTML / Next-only build indicators"] --> C["Legacy mapping and coverage"]
+ C --> D["Manual evidence review"]
+```
+
+نمونه‌ها قواعد React و Next اختصاصی، گزینه امن و ریشه خارج محدوده را تفکیک می‌کنند؛ Build واقعی تست جدا می‌خواهد.

@@ -29,3 +29,13 @@ Review the source-to-render flow and actual sanitizer configuration before accep
 References: [React DOM](https://react.dev/reference/react-dom/components/common), [Next environment variables](https://nextjs.org/docs/app/guides/environment-variables), [Next production source maps](https://nextjs.org/docs/pages/api-reference/config/next-config-js/productionBrowserSourceMaps), [Next production checklist](https://nextjs.org/docs/app/guides/production-checklist).
 
 Run package validation, Python regression tests and npm packaging smoke. Synthetic fixtures cover positive and negative examples, scope, Next-only filtering, legacy compatibility and source redaction. Revert this isolated change if necessary; no ledger migration.
+
+## Architecture and testing value (#68)
+
+```mermaid
+flowchart LR
+ A["React / Next manifest roots"] --> B["Raw HTML / Next-only build indicators"] --> C["Legacy mapping and coverage"]
+ C --> D["Manual evidence review"]
+```
+
+Fixtures distinguish React from Next-only rules, safe alternatives and excluded roots; actual builds require separate tests.

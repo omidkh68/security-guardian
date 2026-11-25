@@ -28,3 +28,13 @@ python3 <skill-dir>/scripts/security_scan.py --root . --profile frontend --forma
 Parser Svelte، جریان داده، تحلیل Alias، Import پویا/Namespace، Import نام‌دار چندخطی، تحلیل اعلان، اسکن واقعی Bundle یا تأیید نسخه فریم‌ورک نداریم. Regex ممکن است Comment، Literal یا Alias را هم علامت بزند. کد هدف اجرا نمی‌شود، شبکه استفاده نمی‌شود و فایل .env حذف‌شده بررسی نمی‌شود. نبود نشانه امنیت را اثبات نمی‌کند. اعتبارسنجی بسته، رگرسیون و بررسی tarball npm را اجرا کنید. Fixtureهای مصنوعی مثبت/منفی، محدوده، فیلتر Kit، سازگاری قدیمی و عدم افشای سورس را پوشش می‌دهند. برای بازگردانی PR مستقل را Revert کنید.
 
 مراجع: [HTML خام Svelte](https://svelte.dev/docs/svelte/@html)، [متغیرهای محیطی SvelteKit](https://svelte.dev/docs/kit/environment-variables)، [ماژول عمومی قدیمی](https://svelte.dev/docs/kit/$env-static-public).
+
+## معماری و ارزش تست (#72)
+
+```mermaid
+flowchart LR
+ A["Svelte / Kit manifest roots"] --> B["Raw HTML / Kit public import"] --> C["Legacy mapping and coverage"]
+ C --> D["Manual evidence review"]
+```
+
+نمونه‌ها تطابق اختصاصی Kit، منفی، محدوده و حذف داده را می‌سنجند؛ اثبات Runtime نیست.

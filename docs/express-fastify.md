@@ -29,3 +29,13 @@ Inspect the real proxy chain, ingress restrictions and overwritten forwarding he
 Run package validation, regression tests and npm packaging checks. Synthetic fixtures cover positive/negative signals, framework separation, scope, legacy compatibility and redaction. Revert this PR for rollback; no ledger migration.
 
 References: [Express behind proxies](https://expressjs.com/en/guide/behind-proxies/), [Fastify server](https://fastify.dev/docs/latest/Reference/Server/), [Fastify validation](https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/).
+
+## Architecture and testing value (#74)
+
+```mermaid
+flowchart LR
+ A["Express / Fastify roots"] --> B["Literal proxy / validation options"] --> C["Candidate plus coverage"]
+ C --> D["Manual evidence review"]
+```
+
+Fixtures check framework separation, safe options and scope; deployed proxy trust needs authorized tests.
