@@ -454,3 +454,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 [ماتریس پوشش فناوری و قرارداد توسعه Pack](docs/framework-coverage-FA.md) ([English](docs/framework-coverage.md)): موجودی نسخه‌دار Discovery، واجد شرایط بودن Heuristic/AST و وضعیت Runtime NOT_RUN؛ سیاست نگاشت و مهاجرت.
 
 [ارزیابی مستقل تشخیص](docs/independent-benchmark-FA.md) ([English](docs/independent-benchmark.md)): مجموعه خارجی CWE-89، مجموعه مصنوعی جدا و مخرج شفاف معیارها.
+
+[نگاشت استانداردها](docs/standards-crosswalk-FA.md) ([English](docs/standards-crosswalk.md)): روابط نسخه‌دار و تفکیک کاربرد و تأیید.

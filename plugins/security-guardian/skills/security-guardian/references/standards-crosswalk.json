@@ -1,0 +1,4115 @@
+{
+  "schema_version": 1,
+  "crosswalk_version": 1,
+  "catalog_blob_sha": "7d939ce0b3d83250b6eb47adf172e16a98f5f1f2",
+  "review_status": "AUTHOR_REVIEWED_NOT_INDEPENDENTLY_APPROVED",
+  "sources": {
+    "ASVS": {
+      "version": "5.0.0",
+      "kind": "requirement",
+      "revision": "180622b1329ee7ed349c9f5ce5e14fa91f42c359",
+      "url": "https://github.com/OWASP/ASVS/tree/180622b1329ee7ed349c9f5ce5e14fa91f42c359"
+    },
+    "WSTG": {
+      "version": "4.2",
+      "kind": "test",
+      "revision": "dd33419e10edb22b78d89325a6c2aad9f184e3a2",
+      "url": "https://github.com/OWASP/wstg/tree/dd33419e10edb22b78d89325a6c2aad9f184e3a2"
+    },
+    "MASVS": {
+      "version": "2.1.0",
+      "kind": "requirement",
+      "revision": "8e133d09f4140518ed04cc254b18be9ff4990ffc",
+      "url": "https://github.com/OWASP/masvs/tree/8e133d09f4140518ed04cc254b18be9ff4990ffc"
+    },
+    "MASTG": {
+      "version": "2.0.0",
+      "kind": "test",
+      "revision": "990472dbcffe126f5556045d60270c4ffdfdde72",
+      "url": "https://github.com/OWASP/mastg/tree/990472dbcffe126f5556045d60270c4ffdfdde72"
+    },
+    "MASWE": {
+      "version": "1.0.0",
+      "kind": "weakness",
+      "revision": "308b82b4bbe29166934fb5a621b40471cfea61db",
+      "url": "https://github.com/OWASP/maswe/tree/308b82b4bbe29166934fb5a621b40471cfea61db"
+    },
+    "CWE": {
+      "version": "5.0",
+      "kind": "weakness",
+      "revision": null,
+      "url": "https://cwe.mitre.org/data/",
+      "observed_date": "2026-11-25"
+    }
+  },
+  "references": {
+    "ASVS:1.2.1": {
+      "standard": "ASVS",
+      "id": "1.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 1.2.1"
+    },
+    "ASVS:1.2.10": {
+      "standard": "ASVS",
+      "id": "1.2.10",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 1.2.10"
+    },
+    "ASVS:1.2.2": {
+      "standard": "ASVS",
+      "id": "1.2.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 1.2.2"
+    },
+    "ASVS:1.2.3": {
+      "standard": "ASVS",
+      "id": "1.2.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 1.2.3"
+    },
+    "ASVS:1.2.4": {
+      "standard": "ASVS",
+      "id": "1.2.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 1.2.4"
+    },
+    "ASVS:1.3.1": {
+      "standard": "ASVS",
+      "id": "1.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 1.3.1"
+    },
+    "ASVS:1.3.6": {
+      "standard": "ASVS",
+      "id": "1.3.6",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 1.3.6"
+    },
+    "ASVS:1.3.7": {
+      "standard": "ASVS",
+      "id": "1.3.7",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 1.3.7"
+    },
+    "ASVS:10.2.1": {
+      "standard": "ASVS",
+      "id": "10.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.2.1"
+    },
+    "ASVS:10.2.2": {
+      "standard": "ASVS",
+      "id": "10.2.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.2.2"
+    },
+    "ASVS:10.4.1": {
+      "standard": "ASVS",
+      "id": "10.4.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.4.1"
+    },
+    "ASVS:10.4.5": {
+      "standard": "ASVS",
+      "id": "10.4.5",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.4.5"
+    },
+    "ASVS:10.4.6": {
+      "standard": "ASVS",
+      "id": "10.4.6",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.4.6"
+    },
+    "ASVS:10.4.9": {
+      "standard": "ASVS",
+      "id": "10.4.9",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.4.9"
+    },
+    "ASVS:10.5.1": {
+      "standard": "ASVS",
+      "id": "10.5.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.5.1"
+    },
+    "ASVS:10.5.4": {
+      "standard": "ASVS",
+      "id": "10.5.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.5.4"
+    },
+    "ASVS:11.4.3": {
+      "standard": "ASVS",
+      "id": "11.4.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 11.4.3"
+    },
+    "ASVS:11.6.1": {
+      "standard": "ASVS",
+      "id": "11.6.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 11.6.1"
+    },
+    "ASVS:12.1.1": {
+      "standard": "ASVS",
+      "id": "12.1.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 12.1.1"
+    },
+    "ASVS:12.1.2": {
+      "standard": "ASVS",
+      "id": "12.1.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 12.1.2"
+    },
+    "ASVS:12.2.1": {
+      "standard": "ASVS",
+      "id": "12.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 12.2.1"
+    },
+    "ASVS:12.3.1": {
+      "standard": "ASVS",
+      "id": "12.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 12.3.1"
+    },
+    "ASVS:12.3.2": {
+      "standard": "ASVS",
+      "id": "12.3.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 12.3.2"
+    },
+    "ASVS:12.3.5": {
+      "standard": "ASVS",
+      "id": "12.3.5",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 12.3.5"
+    },
+    "ASVS:13.1.2": {
+      "standard": "ASVS",
+      "id": "13.1.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.1.2"
+    },
+    "ASVS:13.2.1": {
+      "standard": "ASVS",
+      "id": "13.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.2.1"
+    },
+    "ASVS:13.2.2": {
+      "standard": "ASVS",
+      "id": "13.2.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.2.2"
+    },
+    "ASVS:13.2.4": {
+      "standard": "ASVS",
+      "id": "13.2.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.2.4"
+    },
+    "ASVS:13.2.5": {
+      "standard": "ASVS",
+      "id": "13.2.5",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.2.5"
+    },
+    "ASVS:13.2.6": {
+      "standard": "ASVS",
+      "id": "13.2.6",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.2.6"
+    },
+    "ASVS:13.3.1": {
+      "standard": "ASVS",
+      "id": "13.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.3.1"
+    },
+    "ASVS:13.3.2": {
+      "standard": "ASVS",
+      "id": "13.3.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.3.2"
+    },
+    "ASVS:13.3.3": {
+      "standard": "ASVS",
+      "id": "13.3.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.3.3"
+    },
+    "ASVS:13.3.4": {
+      "standard": "ASVS",
+      "id": "13.3.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.3.4"
+    },
+    "ASVS:13.4.2": {
+      "standard": "ASVS",
+      "id": "13.4.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.4.2"
+    },
+    "ASVS:13.4.5": {
+      "standard": "ASVS",
+      "id": "13.4.5",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.4.5"
+    },
+    "ASVS:13.4.7": {
+      "standard": "ASVS",
+      "id": "13.4.7",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 13.4.7"
+    },
+    "ASVS:14.1.1": {
+      "standard": "ASVS",
+      "id": "14.1.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 14.1.1"
+    },
+    "ASVS:14.2.2": {
+      "standard": "ASVS",
+      "id": "14.2.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 14.2.2"
+    },
+    "ASVS:14.2.4": {
+      "standard": "ASVS",
+      "id": "14.2.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 14.2.4"
+    },
+    "ASVS:14.2.5": {
+      "standard": "ASVS",
+      "id": "14.2.5",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 14.2.5"
+    },
+    "ASVS:14.2.6": {
+      "standard": "ASVS",
+      "id": "14.2.6",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 14.2.6"
+    },
+    "ASVS:14.2.7": {
+      "standard": "ASVS",
+      "id": "14.2.7",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 14.2.7"
+    },
+    "ASVS:14.3.1": {
+      "standard": "ASVS",
+      "id": "14.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 14.3.1"
+    },
+    "ASVS:14.3.2": {
+      "standard": "ASVS",
+      "id": "14.3.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 14.3.2"
+    },
+    "ASVS:14.3.3": {
+      "standard": "ASVS",
+      "id": "14.3.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 14.3.3"
+    },
+    "ASVS:15.1.1": {
+      "standard": "ASVS",
+      "id": "15.1.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 15.1.1"
+    },
+    "ASVS:15.1.2": {
+      "standard": "ASVS",
+      "id": "15.1.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 15.1.2"
+    },
+    "ASVS:15.2.1": {
+      "standard": "ASVS",
+      "id": "15.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 15.2.1"
+    },
+    "ASVS:15.2.2": {
+      "standard": "ASVS",
+      "id": "15.2.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 15.2.2"
+    },
+    "ASVS:15.2.4": {
+      "standard": "ASVS",
+      "id": "15.2.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 15.2.4"
+    },
+    "ASVS:15.2.5": {
+      "standard": "ASVS",
+      "id": "15.2.5",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 15.2.5"
+    },
+    "ASVS:15.3.1": {
+      "standard": "ASVS",
+      "id": "15.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 15.3.1"
+    },
+    "ASVS:15.3.2": {
+      "standard": "ASVS",
+      "id": "15.3.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 15.3.2"
+    },
+    "ASVS:15.3.3": {
+      "standard": "ASVS",
+      "id": "15.3.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 15.3.3"
+    },
+    "ASVS:15.3.4": {
+      "standard": "ASVS",
+      "id": "15.3.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 15.3.4"
+    },
+    "ASVS:15.4.2": {
+      "standard": "ASVS",
+      "id": "15.4.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 15.4.2"
+    },
+    "ASVS:16.2.1": {
+      "standard": "ASVS",
+      "id": "16.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 16.2.1"
+    },
+    "ASVS:16.2.5": {
+      "standard": "ASVS",
+      "id": "16.2.5",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 16.2.5"
+    },
+    "ASVS:16.3.1": {
+      "standard": "ASVS",
+      "id": "16.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 16.3.1"
+    },
+    "ASVS:16.3.2": {
+      "standard": "ASVS",
+      "id": "16.3.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 16.3.2"
+    },
+    "ASVS:16.3.3": {
+      "standard": "ASVS",
+      "id": "16.3.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 16.3.3"
+    },
+    "ASVS:16.4.1": {
+      "standard": "ASVS",
+      "id": "16.4.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 16.4.1"
+    },
+    "ASVS:16.4.2": {
+      "standard": "ASVS",
+      "id": "16.4.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 16.4.2"
+    },
+    "ASVS:16.4.3": {
+      "standard": "ASVS",
+      "id": "16.4.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 16.4.3"
+    },
+    "ASVS:16.5.1": {
+      "standard": "ASVS",
+      "id": "16.5.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 16.5.1"
+    },
+    "ASVS:16.5.2": {
+      "standard": "ASVS",
+      "id": "16.5.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 16.5.2"
+    },
+    "ASVS:16.5.3": {
+      "standard": "ASVS",
+      "id": "16.5.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 16.5.3"
+    },
+    "ASVS:16.5.4": {
+      "standard": "ASVS",
+      "id": "16.5.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 16.5.4"
+    },
+    "ASVS:2.2.1": {
+      "standard": "ASVS",
+      "id": "2.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 2.2.1"
+    },
+    "ASVS:2.2.2": {
+      "standard": "ASVS",
+      "id": "2.2.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 2.2.2"
+    },
+    "ASVS:2.2.3": {
+      "standard": "ASVS",
+      "id": "2.2.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 2.2.3"
+    },
+    "ASVS:2.3.1": {
+      "standard": "ASVS",
+      "id": "2.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 2.3.1"
+    },
+    "ASVS:2.3.2": {
+      "standard": "ASVS",
+      "id": "2.3.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 2.3.2"
+    },
+    "ASVS:2.3.3": {
+      "standard": "ASVS",
+      "id": "2.3.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 2.3.3"
+    },
+    "ASVS:2.3.4": {
+      "standard": "ASVS",
+      "id": "2.3.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 2.3.4"
+    },
+    "ASVS:2.4.1": {
+      "standard": "ASVS",
+      "id": "2.4.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 2.4.1"
+    },
+    "ASVS:3.2.2": {
+      "standard": "ASVS",
+      "id": "3.2.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.2.2"
+    },
+    "ASVS:3.3.1": {
+      "standard": "ASVS",
+      "id": "3.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.3.1"
+    },
+    "ASVS:3.3.2": {
+      "standard": "ASVS",
+      "id": "3.3.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.3.2"
+    },
+    "ASVS:3.3.4": {
+      "standard": "ASVS",
+      "id": "3.3.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.3.4"
+    },
+    "ASVS:3.4.1": {
+      "standard": "ASVS",
+      "id": "3.4.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.4.1"
+    },
+    "ASVS:3.4.2": {
+      "standard": "ASVS",
+      "id": "3.4.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.4.2"
+    },
+    "ASVS:3.4.3": {
+      "standard": "ASVS",
+      "id": "3.4.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.4.3"
+    },
+    "ASVS:3.4.4": {
+      "standard": "ASVS",
+      "id": "3.4.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.4.4"
+    },
+    "ASVS:3.4.5": {
+      "standard": "ASVS",
+      "id": "3.4.5",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.4.5"
+    },
+    "ASVS:3.4.6": {
+      "standard": "ASVS",
+      "id": "3.4.6",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.4.6"
+    },
+    "ASVS:3.4.7": {
+      "standard": "ASVS",
+      "id": "3.4.7",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.4.7"
+    },
+    "ASVS:3.5.1": {
+      "standard": "ASVS",
+      "id": "3.5.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.5.1"
+    },
+    "ASVS:3.5.2": {
+      "standard": "ASVS",
+      "id": "3.5.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.5.2"
+    },
+    "ASVS:3.5.3": {
+      "standard": "ASVS",
+      "id": "3.5.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.5.3"
+    },
+    "ASVS:3.6.1": {
+      "standard": "ASVS",
+      "id": "3.6.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.6.1"
+    },
+    "ASVS:3.7.2": {
+      "standard": "ASVS",
+      "id": "3.7.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.7.2"
+    },
+    "ASVS:3.7.3": {
+      "standard": "ASVS",
+      "id": "3.7.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 3.7.3"
+    },
+    "ASVS:4.1.3": {
+      "standard": "ASVS",
+      "id": "4.1.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 4.1.3"
+    },
+    "ASVS:4.1.5": {
+      "standard": "ASVS",
+      "id": "4.1.5",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 4.1.5"
+    },
+    "ASVS:4.2.1": {
+      "standard": "ASVS",
+      "id": "4.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 4.2.1"
+    },
+    "ASVS:4.2.2": {
+      "standard": "ASVS",
+      "id": "4.2.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 4.2.2"
+    },
+    "ASVS:4.2.3": {
+      "standard": "ASVS",
+      "id": "4.2.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 4.2.3"
+    },
+    "ASVS:4.2.4": {
+      "standard": "ASVS",
+      "id": "4.2.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 4.2.4"
+    },
+    "ASVS:4.3.1": {
+      "standard": "ASVS",
+      "id": "4.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 4.3.1"
+    },
+    "ASVS:4.4.1": {
+      "standard": "ASVS",
+      "id": "4.4.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 4.4.1"
+    },
+    "ASVS:4.4.2": {
+      "standard": "ASVS",
+      "id": "4.4.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 4.4.2"
+    },
+    "ASVS:4.4.3": {
+      "standard": "ASVS",
+      "id": "4.4.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 4.4.3"
+    },
+    "ASVS:5.2.1": {
+      "standard": "ASVS",
+      "id": "5.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 5.2.1"
+    },
+    "ASVS:5.2.2": {
+      "standard": "ASVS",
+      "id": "5.2.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 5.2.2"
+    },
+    "ASVS:5.2.3": {
+      "standard": "ASVS",
+      "id": "5.2.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 5.2.3"
+    },
+    "ASVS:5.3.1": {
+      "standard": "ASVS",
+      "id": "5.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 5.3.1"
+    },
+    "ASVS:5.3.2": {
+      "standard": "ASVS",
+      "id": "5.3.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 5.3.2"
+    },
+    "ASVS:5.3.3": {
+      "standard": "ASVS",
+      "id": "5.3.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 5.3.3"
+    },
+    "ASVS:5.4.3": {
+      "standard": "ASVS",
+      "id": "5.4.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 5.4.3"
+    },
+    "ASVS:6.3.1": {
+      "standard": "ASVS",
+      "id": "6.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.3.1"
+    },
+    "ASVS:6.3.3": {
+      "standard": "ASVS",
+      "id": "6.3.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.3.3"
+    },
+    "ASVS:6.3.8": {
+      "standard": "ASVS",
+      "id": "6.3.8",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.3.8"
+    },
+    "ASVS:6.4.1": {
+      "standard": "ASVS",
+      "id": "6.4.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.4.1"
+    },
+    "ASVS:6.4.3": {
+      "standard": "ASVS",
+      "id": "6.4.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.4.3"
+    },
+    "ASVS:6.5.5": {
+      "standard": "ASVS",
+      "id": "6.5.5",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.5.5"
+    },
+    "ASVS:6.6.2": {
+      "standard": "ASVS",
+      "id": "6.6.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.6.2"
+    },
+    "ASVS:6.6.3": {
+      "standard": "ASVS",
+      "id": "6.6.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.6.3"
+    },
+    "ASVS:6.7.1": {
+      "standard": "ASVS",
+      "id": "6.7.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.7.1"
+    },
+    "ASVS:6.7.2": {
+      "standard": "ASVS",
+      "id": "6.7.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.7.2"
+    },
+    "ASVS:7.1.2": {
+      "standard": "ASVS",
+      "id": "7.1.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 7.1.2"
+    },
+    "ASVS:7.3.1": {
+      "standard": "ASVS",
+      "id": "7.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 7.3.1"
+    },
+    "ASVS:7.3.2": {
+      "standard": "ASVS",
+      "id": "7.3.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 7.3.2"
+    },
+    "ASVS:7.4.1": {
+      "standard": "ASVS",
+      "id": "7.4.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 7.4.1"
+    },
+    "ASVS:7.4.2": {
+      "standard": "ASVS",
+      "id": "7.4.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 7.4.2"
+    },
+    "ASVS:7.4.5": {
+      "standard": "ASVS",
+      "id": "7.4.5",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 7.4.5"
+    },
+    "ASVS:7.5.1": {
+      "standard": "ASVS",
+      "id": "7.5.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 7.5.1"
+    },
+    "ASVS:7.5.2": {
+      "standard": "ASVS",
+      "id": "7.5.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 7.5.2"
+    },
+    "ASVS:7.5.3": {
+      "standard": "ASVS",
+      "id": "7.5.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 7.5.3"
+    },
+    "ASVS:8.1.1": {
+      "standard": "ASVS",
+      "id": "8.1.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.1.1"
+    },
+    "ASVS:8.1.2": {
+      "standard": "ASVS",
+      "id": "8.1.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.1.2"
+    },
+    "ASVS:8.1.3": {
+      "standard": "ASVS",
+      "id": "8.1.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.1.3"
+    },
+    "ASVS:8.2.1": {
+      "standard": "ASVS",
+      "id": "8.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.2.1"
+    },
+    "ASVS:8.2.2": {
+      "standard": "ASVS",
+      "id": "8.2.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.2.2"
+    },
+    "ASVS:8.2.3": {
+      "standard": "ASVS",
+      "id": "8.2.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.2.3"
+    },
+    "ASVS:8.2.4": {
+      "standard": "ASVS",
+      "id": "8.2.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.2.4"
+    },
+    "ASVS:8.3.1": {
+      "standard": "ASVS",
+      "id": "8.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.3.1"
+    },
+    "ASVS:8.3.2": {
+      "standard": "ASVS",
+      "id": "8.3.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.3.2"
+    },
+    "ASVS:8.3.3": {
+      "standard": "ASVS",
+      "id": "8.3.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.3.3"
+    },
+    "ASVS:8.4.1": {
+      "standard": "ASVS",
+      "id": "8.4.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.4.1"
+    },
+    "ASVS:8.4.2": {
+      "standard": "ASVS",
+      "id": "8.4.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.4.2"
+    },
+    "ASVS:9.1.1": {
+      "standard": "ASVS",
+      "id": "9.1.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 9.1.1"
+    },
+    "ASVS:9.1.2": {
+      "standard": "ASVS",
+      "id": "9.1.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 9.1.2"
+    },
+    "ASVS:9.1.3": {
+      "standard": "ASVS",
+      "id": "9.1.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 9.1.3"
+    },
+    "ASVS:9.2.1": {
+      "standard": "ASVS",
+      "id": "9.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 9.2.1"
+    },
+    "ASVS:9.2.3": {
+      "standard": "ASVS",
+      "id": "9.2.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 9.2.3"
+    },
+    "CWE:CWE-352": {
+      "standard": "CWE",
+      "id": "CWE-352",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/352.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "CSRF"
+    },
+    "CWE:CWE-400": {
+      "standard": "CWE",
+      "id": "CWE-400",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/400.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Resource consumption"
+    },
+    "CWE:CWE-639": {
+      "standard": "CWE",
+      "id": "CWE-639",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/639.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "User-controlled object key authorization"
+    },
+    "CWE:CWE-79": {
+      "standard": "CWE",
+      "id": "CWE-79",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/79.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Web page generation injection"
+    },
+    "CWE:CWE-862": {
+      "standard": "CWE",
+      "id": "CWE-862",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/862.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Missing authorization"
+    },
+    "CWE:CWE-89": {
+      "standard": "CWE",
+      "id": "CWE-89",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/89.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "SQL injection"
+    },
+    "CWE:CWE-915": {
+      "standard": "CWE",
+      "id": "CWE-915",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/915.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Dynamic object attribute modification"
+    },
+    "CWE:CWE-918": {
+      "standard": "CWE",
+      "id": "CWE-918",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/918.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "SSRF"
+    },
+    "MASTG:MASTG-TEST-0217": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0217",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-NETWORK/MASTG-TEST-0217.md",
+      "source_path": "tests-beta/android/MASVS-NETWORK/MASTG-TEST-0217.md",
+      "source_blob_sha": "bb10d7894272236c7093b1f90bb61d20f9000772",
+      "topic": "Insecure TLS protocols"
+    },
+    "MASTG:MASTG-TEST-0242": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0242",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-NETWORK/MASTG-TEST-0242.md",
+      "source_path": "tests-beta/android/MASVS-NETWORK/MASTG-TEST-0242.md",
+      "source_blob_sha": "50950c6a4caa8000e73d8b6715dfb4bbfb5f0231",
+      "topic": "Android network configuration pinning"
+    },
+    "MASVS:MASVS-CRYPTO-2": {
+      "standard": "MASVS",
+      "id": "MASVS-CRYPTO-2",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-CRYPTO-2.md",
+      "source_path": "controls/MASVS-CRYPTO-2.md",
+      "source_blob_sha": "49e47b17a37b02ab624293a7fd7e3021d6e47ecc",
+      "topic": "Key lifecycle"
+    },
+    "MASVS:MASVS-NETWORK-1": {
+      "standard": "MASVS",
+      "id": "MASVS-NETWORK-1",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-NETWORK-1.md",
+      "source_path": "controls/MASVS-NETWORK-1.md",
+      "source_blob_sha": "84841ebe5b521a4e7a548bca42ced5c49455dc2d",
+      "topic": "Secure network traffic"
+    },
+    "MASVS:MASVS-NETWORK-2": {
+      "standard": "MASVS",
+      "id": "MASVS-NETWORK-2",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-NETWORK-2.md",
+      "source_path": "controls/MASVS-NETWORK-2.md",
+      "source_blob_sha": "02c2e1da589dfa78225e1e283108b0f754edf41b",
+      "topic": "Identity pinning on controlled endpoints"
+    },
+    "MASVS:MASVS-PLATFORM-1": {
+      "standard": "MASVS",
+      "id": "MASVS-PLATFORM-1",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-PLATFORM-1.md",
+      "source_path": "controls/MASVS-PLATFORM-1.md",
+      "source_blob_sha": "27769eff74469cec07107488522c9999c0b09a00",
+      "topic": "IPC safety"
+    },
+    "MASVS:MASVS-PLATFORM-2": {
+      "standard": "MASVS",
+      "id": "MASVS-PLATFORM-2",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-PLATFORM-2.md",
+      "source_path": "controls/MASVS-PLATFORM-2.md",
+      "source_blob_sha": "ed37e4df5badda98fd7e0b85e85ad77f399c2598",
+      "topic": "WebView safety"
+    },
+    "MASVS:MASVS-RESILIENCE-1": {
+      "standard": "MASVS",
+      "id": "MASVS-RESILIENCE-1",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-RESILIENCE-1.md",
+      "source_path": "controls/MASVS-RESILIENCE-1.md",
+      "source_blob_sha": "0306619cb7b0262e62f3ba8e4a7a300a82a8c62b",
+      "topic": "Platform integrity"
+    },
+    "MASVS:MASVS-RESILIENCE-2": {
+      "standard": "MASVS",
+      "id": "MASVS-RESILIENCE-2",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-RESILIENCE-2.md",
+      "source_path": "controls/MASVS-RESILIENCE-2.md",
+      "source_blob_sha": "2048f25907bb2618d404ab0a30fcaa904897b59f",
+      "topic": "Tamper resistance"
+    },
+    "MASVS:MASVS-STORAGE-1": {
+      "standard": "MASVS",
+      "id": "MASVS-STORAGE-1",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-STORAGE-1.md",
+      "source_path": "controls/MASVS-STORAGE-1.md",
+      "source_blob_sha": "de44ce4e25ae4192d2eb8310e2e666804a9fd71b",
+      "topic": "Sensitive storage"
+    },
+    "MASWE:MASWE-0026": {
+      "standard": "MASWE",
+      "id": "MASWE-0026",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-NETWORK/MASWE-0026.md",
+      "source_path": "weaknesses/MASVS-NETWORK/MASWE-0026.md",
+      "source_blob_sha": "2310ed512fbef71f1e9ac117cbfa9616b5d3a409",
+      "topic": "Unencrypted traffic"
+    },
+    "MASWE:MASWE-0028": {
+      "standard": "MASWE",
+      "id": "MASWE-0028",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-NETWORK/MASWE-0028.md",
+      "source_path": "weaknesses/MASVS-NETWORK/MASWE-0028.md",
+      "source_blob_sha": "426ca4d8fd02a8759455a5005b279a353fb55a72",
+      "topic": "Pinning weakness"
+    },
+    "WSTG:WSTG-v42-ATHZ-04": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-ATHZ-04",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/05-Authorization_Testing/04-Testing_for_Insecure_Direct_Object_References.md",
+      "source_path": "document/4-Web_Application_Security_Testing/05-Authorization_Testing/04-Testing_for_Insecure_Direct_Object_References.md",
+      "source_blob_sha": "e38b89555cdaa0a4957851565d250ffb91fc366a",
+      "topic": "Object reference authorization"
+    },
+    "WSTG:WSTG-v42-CLNT-01": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-CLNT-01",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/11-Client-side_Testing/01-Testing_for_DOM-based_Cross_Site_Scripting.md",
+      "source_path": "document/4-Web_Application_Security_Testing/11-Client-side_Testing/01-Testing_for_DOM-based_Cross_Site_Scripting.md",
+      "source_blob_sha": "ce9dffc1971b667d01bb504eaf7b7995d876bf13",
+      "topic": "DOM XSS tests"
+    },
+    "WSTG:WSTG-v42-INPV-05": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-INPV-05",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05-Testing_for_SQL_Injection.md",
+      "source_path": "document/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05-Testing_for_SQL_Injection.md",
+      "source_blob_sha": "3a22e2c82f1c2bc485c4c57295af4a506fadfcbd",
+      "topic": "SQL injection tests"
+    },
+    "WSTG:WSTG-v42-SESS-05": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-SESS-05",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/06-Session_Management_Testing/05-Testing_for_Cross_Site_Request_Forgery.md",
+      "source_path": "document/4-Web_Application_Security_Testing/06-Session_Management_Testing/05-Testing_for_Cross_Site_Request_Forgery.md",
+      "source_blob_sha": "3249c7d414c1aaa82e23a93e58fbb333764bce49",
+      "topic": "CSRF tests"
+    }
+  },
+  "controls": [
+    {
+      "control_id": "GOV-01",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "GOV-02",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "GOV-03",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "GOV-04",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "GOV-05",
+      "mappings": [
+        {
+          "reference": "ASVS:14.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Data classification and minimum disclosure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:14.2.6",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Data classification and minimum disclosure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "GOV-06",
+      "mappings": [
+        {
+          "reference": "ASVS:15.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Third-party remediation windows only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "GOV-07",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "GOV-08",
+      "mappings": [
+        {
+          "reference": "ASVS:15.2.5",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Additional defenses and secure failure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:16.5.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Additional defenses and secure failure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "IAM-01",
+      "mappings": [
+        {
+          "reference": "ASVS:8.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Trusted service enforcement",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-862",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Missing authorization; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "IAM-02",
+      "mappings": [
+        {
+          "reference": "ASVS:8.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Explicit function and data permissions",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Explicit function and data permissions",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "IAM-03",
+      "mappings": [
+        {
+          "reference": "ASVS:6.3.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "MFA and cryptographic authentication aspects, not full phishing resistance",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:6.7.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "MFA and cryptographic authentication aspects, not full phishing resistance",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:6.7.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "MFA and cryptographic authentication aspects, not full phishing resistance",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "IAM-04",
+      "mappings": [
+        {
+          "reference": "ASVS:3.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Cookies and cross-origin request defense",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Cookies and cross-origin request defense",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.3.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Cookies and cross-origin request defense",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.5.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Cookies and cross-origin request defense",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.5.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Cookies and cross-origin request defense",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-SESS-05",
+          "relationship": "RELATED_TEST",
+          "rationale": "CSRF tests; related aspect only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-352",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "CSRF; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "IAM-05",
+      "mappings": [
+        {
+          "reference": "ASVS:9.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token validation and refresh lifecycle",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:9.1.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token validation and refresh lifecycle",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:9.1.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token validation and refresh lifecycle",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:9.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token validation and refresh lifecycle",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:9.2.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token validation and refresh lifecycle",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:10.4.5",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token validation and refresh lifecycle",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:10.4.9",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token validation and refresh lifecycle",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "IAM-06",
+      "mappings": [
+        {
+          "reference": "ASVS:6.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Brute force and enumeration",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:6.3.8",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Brute force and enumeration",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "IAM-07",
+      "mappings": [
+        {
+          "reference": "ASVS:6.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Recovery and OTP integrity",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:6.4.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Recovery and OTP integrity",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:6.5.5",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Recovery and OTP integrity",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:6.6.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Recovery and OTP integrity",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:6.6.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Recovery and OTP integrity",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "IAM-08",
+      "mappings": [
+        {
+          "reference": "ASVS:7.5.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Sensitive operation reauthentication",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:7.5.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Sensitive operation reauthentication",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "IAM-09",
+      "mappings": [
+        {
+          "reference": "ASVS:7.1.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Parallel sessions and termination",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:7.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Parallel sessions and termination",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:7.4.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Parallel sessions and termination",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:7.4.5",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Parallel sessions and termination",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:7.5.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Parallel sessions and termination",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "IAM-10",
+      "mappings": [
+        {
+          "reference": "ASVS:12.3.5",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Internal service identity",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Internal service identity",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "IAM-11",
+      "mappings": [
+        {
+          "reference": "ASVS:10.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected OAuth/OIDC safeguards",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:10.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected OAuth/OIDC safeguards",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:10.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected OAuth/OIDC safeguards",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:10.4.6",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected OAuth/OIDC safeguards",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:10.5.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected OAuth/OIDC safeguards",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:10.5.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected OAuth/OIDC safeguards",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "IAM-12",
+      "mappings": [
+        {
+          "reference": "ASVS:7.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Timeout and adaptive access",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:7.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Timeout and adaptive access",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.2.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Timeout and adaptive access",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-01",
+      "mappings": [
+        {
+          "reference": "ASVS:1.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Contextual encoding and safe HTML",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:1.2.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Contextual encoding and safe HTML",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:1.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Contextual encoding and safe HTML",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Contextual encoding and safe HTML",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-CLNT-01",
+          "relationship": "RELATED_TEST",
+          "rationale": "DOM XSS tests; related aspect only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-79",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Web page generation injection; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-02",
+      "mappings": [
+        {
+          "reference": "ASVS:3.4.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "CSP; Trusted Types separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.4.6",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "CSP; Trusted Types separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.4.7",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "CSP; Trusted Types separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-03",
+      "mappings": [
+        {
+          "reference": "ASVS:1.3.7",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Template injection and production debug",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.4.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Template injection and production debug",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-04",
+      "mappings": [
+        {
+          "reference": "ASVS:14.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Browser storage and cleanup",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:14.3.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Browser storage and cleanup",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-05",
+      "mappings": [
+        {
+          "reference": "ASVS:3.5.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Cross-origin sensitive operations",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.5.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Cross-origin sensitive operations",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.5.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Cross-origin sensitive operations",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-SESS-05",
+          "relationship": "RELATED_TEST",
+          "rationale": "CSRF tests; related aspect only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-352",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "CSRF; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-06",
+      "mappings": [
+        {
+          "reference": "ASVS:4.1.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Intermediary headers",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-07",
+      "mappings": [
+        {
+          "reference": "ASVS:8.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Trusted enforcement rather than UI guards",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-862",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Missing authorization; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-08",
+      "mappings": [
+        {
+          "reference": "ASVS:3.6.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "External assets and dependency origin",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:15.2.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "External assets and dependency origin",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-09",
+      "mappings": [
+        {
+          "reference": "ASVS:5.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Upload size and type",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:5.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Upload size and type",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-10",
+      "mappings": [
+        {
+          "reference": "ASVS:14.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Sensitive response caching",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:14.2.5",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Sensitive response caching",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:14.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Sensitive response caching",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-11",
+      "mappings": [
+        {
+          "reference": "ASVS:1.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "URL and redirects",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.7.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "URL and redirects",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.7.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "URL and redirects",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-12",
+      "mappings": [
+        {
+          "reference": "ASVS:13.4.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Debug and unintended served files",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.4.7",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Debug and unintended served files",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "ANG-13",
+      "mappings": [
+        {
+          "reference": "ASVS:1.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Untrusted HTML handling",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:1.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Untrusted HTML handling",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Untrusted HTML handling",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-CLNT-01",
+          "relationship": "RELATED_TEST",
+          "rationale": "DOM XSS tests; related aspect only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-79",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Web page generation injection; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-01",
+      "mappings": [
+        {
+          "reference": "ASVS:2.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Input constraints and mass assignment",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:15.3.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Input constraints and mass assignment",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-915",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Dynamic object attribute modification; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-02",
+      "mappings": [
+        {
+          "reference": "ASVS:3.4.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "CORS and independent authorization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "CORS and independent authorization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-03",
+      "mappings": [
+        {
+          "reference": "ASVS:3.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Browser response headers",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.4.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Browser response headers",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.4.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Browser response headers",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.4.5",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Browser response headers",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.4.6",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Browser response headers",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-04",
+      "mappings": [
+        {
+          "reference": "ASVS:2.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Abuse and resource limits",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:15.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Abuse and resource limits",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.2.6",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Abuse and resource limits",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-400",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Resource consumption; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-05",
+      "mappings": [
+        {
+          "reference": "ASVS:9.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token signature, claims and rotation",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:9.1.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token signature, claims and rotation",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:9.1.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token signature, claims and rotation",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:9.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token signature, claims and rotation",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:9.2.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token signature, claims and rotation",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.3.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Token signature, claims and rotation",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-06",
+      "mappings": [
+        {
+          "reference": "ASVS:2.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Trusted validation and output fields",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:2.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Trusted validation and output fields",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:15.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Trusted validation and output fields",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-07",
+      "mappings": [
+        {
+          "reference": "ASVS:1.2.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Query parameterization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-INPV-05",
+          "relationship": "RELATED_TEST",
+          "rationale": "SQL injection tests; related aspect only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-89",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "SQL injection; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-08",
+      "mappings": [
+        {
+          "reference": "ASVS:1.3.6",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "SSRF allowlist and redirects",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:15.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "SSRF allowlist and redirects",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-918",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "SSRF; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-09",
+      "mappings": [
+        {
+          "reference": "ASVS:5.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected upload handling",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:5.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected upload handling",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:5.2.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected upload handling",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:5.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected upload handling",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:5.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected upload handling",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:5.3.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected upload handling",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:5.4.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Selected upload handling",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-10",
+      "mappings": [
+        {
+          "reference": "ASVS:16.5.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Generic errors and secure failure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:16.5.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Generic errors and secure failure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:16.5.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Generic errors and secure failure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-11",
+      "mappings": [
+        {
+          "reference": "ASVS:4.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "WebSocket transport and authorization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:4.4.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "WebSocket transport and authorization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:4.4.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "WebSocket transport and authorization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "WebSocket transport and authorization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-12",
+      "mappings": [
+        {
+          "reference": "ASVS:4.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "GraphQL complexity",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-400",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Resource consumption; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-13",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "API-14",
+      "mappings": [
+        {
+          "reference": "ASVS:13.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Service identity and resource limits for queue integrations",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.2.6",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Service identity and resource limits for queue integrations",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-15",
+      "mappings": [
+        {
+          "reference": "ASVS:4.1.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Intermediary headers and client IP",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:15.3.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Intermediary headers and client IP",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "API-16",
+      "mappings": [
+        {
+          "reference": "ASVS:4.1.5",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Message signatures; replay separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "BIZ-01",
+      "mappings": [
+        {
+          "reference": "ASVS:8.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Object and data authorization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.3.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Object and data authorization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-ATHZ-04",
+          "relationship": "RELATED_TEST",
+          "rationale": "Object reference authorization; related aspect only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-639",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "User-controlled object key authorization; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "BIZ-02",
+      "mappings": [
+        {
+          "reference": "ASVS:8.1.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Field-level restrictions",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.2.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Field-level restrictions",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:15.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Field-level restrictions",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "BIZ-03",
+      "mappings": [
+        {
+          "reference": "ASVS:8.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Permission and context rules",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.1.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Permission and context rules",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Permission and context rules",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.2.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Permission and context rules",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "BIZ-04",
+      "mappings": [
+        {
+          "reference": "ASVS:2.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Ordered flows and transactions",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:2.3.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Ordered flows and transactions",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "BIZ-05",
+      "mappings": [
+        {
+          "reference": "ASVS:2.3.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Atomic state and locking",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:15.4.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Atomic state and locking",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "BIZ-06",
+      "mappings": [
+        {
+          "reference": "ASVS:2.3.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Atomic payment operations, settlement separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:15.4.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Atomic payment operations, settlement separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "BIZ-07",
+      "mappings": [
+        {
+          "reference": "ASVS:2.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Business abuse limits",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:2.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Business abuse limits",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "BIZ-08",
+      "mappings": [
+        {
+          "reference": "ASVS:8.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Download data authorization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.3.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Download data authorization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-ATHZ-04",
+          "relationship": "RELATED_TEST",
+          "rationale": "Object reference authorization; related aspect only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "BIZ-09",
+      "mappings": [
+        {
+          "reference": "ASVS:6.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Activation and ordered binding",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:2.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Activation and ordered binding",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "BIZ-10",
+      "mappings": [
+        {
+          "reference": "ASVS:2.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Trusted business validation",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:2.2.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Trusted business validation",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "BIZ-11",
+      "mappings": [
+        {
+          "reference": "ASVS:16.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Audit metadata and log integrity",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:16.4.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Audit metadata and log integrity",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "BIZ-12",
+      "mappings": [
+        {
+          "reference": "ASVS:7.5.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Sensitive changes and immediate authorization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Sensitive changes and immediate authorization",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-01",
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-STORAGE-1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Sensitive storage; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASVS:MASVS-CRYPTO-2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Key lifecycle; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-02",
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-NETWORK-1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Secure network traffic; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0026",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Unencrypted traffic; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0217",
+          "relationship": "RELATED_TEST",
+          "rationale": "Insecure TLS protocols; related aspect only",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-03",
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-NETWORK-2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Identity pinning on controlled endpoints; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0028",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Pinning weakness; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0242",
+          "relationship": "RELATED_TEST",
+          "rationale": "Android network configuration pinning; related aspect only",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-04",
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-PLATFORM-1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "IPC safety; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-05",
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-PLATFORM-2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "WebView safety; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-06",
+      "mappings": [
+        {
+          "reference": "ASVS:2.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Backend enforcement for mobile clients",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Backend enforcement for mobile clients",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-07",
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-RESILIENCE-1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Platform integrity; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASVS:MASVS-RESILIENCE-2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Tamper resistance; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-08",
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-CRYPTO-2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Key lifecycle; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASVS:MASVS-PLATFORM-1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "IPC safety; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-09",
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-CRYPTO-2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Key lifecycle; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-10",
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-RESILIENCE-1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Platform integrity; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASVS:MASVS-RESILIENCE-2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Tamper resistance; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-11",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "MOB-12",
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-RESILIENCE-2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Tamper resistance; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-13",
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-STORAGE-1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Sensitive storage; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "MOB-14",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "PKI-01",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "PKI-02",
+      "mappings": [
+        {
+          "reference": "ASVS:11.6.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Signature algorithms and hashes",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:11.4.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Signature algorithms and hashes",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "PKI-03",
+      "mappings": [
+        {
+          "reference": "ASVS:4.1.5",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Message signatures; canonical binding separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "PKI-04",
+      "mappings": [
+        {
+          "reference": "ASVS:7.5.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Additional sensitive-action confirmation only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "PKI-05",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "PKI-06",
+      "mappings": [
+        {
+          "reference": "ASVS:12.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "TLS certificate validation only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "PKI-07",
+      "mappings": [
+        {
+          "reference": "ASVS:13.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Key access and isolated crypto",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.3.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Key access and isolated crypto",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "DATA-01",
+      "mappings": [
+        {
+          "reference": "ASVS:13.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Backend component least privilege",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "DATA-02",
+      "mappings": [
+        {
+          "reference": "ASVS:8.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Cross-tenant controls; RLS separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "DATA-03",
+      "mappings": [
+        {
+          "reference": "ASVS:12.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Transport and data protection",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:14.2.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Transport and data protection",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "DATA-04",
+      "mappings": [
+        {
+          "reference": "ASVS:14.2.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Data protection; backup isolation separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "DATA-05",
+      "mappings": [
+        {
+          "reference": "ASVS:14.2.7",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Retention and deletion",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "DATA-06",
+      "mappings": [
+        {
+          "reference": "ASVS:8.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Data access; object storage settings separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:14.2.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Data access; object storage settings separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "DATA-07",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "DATA-08",
+      "mappings": [
+        {
+          "reference": "ASVS:14.2.6",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Minimum disclosure and formula injection",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:1.2.10",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Minimum disclosure and formula injection",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "DATA-09",
+      "mappings": [
+        {
+          "reference": "ASVS:12.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Queue transport and authentication",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Queue transport and authentication",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "HOST-01",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "HOST-02",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "HOST-03",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "HOST-04",
+      "mappings": [
+        {
+          "reference": "ASVS:12.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "TLS and HSTS",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:12.1.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "TLS and HSTS",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "TLS and HSTS",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "HOST-05",
+      "mappings": [
+        {
+          "reference": "ASVS:13.1.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Connection and resource limits",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.2.6",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Connection and resource limits",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:15.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Connection and resource limits",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "HOST-06",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "HOST-07",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "HOST-08",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "HOST-09",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "HOST-10",
+      "mappings": [
+        {
+          "reference": "ASVS:8.4.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Admin and monitoring exposure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.4.5",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Admin and monitoring exposure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "HOST-11",
+      "mappings": [
+        {
+          "reference": "ASVS:15.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Availability and dependency failure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:16.5.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Availability and dependency failure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "CLOUD-01",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "CLOUD-02",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "CLOUD-03",
+      "mappings": [
+        {
+          "reference": "ASVS:13.2.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Outbound allowlists, segmentation separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.2.5",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Outbound allowlists, segmentation separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "CLOUD-04",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "CLOUD-05",
+      "mappings": [
+        {
+          "reference": "ASVS:13.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Secret management; image layers separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "CLOUD-06",
+      "mappings": [
+        {
+          "reference": "ASVS:8.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Explicit access and secret least privilege",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Explicit access and secret least privilege",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "CLOUD-07",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "CLOUD-08",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "CLOUD-09",
+      "mappings": [
+        {
+          "reference": "ASVS:13.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Secret access and rotation, environment separation distinct",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:13.3.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Secret access and rotation, environment separation distinct",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "CLOUD-10",
+      "mappings": [
+        {
+          "reference": "ASVS:4.1.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Intermediary trust and TLS",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:12.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Intermediary trust and TLS",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "SDLC-01",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "SDLC-02",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "SDLC-03",
+      "mappings": [
+        {
+          "reference": "ASVS:13.3.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Rotation only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "SDLC-04",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "SDLC-05",
+      "mappings": [
+        {
+          "reference": "ASVS:15.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Dependency remediation",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:15.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Dependency remediation",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "SDLC-06",
+      "mappings": [
+        {
+          "reference": "ASVS:15.1.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Dependency inventory",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "SDLC-07",
+      "mappings": [
+        {
+          "reference": "ASVS:15.2.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Dependency origin only, not build signing",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "SDLC-08",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "SDLC-09",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "SDLC-10",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "SDLC-11",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "SDLC-12",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "SDLC-13",
+      "mappings": [
+        {
+          "reference": "ASVS:15.2.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Dependency origin only, not AI review",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "SDLC-14",
+      "mappings": [
+        {
+          "reference": "ASVS:15.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Component remediation windows only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "OPS-01",
+      "mappings": [
+        {
+          "reference": "ASVS:16.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Log metadata, redaction and encoding",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:16.2.5",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Log metadata, redaction and encoding",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:16.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Log metadata, redaction and encoding",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "OPS-02",
+      "mappings": [
+        {
+          "reference": "ASVS:16.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Security events and alerting pipeline",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:16.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Security events and alerting pipeline",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:16.3.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Security events and alerting pipeline",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:16.4.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Security events and alerting pipeline",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "OPS-03",
+      "mappings": [
+        {
+          "reference": "ASVS:16.4.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Log integrity and separate collection",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:16.4.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Log integrity and separate collection",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "OPS-04",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "OPS-05",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "OPS-06",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "OPS-07",
+      "mappings": [
+        {
+          "reference": "ASVS:15.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Dependency remediation, not KEV triage",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:15.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Dependency remediation, not KEV triage",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "OPS-08",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "OPS-09",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "TEST-01",
+      "mappings": [
+        {
+          "reference": "ASVS:8.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Requirements targeted by multi-identity tests",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.3.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Requirements targeted by multi-identity tests",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Requirements targeted by multi-identity tests",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-ATHZ-04",
+          "relationship": "RELATED_TEST",
+          "rationale": "Object reference authorization; related aspect only",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-639",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "User-controlled object key authorization; taxonomy association only",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "TEST-02",
+      "mappings": [
+        {
+          "reference": "ASVS:2.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Requirements targeted by workflow tests",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:2.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Requirements targeted by workflow tests",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:2.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Requirements targeted by workflow tests",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "TEST-03",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "TEST-04",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "TEST-05",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "TEST-06",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "TEST-07",
+      "mappings": [
+        {
+          "reference": "ASVS:4.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "HTTP message structure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:4.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "HTTP message structure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:4.2.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "HTTP message structure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:4.2.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "HTTP message structure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "TEST-08",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    },
+    {
+      "control_id": "TEST-09",
+      "mappings": [
+        {
+          "reference": "ASVS:8.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Immediate authorization changes",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
+    },
+    {
+      "control_id": "TEST-10",
+      "mappings": [],
+      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
+      "status": "UNMAPPED"
+    }
+  ]
+}
