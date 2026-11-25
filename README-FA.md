@@ -452,3 +452,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 نسخه ۴ تحلیل AST جریان SQL پایتون، مسیر عادی Context Manager مستقیم SQLite را اضافه می‌کند (#90) و معنای تراکنش/استثنا را ناقص گزارش می‌دهد.
 
 [ماتریس پوشش فناوری و قرارداد توسعه Pack](docs/framework-coverage-FA.md) ([English](docs/framework-coverage.md)): موجودی نسخه‌دار Discovery، واجد شرایط بودن Heuristic/AST و وضعیت Runtime NOT_RUN؛ سیاست نگاشت و مهاجرت.
+
+[ارزیابی مستقل تشخیص](docs/independent-benchmark-FA.md) ([English](docs/independent-benchmark.md)): مجموعه خارجی CWE-89، مجموعه مصنوعی جدا و مخرج شفاف معیارها.

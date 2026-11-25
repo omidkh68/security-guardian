@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Add pinned external CWE-89 evaluation and separate post-freeze semantic holdout reporting (#96).
 - Add versioned framework/pack coverage inventory and bilingual contributor mapping contract (#95).
 - Consolidate optional JS AST parser and evidence contracts; preserve DOM sanitizer call evidence without suppressing review candidates (#94).
 - Add optional route-to-resource authorization evidence matrix for Express, Fastify and NestJS with Prisma selectors (#93).
