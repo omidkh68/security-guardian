@@ -530,7 +530,6 @@ def _selected_inputs(root, run, finding, files, test_file):
         raise ValueError('Local execution requires an explicitly resolved run scope')
     if not isinstance(test_file, str) or not Path(test_file).name.startswith('test_') or Path(test_file).suffix != '.py':
         raise ValueError('An explicit test_*.py module is required')
-    current = source_fingerprint(root, files)
     location = re.sub(r':\d+(?::\d+)?$', '', finding['location'])
     if location not in files or test_file not in files or location == test_file:
         raise ValueError('Select the finding source file and a distinct test module')
@@ -540,7 +539,7 @@ def _selected_inputs(root, run, finding, files, test_file):
     selected = set(scope['selected_roots'])
     if any(security_scan._owner(p, scope['components']) not in selected for p in files):
         raise ValueError('Selected test input is outside the run component scope')
-    return current
+    return source_fingerprint(root, files)
 
 
 def validate_execution_receipt(root, run, finding, receipt):

@@ -85,6 +85,8 @@ class TrackerExecutionTests(unittest.TestCase):
             'from pathlib import Path\nPath("ran").write_text("yes")\n')
         self.execute(authorize=False,expected=2)
         self.execute(extra=('--file','web/other.py'),expected=2)
+        denied = self.execute(extra=('--file','web/missing.py'),expected=2)
+        self.assertIn('outside the run component scope', denied.stderr)
         self.execute(finding='SG-API-01-000000000000',expected=2)
         self.assertFalse((self.root/'ran').exists())
         self.assertEqual(self.run_data()['tests'],[])

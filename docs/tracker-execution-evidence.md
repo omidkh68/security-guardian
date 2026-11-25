@@ -23,3 +23,5 @@ Existing manually reported verification remains compatible, explicitly labeled M
 Run package validation and the offline unittest suite. Fixtures exercise positive execution, stale source, missing review, consent, unknown finding, excluded components, manual provenance spoofing, failed execution and finalized runs. Revert the feature if necessary; existing manual commands and archives remain compatible. Wider independent attestation and framework adapters remain follow-up work.
 
 The receipt is also bound to the stored scope digest. Regression coverage includes malformed and unrelated receipt fields, duplicate record transitions are rejected, and the positive fixture asserts both allowed and denied property updates in a local synthetic module.
+
+The tracker rejects inputs outside the stored component scope before reading their bytes for fingerprinting.
