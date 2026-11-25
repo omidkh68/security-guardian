@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Add explicit framework discovery preview and conservative natural-language Skill intent routing (#76).
 - Add scoped Express/Fastify v1 indicators for broad proxy trust and validation handler review (#74).
 - Add scoped Svelte/Kit v1 indicators for raw HTML and secret-like public environment imports (#72).
 - Add scoped Vue/Nuxt v1 indicators for raw HTML and secret-like public runtime config names (#70).

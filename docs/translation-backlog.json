@@ -2,7 +2,6 @@
   "schema_version": 1,
   "issue": 54,
   "missing_persian": [
-    "docs/commands.md",
     "docs/multi-agent.md",
     "docs/pdf-reporting.md",
     "docs/provenance.md",

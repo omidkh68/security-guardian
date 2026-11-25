@@ -71,7 +71,7 @@ Explain precise scope, acceptance conditions, relevant files or follow-up questi
 ## Agent vs Python tools
 
 - `security_scan.py`: reads source/configuration, returns **unconfirmed** signals; does not write source, call external services or perform tests.
-- `security_tracker.py`: records runs/findings/test reports and history; does **not** execute the tests and cannot ascertain that the agent's claims are true.
+- `security_tracker.py`: records runs/findings/test reports and history. Its explicit, authorized `run-test` command executes trusted local unittest code; manual test records are not execution evidence and neither form is independent attestation.
 - Claude Code: interprets findings, reads actual source, can run permitted tests and propose/apply changes; results must be reviewed by developers.
 
 See the internal [`SKILL.md`](../plugins/security-guardian/skills/security-guardian/SKILL.md) for the exact agent workflow and the [tracker contract](../plugins/security-guardian/skills/security-guardian/references/workflows/tracking.md) for commands and schemas.
@@ -90,3 +90,13 @@ python3 /path/to/skill/scripts/security_report.py --root /path/to/project --cumu
 Inside Claude Marketplace, `/security-guardian:security-guardian mapping-audit`
 must dispatch to the read-only CLI above, **without creating an audit version**.
 The same applies to `export-pdf` and `pdf`.
+
+## Natural-language requests and framework scope
+
+Requests such as “audit my React app” default to read-only application review. Planning, fixing and verification are distinct; a quoted command or security question never grants permission to change code or run tests. Explicit special commands retain precedence. Clarify conflicting modes or ambiguous targets before starting a run.
+
+```bash
+python3 /path/to/skill/scripts/security_scan.py --root /path/to/project --discover --framework React
+```
+
+The helper accepts one exact discovered framework name, not arbitrary prompt text. A unique single-role match with complete discovery returns a custom scope. Missing, multiple, mixed or incomplete matches return NEEDS_SELECTION. Confirm the selected roots and use the same custom profile/roots for tracker begin. Discovery does not verify agent activation, framework versions or security coverage. The helper does not write history or execute project code. See [intent routing](intent-routing.md).

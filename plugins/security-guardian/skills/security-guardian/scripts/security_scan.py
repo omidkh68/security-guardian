@@ -577,6 +577,33 @@ def preview_scope(root, profile='auto', components=()):
     return resolve_scope(root,files,coverage,profile,components)
 
 
+def preview_framework(root, framework):
+    """Resolve one explicitly named framework from manifest evidence; never execute code."""
+    supported = set(FRONTEND_PACKAGES.values()) | set(BACKEND_PACKAGES.values()) | {
+        'Flutter', 'Django', 'FastAPI', 'Flask', 'Spring Boot', 'ASP.NET Core', 'Laravel'}
+    if framework not in supported:
+        raise ValueError('Use an exact discovered framework name')
+    preview = preview_scope(root, 'auto')
+    matches = [c for c in preview['components']
+               if framework in c['frameworks'] and 'workspace_container' not in c['capabilities']]
+    incomplete = preview['discovery_coverage'].get('truncated') or any(
+        c['errors'] for c in preview['components'])
+    if len(matches) == 1 and len(matches[0]['roles']) == 1 and not incomplete:
+        selected = preview_scope(root, 'custom', [matches[0]['root']])
+        # Never accept changed discovery between the two previews.
+        if (selected['components'] == preview['components'] and
+                not selected['discovery_coverage'].get('truncated') and
+                selected['status'] == 'RESOLVED'):
+            return {**selected, 'framework_intent': framework,
+                    'matching_roots': [matches[0]['root']]}
+    return {**preview, 'framework_intent': framework,
+            'matching_roots': [c['root'] for c in matches],
+            'status': 'NEEDS_SELECTION', 'selected_roots': [], 'selected_components': [],
+            'selected_domains': [], 'selected_profile': None,
+            'excluded_components': [c['root'] for c in preview['components']],
+            'reasons': ['Framework match is missing, multiple, mixed, incomplete or changed; choose explicit verified roots.']}
+
+
 def process(root:Path, profile=None, components=()):
     root=Path(root).resolve(strict=True)
     if components and profile is None:
@@ -961,9 +988,12 @@ def main():
     p.add_argument('--output',help='Optional report file path; never writes into project by default')
     p.add_argument('--profile',choices=PROFILES,help='Resolve selected security scope; omitted preserves legacy whole-repo scan')
     p.add_argument('--component',action='append',default=[],help='Repeatable repository-relative component root')
+    p.add_argument('--framework',help='Exact framework name; read-only discovery only, cannot combine with profile/components')
     p.add_argument('--discover',action='store_true',help='Read-only scope preview; never scan source or write history')
     p.add_argument('--assert-count',action='store_true',help='Verify full catalog is present and exit')
     opts=p.parse_args()
+    if opts.framework is not None and (not opts.discover or opts.profile or opts.component or opts.output or opts.assert_count):
+        p.error('--framework requires --discover without profile, component, output or assert-count')
     if opts.assert_count:
         data=json.loads((Path(__file__).resolve().parent.parent/'references'/'controls.json').read_text())
         ids=[c['id'] for c in data['controls']]
@@ -976,7 +1006,7 @@ def main():
         if opts.discover:
             if opts.output:
                 p.error('--discover prints JSON only; does not write files')
-            print(json.dumps(preview_scope(root,opts.profile or 'auto',opts.component),indent=2,ensure_ascii=False))
+            print(json.dumps(preview_framework(root, opts.framework) if opts.framework is not None else preview_scope(root,opts.profile or 'auto',opts.component),indent=2,ensure_ascii=False))
             return 0
         data=process(root,opts.profile,opts.component)
     except (ValueError,OSError) as exc:
