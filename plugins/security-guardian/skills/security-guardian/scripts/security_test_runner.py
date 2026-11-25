@@ -16,6 +16,7 @@ import signal
 import subprocess
 import sys
 import time
+import tempfile
 
 from security_fingerprint import fingerprint
 
@@ -58,7 +59,7 @@ NODE_WORKER = r"""
 import {run} from 'node:test';
 const summaries=[];
 try {
-  for await(const event of run({files:[process.argv[1]],concurrency:1})) {
+  for await(const event of run({files:[process.argv[2]],concurrency:1})) {
     if(event.type==='test:summary' && !event.data.file) summaries.push(event.data);
   }
   if(summaries.length!==1)throw Error('summary');
@@ -111,11 +112,19 @@ def _terminate(proc):
 
 
 def _execute(root, test_file, timeout, node=None):
+    if node:
+        with tempfile.TemporaryDirectory(prefix='sg-node-worker-') as tmp:
+            worker=Path(tmp)/'worker.mjs'
+            worker.write_text(NODE_WORKER,encoding='utf-8')
+            return _execute_command(root,[node,str(worker),str(root/test_file)],timeout)
+    return _execute_command(root,[sys.executable,'-I','-B','-c',WORKER,str(root),test_file],timeout)
+
+
+def _execute_command(root, command, timeout):
     """Bound wall time and retained output; never return raw worker output."""
     started = time.monotonic()
     proc = subprocess.Popen(
-        ([node, '--input-type=module', '-e', NODE_WORKER, str(root/test_file)] if node else
-         [sys.executable, '-I', '-B', '-c', WORKER, str(root), test_file]),
+        command,
         cwd=root, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT, start_new_session=True,
         env={k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL') if k in os.environ})
