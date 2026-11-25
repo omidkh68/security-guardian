@@ -1,0 +1,39 @@
+{
+  "name": "@omidkh68/security-guardian",
+  "version": "1.2.1",
+  "private": true,
+  "description": "Security Guardian — local Agent Skills installer",
+  "author": "omidkh68",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/omidkh68/security-guardian.git"
+  },
+  "homepage": "https://github.com/omidkh68/security-guardian",
+  "bugs": {
+    "url": "https://github.com/omidkh68/security-guardian/issues"
+  },
+  "type": "module",
+  "bin": {
+    "security-guardian": "bin/security-guardian.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin/security-guardian.mjs",
+    "README-FA.md",
+    "plugins/security-guardian/skills/security-guardian/SKILL.md",
+    "plugins/security-guardian/skills/security-guardian/VERSION",
+    "plugins/security-guardian/skills/security-guardian/LICENSE",
+    "plugins/security-guardian/skills/security-guardian/references/**/*.md",
+    "plugins/security-guardian/skills/security-guardian/references/**/*.json",
+    "plugins/security-guardian/skills/security-guardian/references/**/*.yaml",
+    "plugins/security-guardian/skills/security-guardian/scripts/*.py",
+    "docs/npm-distribution.md",
+    "docs/npm-distribution-FA.md"
+  ],
+  "scripts": {
+    "test": "node --test tests/npm-cli.test.mjs"
+  }
+}
