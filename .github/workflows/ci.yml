@@ -51,3 +51,23 @@ jobs:
           find "$HOME/.claude/skill-backups" -name 'SKILL.md' -print | grep -q SKILL.md
           bash install.sh --project "$ROOT/project"
           test -f "$ROOT/project/.claude/skills/security-guardian/SKILL.md"
+
+  npm-smoke:
+    name: npm smoke (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22', '24']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Test local CLI safety and upgrades
+        run: npm test
+      - name: Verify exact tarball manifest and offline npx install-to-report
+        run: node scripts/verify-npm-package.mjs

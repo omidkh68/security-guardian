@@ -82,6 +82,11 @@ def validate():
     plugin = json.loads(PLUGIN.read_text())
     assert plugin['name'] == market['plugins'][0]['name'] == 'security-guardian'
     assert plugin['version'] == v, 'plugin and skill versions mismatch'
+    npm = json.loads((ROOT/'package.json').read_text())
+    assert npm['version'] == v, 'npm and skill versions mismatch'
+    assert npm['private'] is True, 'npm preview must not be publishable'
+    assert npm['bin']['security-guardian'] == 'bin/security-guardian.mjs'
+    assert (ROOT/npm['bin']['security-guardian']).is_file()
     source = ROOT / market['plugins'][0]['source']
     assert source.resolve() == PLUGIN.parent.parent.resolve(), 'marketplace source does not match plugin root'
     controls = json.loads((SKILL/'references/controls.json').read_text())

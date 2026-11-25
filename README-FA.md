@@ -418,3 +418,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 [سورس Wiki مهندسی](docs/wiki/SG-Home.md) شامل وضعیت مبنای نسخه ۱.۲.۱، استانداردهای ۲۰۲۶ و طراحی آینده آگاه از محدوده پروژه است. RFCها پیشنهادهایی در انتظار بررسی‌اند، نه قابلیت‌های منتشرشده. [GitHub Wiki](https://github.com/omidkh68/security-guardian/wiki) جداگانه نگه‌داری می‌شود؛ [دستورالعمل انتشار Wiki](docs/wiki-publishing.md) را ببینید.
 
 فرمان [شواهد اجرای متصل به Tracker](docs/tracker-execution-evidence-FA.md) اجرای مستقیم محلی را از شواهد دستی تفکیک می‌کند. [English](docs/tracker-execution-evidence.md).
+
+برای مشارکت‌کنندگان: [پیش‌نمایش خصوصی توزیع npm/npx](docs/npm-distribution-FA.md) — فقط tarball محلی؛ در این مرحله بسته عمومی در رجیستری منتشر نشده است.

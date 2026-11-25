@@ -185,7 +185,7 @@ try {
     if (Number(process.versions.node.split('.')[0]) < 22) fail('Node.js 22 or newer required.');
     const base = path.resolve(options.user ? os.homedir() : options.project);
     checkAncestors(base);
-    if (source.startsWith(base + path.sep) && base === source) fail('Invalid installation root.');
+    if (base === path.resolve(source) || base.startsWith(path.resolve(source) + path.sep)) fail('Installation root cannot be inside the bundled Skill.');
     const files = runtimeFiles();
     const targets = plan(options, base);
     if (options['dry-run']) {
