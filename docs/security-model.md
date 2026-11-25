@@ -37,3 +37,7 @@ Security Guardian is for defensive auditing and remediation of software **you ow
 4. Approve narrow `fix` changes and authorized negative tests.
 5. Use `verify`, review test output and unresolved findings, and arrange independent assessment for high-value systems.
 6. Keep `.security-guardian/` private.
+
+## Optional local test adapter
+
+The [local verification runner](verification-runner.md) is a separate, explicitly authorized Python unittest adapter. It launches trusted local tests, captures bounded receipt metadata and checks selected-input fingerprints before/after. Test code can have side effects, and the runner is not a sandbox or independent finding verifier. Use isolated owned fixtures without production credentials; never automatically execute untrusted repository tests.
