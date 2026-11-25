@@ -452,7 +452,8 @@ def process(root:Path, profile=None, components=()):
                         evidence.append({'control_id':cid,'signal':label,'path':fn,'line':lineno,
                             'confidence':confidence,'suggested_severity':severity,
                             'status':'HEURISTIC_REVIEW_ONLY'})
-                        break
+                        # A line may contain independent security signals. Do not
+                        # discard later matching rules; each requires separate triage.
     if any(x.startswith('android/') or '/android/' in x for x in names) and 'Flutter' in stack:stack.add('Android target')
     if any(x.startswith('ios/') or '/ios/' in x for x in names) and 'Flutter' in stack:stack.add('iOS target')
     # Domain-level rule is only a starting heuristic; control-specific features filter applicability.
