@@ -94,7 +94,7 @@ class ScopeTests(unittest.TestCase):
         for dep in ('@angular/core','react','next','vue','nuxt','svelte','@sveltejs/kit'):
             with self.subTest(dep=dep):
                 self.package('.',dep)
-                self.write('app.jsx','element.innerHTML = payload;\n'
+                self.write('app.jsx','element.innerHTML = PRIVATE_WEB_FIXTURE_VALUE;\n'
                           'localStorage.setItem("access_token", value);\n'
                           'window.location.assign(destination);\n'
                           'element.textContent = payload;\n')
@@ -107,7 +107,7 @@ class ScopeTests(unittest.TestCase):
                 self.assertEqual(result['summary']['web_core']['inspected_eligible_files'],2)
                 self.assertEqual(result['summary']['web_core']['selected_roots'],['.'])
                 self.assertTrue(all(x['status']=='HEURISTIC_REVIEW_ONLY' for x in result['signals']))
-                self.assertNotIn('payload',json.dumps(result))
+                self.assertNotIn('PRIVATE_WEB_FIXTURE_VALUE',json.dumps(result))
 
     def test_web_core_scope_and_legacy_compatibility(self):
         self.package('web','react')
