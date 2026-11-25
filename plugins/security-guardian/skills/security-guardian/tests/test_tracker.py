@@ -24,6 +24,16 @@ class TrackingTests(unittest.TestCase):
             self.fail(f'Unexpected code {cp.returncode} != {expected}\nstdout={cp.stdout}\nstderr={cp.stderr}')
         return json.loads(cp.stdout) if cp.returncode == 0 and cp.stdout.startswith('{') else cp
 
+    def test_incomplete_scanner_coverage_is_visible_in_tracker(self):
+        (self.root / 'bad.ts').write_bytes(b'\xff\xfe')
+        run = self.call('begin', '--mode', 'audit')
+        coverage = run.get('scan_coverage', {})
+        self.assertTrue(coverage.get('truncated'))
+        self.assertEqual(coverage['skipped']['invalid_source_encoding'], 1)
+        report = self.root / '.security-guardian' / 'runs' / run['run_id'] / 'RUN.md'
+        self.assertIn('Scanner coverage incomplete', report.read_text())
+        self.assertIn('invalid_source_encoding', report.read_text())
+
     def test_versioning_lifecycle_and_no_auto_fix(self):
         one = self.call('begin', '--mode', 'audit')
         store = self.root / '.security-guardian'
