@@ -424,3 +424,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 [بسته نشانه‌های هسته وب](docs/web-core-FA.md) ([English](docs/web-core.md)): Candidateهای مشترک مرورگر در محدوده فریم‌ورک‌های کشف‌شده؛ نه تأیید اختصاصی فریم‌ورک.
 
 [بسته نشانه‌های هسته بک‌اند](docs/backend-core-FA.md) ([English](docs/backend-core.md)): Candidateهای HTTP/API محدوده‌دار Node؛ نه اثبات مجوز یا تأیید اختصاصی فریم‌ورک.
+
+[بسته بازبینی React/Next.js](docs/react-next-FA.md) ([English](docs/react-next.md)): نشانه‌های HTML خام، نام عمومی حساس‌نما و Source Map مرورگر در محدوده انتخاب‌شده؛ SSR و مجوز سرور نیازمند بازبینی هستند.

@@ -126,7 +126,37 @@ def _backend_core(component):
             and bool(BACKEND_CORE_FRAMEWORKS.intersection(component['frameworks'])))
 
 
-def _rules_for_file(p, allowed_domains, web_core, backend_core=False, nest=False):
+REACT_NEXT_PACK = 'react-next'
+REACT_NEXT_VERSION = 1
+REACT_NEXT_RULES = (
+    ('REACT.DOM.RAW_HTML', 'ANG-01', 'React raw HTML rendering requires trusted-input review',
+     re.compile(r'\bdangerouslySetInnerHTML\s*(?:=|:)'), 'medium', 'high'),
+    ('NEXT.BUILD.PUBLIC_SECRET_NAME', 'ANG-12', 'Next.js public environment variable with secret-like name',
+     re.compile(r'\bprocess\.env\.NEXT_PUBLIC_[A-Z0-9_]*(?:SECRET|PRIVATE_KEY|PASSWORD|ACCESS_TOKEN|REFRESH_TOKEN|API_KEY)[A-Z0-9_]*\b'), 'medium', 'high'),
+    ('NEXT.BUILD.BROWSER_SOURCEMAPS', 'ANG-12', 'Next.js production browser source maps enabled',
+     re.compile(r'\bproductionBrowserSourceMaps\s*:\s*true\b'), 'medium', 'medium'),
+)
+NEXT_CONFIG_NAMES = {'next.config.js', 'next.config.mjs', 'next.config.cjs', 'next.config.ts'}
+
+
+def _react_next(component):
+    return ('frontend' in component['roles']
+            and bool({'React', 'Next.js'}.intersection(component['frameworks'])))
+
+
+def _react_next_rules(p, next_component):
+    if p.suffix not in WEB_CORE_SUFFIXES:
+        return
+    for rule_id, cid, label, regex, confidence, severity in REACT_NEXT_RULES:
+        if rule_id.startswith('NEXT.') and not next_component:
+            continue
+        if rule_id == 'NEXT.BUILD.BROWSER_SOURCEMAPS' and p.name not in NEXT_CONFIG_NAMES:
+            continue
+        yield cid, label, regex, confidence, severity, REACT_NEXT_PACK, rule_id
+
+
+def _rules_for_file(p, allowed_domains, web_core, backend_core=False, nest=False,
+                    react_next=False, next_component=False):
     """Select scoped pack rules once per file; retain unscoped legacy matching."""
     for cid, label, regex, extensions, confidence, severity in PATTERNS:
         if allowed_domains is not None and not nest and label in NEST_ONLY_LABELS:
@@ -151,6 +181,8 @@ def _rules_for_file(p, allowed_domains, web_core, backend_core=False, nest=False
             if not nest or p.suffix not in extensions:
                 regex = CORS_WILDCARD
         yield cid, label, regex, confidence, severity, pack_id, pack_rule
+    if react_next:
+        yield from _react_next_rules(p, next_component)
 
 
 def _multiline_window(line, following):
@@ -487,6 +519,10 @@ def process(root:Path, profile=None, components=()):
     backend_roots = {root_id for root_id, component in selected_by_root.items() if _backend_core(component)}
     backend_files = 0
     backend_counts = Counter()
+    react_roots = {r for r, c in selected_by_root.items() if _react_next(c)}
+    next_roots = {r for r in react_roots if 'Next.js' in selected_by_root[r]['frameworks']}
+    react_files = 0
+    react_counts = Counter()
     rels={p.relative_to(root).as_posix():p for p in files}
     names=set(rels)
     evidence=[]
@@ -553,7 +589,10 @@ def process(root:Path, profile=None, components=()):
             coverage['skipped']['test_fixture']=coverage['skipped'].get('test_fixture',0)+1
         else:
             coverage['inspected_files'] += 1
-            rules = tuple(_rules_for_file(p, allowed_domains, web_core, backend_core, nest))
+            rules = tuple(_rules_for_file(p, allowed_domains, web_core, backend_core, nest,
+                                         owner in react_roots, owner in next_roots))
+            if owner in react_roots and p.suffix in WEB_CORE_SUFFIXES:
+                react_files += 1
             if web_core and p.suffix in WEB_CORE_SUFFIXES:
                 web_files += 1
             if backend_core and p.suffix in BACKEND_CORE_SUFFIXES:
@@ -578,12 +617,14 @@ def process(root:Path, profile=None, components=()):
                             web_counts[pack_rule] += 1
                         elif pack_id == BACKEND_CORE_PACK:
                             backend_counts[pack_rule] += 1
+                        elif pack_id == REACT_NEXT_PACK:
+                            react_counts[pack_rule] += 1
                         if len(evidence) < MAX_SIGNALS or len(control_evidence[cid]) < MAX_CONTROL_SIGNALS:
                             entry={'control_id':cid,'signal':label,'path':fn,'line':lineno,
                                 'confidence':confidence,'suggested_severity':severity,
                                 'status':'HEURISTIC_REVIEW_ONLY'}
                             if pack_rule:
-                                entry.update({'pack_id': pack_id, 'pack_version': (WEB_CORE_VERSION if pack_id == WEB_CORE_PACK else BACKEND_CORE_VERSION),
+                                entry.update({'pack_id': pack_id, 'pack_version': {WEB_CORE_PACK: WEB_CORE_VERSION, BACKEND_CORE_PACK: BACKEND_CORE_VERSION, REACT_NEXT_PACK: REACT_NEXT_VERSION}[pack_id],
                                               'rule_id': pack_rule, 'control_mapping': 'LEGACY_COMPATIBILITY'})
                             if len(evidence) < MAX_SIGNALS:
                                 evidence.append(entry)
@@ -617,6 +658,8 @@ def process(root:Path, profile=None, components=()):
                     status,reason='NEEDS_DISCOVERY','Non-Angular frontend requires general security review; no dedicated framework pack in this revision.'
                     if web_roots and id in {key[0] for key in WEB_CORE_RULES}:
                         reason='Common web-core indicator maps to this legacy control for triage; review actual applicability, not Angular-specific acceptance.'
+                    if react_roots and id in {r[1] for r in REACT_NEXT_RULES}:
+                        reason='React/Next review indicator maps to this legacy control; assess actual render/build boundaries.'
                 elif d in {'API','BIZ'} and 'NestJS' not in stack:
                     status,reason='NEEDS_DISCOVERY','Non-Nest backend: verify applicable controls in actual framework; no dedicated framework pack in this revision.'
                     if backend_roots and id in {key[0] for key in BACKEND_CORE_RULES}:
@@ -646,7 +689,7 @@ def process(root:Path, profile=None, components=()):
       'discovered_stack':sorted(stack),'feature_hints':sorted(features),
       'applicability':dict(Counter(c['applicability'] for c in result)),
       'heuristic_signals':total_signals,'scan_coverage':coverage,'signal_coverage':signal_coverage,
-      'indicator_rules':len(PATTERNS),'status':'NO_CONTROLS_CERTIFIED_BY_THIS_SCANNER',
+      'indicator_rules':len(PATTERNS),'scoped_additional_indicator_rules': (3 if next_roots else 1 if react_roots else 0),'status':'NO_CONTROLS_CERTIFIED_BY_THIS_SCANNER',
       'timestamp_utc':datetime.now(timezone.utc).isoformat()}
     if scope:
         summary['scope_resolution']=scope
@@ -669,6 +712,17 @@ def process(root:Path, profile=None, components=()):
                       for (cid, label), rule in BACKEND_CORE_RULES.items()],
             'limitations': ['JS/TS text indicators only; no authorization, request flow or framework semantic analysis.',
                             'Framework discovery does not certify version compatibility or vulnerability coverage.'],
+        }
+        summary['react_next'] = {
+            'pack_id': REACT_NEXT_PACK, 'pack_version': REACT_NEXT_VERSION,
+            'selected_roots': sorted(react_roots), 'next_roots': sorted(next_roots),
+            'status': 'HEURISTIC_REVIEW_ONLY' if react_roots else 'NOT_SELECTED',
+            'inspected_eligible_files': react_files,
+            'rules': [{'rule_id': rid, 'legacy_control_id': cid, 'matches': react_counts[rid],
+                       'enabled': bool(next_roots if rid.startswith('NEXT.') else react_roots)}
+                      for rid, cid, *_ in REACT_NEXT_RULES],
+            'limitations': ['Text indicators only; no JSX parser, taint analysis, SSR cache or server authorization proof.',
+                            'Public variable names are heuristic; values and built artifacts are not inspected by this pack.'],
         }
     return {'summary':summary,'signals':evidence,'controls':result,
       'limitations':['Regex signatures are not vulnerability proof.',
@@ -705,6 +759,12 @@ def markdown(result):
                   f"- Backend core component roots: {', '.join(pack['selected_roots']) or 'None'}",
                   f"- Backend core eligible files inspected: {pack['inspected_eligible_files']}",
                   '- Backend core uses legacy control mappings for triage only; no framework-specific verification.', '']
+    if s.get('react_next'):
+        pack = s['react_next']
+        lines += [f"- React/Next core v{pack['pack_version']}: {pack['status']}",
+                  f"- React/Next component roots: {', '.join(pack['selected_roots']) or 'None'}",
+                  f"- React/Next eligible files inspected: {pack['inspected_eligible_files']}",
+                  '- React/Next indicators require manual render/build and server authorization review.', '']
     for status,qty in sorted(s['applicability'].items()):lines.append(f'- {status}: {qty}')
     lines+=['', '## Scan coverage and limitations', '']
     lines += [f'- {key}: {value}' for key,value in sorted(s['scan_coverage']['skipped'].items())]
