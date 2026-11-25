@@ -144,6 +144,67 @@ class SemanticFlowTests(unittest.TestCase):
         self.assertEqual(r['summary']['python_sql_flow']['status'],'PARTIAL')
         self.assertLessEqual(len(self.hits(r)),1)
 
+    def test_direct_import_aliases_and_source_lines(self):
+        r = self.run_scan('    q = req.form.get("PRIVATE_ALIAS_FIXTURE")\n'
+                          '    cur.execute(q)\n',
+                          header='from flask import request as req\nimport sqlite3 as sql\n',
+                          prefix=PREFIX.replace('sqlite3.connect','sql.connect'))
+        self.assertEqual([(h['line'],h['source_lines']) for h in self.hits(r)],[(7,[6])])
+        self.assertEqual(r['summary']['python_sql_flow']['resolved_import_aliases'],2)
+        self.assertNotIn('PRIVATE_ALIAS_FIXTURE',json.dumps(r))
+
+    def test_alias_collision_and_local_shadowing(self):
+        for header in (
+            'from flask import request as req, other as req\nimport sqlite3\n',
+            'from flask import request as req\nimport sqlite3\nreq = unknown\n',
+            'from flask import request as req\nimport sqlite3 as req\n',
+        ):
+            with self.subTest(header=header):
+                r = self.run_scan('    cur.execute(req.args["q"])\n',header=header)
+                self.assertFalse(self.hits(r))
+                self.assertEqual(r['summary']['python_sql_flow']['status'],'PARTIAL')
+        r = self.run_scan('    cur.execute(req.args["q"])\n',
+                          header='from flask import request as req\nimport sqlite3\n',
+                          prefix=PREFIX.replace('search()','search(req)'))
+        self.assertFalse(self.hits(r))
+        self.assertEqual(r['summary']['python_sql_flow']['status'],'PARTIAL')
+
+    def test_local_helper_argument_flow_and_unused_parameter(self):
+        header = HEADER + 'def build(ignored, value):\n    return "SELECT " + value\n'
+        r = self.run_scan('    value = request.args["q"]\n'
+                          '    query = build("constant", value)\n'
+                          '    cur.execute(query)\n'
+                          '    cur.execute(build(value, "constant"))\n',header=header)
+        self.assertEqual([(h['line'],h['source_lines']) for h in self.hits(r)],[(10,[8])])
+        self.assertEqual(r['summary']['python_sql_flow']['recognized_helpers'],1)
+
+    def test_helper_unsafe_dispatch_is_partial(self):
+        for definition in (
+            '@decorate\ndef build(value):\n    return value\n',
+            'def build(value):\n    return build(value)\n',
+            'def build(value):\n    return other(value)\n',
+            'def build(value):\n    return value\nbuild = unknown\n',
+            'def build(value):\n    return value\ndef build(value):\n    return value\n',
+            'def build(value="constant"):\n    return value\n',
+        ):
+            with self.subTest(definition=definition):
+                r = self.run_scan('    cur.execute(build(request.args["q"]))\n',header=HEADER+definition)
+                self.assertFalse(self.hits(r))
+                self.assertEqual(r['summary']['python_sql_flow']['status'],'PARTIAL')
+        r = self.run_scan('    build = unknown\n    cur.execute(build(request.args["q"]))\n',
+                          header=HEADER+'def build(value):\n    return value\n')
+        self.assertFalse(self.hits(r))
+        self.assertEqual(r['summary']['python_sql_flow']['status'],'PARTIAL')
+
+    def test_helper_parameterization_and_exact_arity(self):
+        header=HEADER+'def build(value):\n    return value\n'
+        r=self.run_scan('    value = request.args["q"]\n'
+                        '    cur.execute("SELECT ?", (build(value),))\n'
+                        '    cur.execute(build(value, value))\n',header=header)
+        self.assertFalse(self.hits(r))
+        self.assertEqual(r['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertFalse(any(c['verification']=='VERIFIED_PASS' for c in r['controls']))
+
     def test_unknown_receiver_not_inferred(self):
         r = self.run_scan('    other.execute(request.args["q"])\n')
         self.assertFalse(self.hits(r))
