@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "license": "MIT",
+  "kind": "synthetic_sql_construction_ground_truth",
+  "rule_id": "PY.FLASK.SQL.REQUEST_FLOW",
+  "control_id": "API-07",
+  "cases": [
+    {
+      "id": "direct-http",
+      "unsafe_query_construction": true,
+      "reason": "recognized direct request in query",
+      "source": "from flask import request\nimport sqlite3\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    cur.execute(\"SELECT name FROM items WHERE id = \" + request.args[\"id\"])\n"
+    },
+    {
+      "id": "form-alias",
+      "unsafe_query_construction": true,
+      "reason": "form data propagated through two local assignments",
+      "source": "from flask import request\nimport sqlite3\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    value = request.form.get(\"name\")\n    alias = value\n    query = f\"SELECT id FROM items WHERE name = '{alias}'\"\n    cur.execute(query)\n"
+    },
+    {
+      "id": "percent-format",
+      "unsafe_query_construction": true,
+      "reason": "request in percent-formatted query",
+      "source": "from flask import request\nimport sqlite3\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    value = request.args[\"id\"]\n    cur.execute(\"SELECT id FROM items WHERE id = %s\" % value)\n"
+    },
+    {
+      "id": "literal-format",
+      "unsafe_query_construction": true,
+      "reason": "request in literal format call",
+      "source": "from flask import request\nimport sqlite3\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    value = request.args[\"id\"]\n    cur.execute(\"SELECT id FROM items WHERE id = {}\".format(value))\n"
+    },
+    {
+      "id": "branch-flow",
+      "unsafe_query_construction": true,
+      "reason": "conditional construction is outside straight-line model",
+      "source": "from flask import request\nimport sqlite3\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    value = request.args[\"id\"]\n    if value:\n        cur.execute(\"SELECT id FROM items WHERE id = \" + value)\n"
+    },
+    {
+      "id": "helper-flow",
+      "unsafe_query_construction": true,
+      "reason": "interprocedural propagation outside model",
+      "source": "from flask import request\nimport sqlite3\ndef build(value):\n    return \"SELECT id FROM items WHERE id = \" + value\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    cur.execute(build(request.args[\"id\"]))\n"
+    },
+    {
+      "id": "context-manager",
+      "unsafe_query_construction": true,
+      "reason": "connection established in with statement",
+      "source": "from flask import request\nimport sqlite3\ndef lookup():\n    with sqlite3.connect(\"fixture.db\") as db:\n        db.execute(\"SELECT id FROM items WHERE id = \" + request.args[\"id\"])\n"
+    },
+    {
+      "id": "aliased-import",
+      "unsafe_query_construction": true,
+      "reason": "Flask import alias outside model",
+      "source": "from flask import request as req\nimport sqlite3\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    cur.execute(\"SELECT id FROM items WHERE id = \" + req.args[\"id\"])\n"
+    },
+    {
+      "id": "bound-parameter",
+      "unsafe_query_construction": false,
+      "reason": "constant SQL and separate bound value",
+      "source": "from flask import request\nimport sqlite3\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    value = request.args[\"id\"]\n    cur.execute(\"SELECT id FROM items WHERE id = ?\", (value,))\n"
+    },
+    {
+      "id": "reassigned",
+      "unsafe_query_construction": false,
+      "reason": "tainted local overwritten by trusted literal",
+      "source": "from flask import request\nimport sqlite3\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    value = request.args[\"id\"]\n    value = \"1\"\n    cur.execute(\"SELECT id FROM items WHERE id = \" + value)\n"
+    },
+    {
+      "id": "comment-only",
+      "unsafe_query_construction": false,
+      "reason": "text is not executable syntax",
+      "source": "from flask import request\nimport sqlite3\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    # cur.execute(request.args[\"id\"])\n    note = \"cur.execute(request.args)\"\n"
+    },
+    {
+      "id": "integer-coercion",
+      "unsafe_query_construction": false,
+      "reason": "numeric conversion constrains interpolated value",
+      "source": "from flask import request\nimport sqlite3\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    value = int(request.args[\"id\"])\n    cur.execute(\"SELECT id FROM items WHERE id = \" + str(value))\n"
+    },
+    {
+      "id": "allowlisted-choice",
+      "unsafe_query_construction": false,
+      "reason": "only fixed query fragments selected by branch",
+      "source": "from flask import request\nimport sqlite3\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    value = request.args[\"sort\"]\n    if value == \"name\":\n        query = \"SELECT id FROM items ORDER BY name\"\n    else:\n        query = \"SELECT id FROM items ORDER BY id\"\n    cur.execute(query)\n"
+    },
+    {
+      "id": "parameter-in-branch",
+      "unsafe_query_construction": false,
+      "reason": "parameterized call in unsupported branch",
+      "source": "from flask import request\nimport sqlite3\ndef lookup():\n    db = sqlite3.connect(\"fixture.db\")\n    cur = db.cursor()\n    value = request.args[\"id\"]\n    if value:\n        cur.execute(\"SELECT id FROM items WHERE id = ?\", (value,))\n"
+    }
+  ]
+}

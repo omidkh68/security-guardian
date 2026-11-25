@@ -41,7 +41,7 @@ class ExecutivePdfTest(unittest.TestCase):
             for p,content in original.items():
                 self.assertEqual(p.read_bytes(),content)
             (rdir/"findings.json").write_text('{"findings":{}}')
-            empty=export_pdf(store,rdir,{**run,"tests":[]},output=store/"empty.pdf")
+            empty=export_pdf(store,rdir,{**run,"tests":[]})
             self.assertTrue(empty.read_bytes().startswith(b"%PDF-"))
     def test_redaction_and_truncation(self):
         self.assertNotIn("private-value",safe_text("token=private-value"))

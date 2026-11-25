@@ -25,3 +25,6 @@ a deliverable. Export older runs directly with
 Only source-backed status, scoped work, observed tests and true limitations
 may appear in a management document. Manual privacy review before sharing is
 still mandatory; redaction is best-effort. See `docs/pdf-reporting.md`.
+
+## Structured exports (#98)
+Use `security_report.py --view management|technical --format pdf|json|md` on finalized evidence. Default exports omit project-controlled prose, paths, commands, raw evidence and logs. Do not treat counts of reviewed findings as assessed/verified controls. Private Markdown/JSON snapshots remain authoritative; `--private-details` is explicitly private, best-effort redaction only. The cumulative presentation is the entire finalized snapshot, not a live ledger join. Never claim a PDF when renderer is unavailable.

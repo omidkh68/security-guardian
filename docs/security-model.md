@@ -9,7 +9,7 @@ Security Guardian is for defensive auditing and remediation of software **you ow
 | Component | Project files | Local history | External network | Production operations |
 |---|---|---|---|---|
 | Python scanner | Reads eligible sources/configuration | None by itself | None | None |
-| Python tracker | Reads a small subset, including Git metadata; writes evidence | Writes `.security-guardian/` | None | None |
+| Python tracker | Default commands read a small subset and write evidence; authorized `run-test` delegates to trusted test code | Writes `.security-guardian/` | No network by default; executed test code is not sandboxed | Not authorized |
 | Claude Code agent | Subject to platform/user permissions | Writes report and may edit source under `fix` | Only via separately authorized tools | Requires separate user approval |
 
 ## Threats to consider
@@ -37,3 +37,9 @@ Security Guardian is for defensive auditing and remediation of software **you ow
 4. Approve narrow `fix` changes and authorized negative tests.
 5. Use `verify`, review test output and unresolved findings, and arrange independent assessment for high-value systems.
 6. Keep `.security-guardian/` private.
+
+## Optional local test adapter
+
+The [local verification runner](verification-runner.md) is a separate, explicitly authorized Python unittest adapter. It launches trusted local tests, captures bounded receipt metadata and checks selected-input fingerprints before/after. Test code can have side effects, and the runner is not a sandbox or independent finding verifier. Use isolated owned fixtures without production credentials; never automatically execute untrusted repository tests.
+
+The explicit tracker `run-test` command delegates to the trusted local adapter; test code may have side effects. Manual records are not independent execution, and local receipts are not attestation. See [tracker evidence](tracker-execution-evidence.md).

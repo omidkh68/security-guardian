@@ -16,15 +16,36 @@ jobs:
         python-version: ['3.10', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Validate catalog, plugin metadata, scripts and file layouts
+      - name: Validate catalog, plugin metadata, scripts, layouts and documentation pairs
+        env:
+          SG_DOC_BASE: ${{ github.event.pull_request.base.sha }}
         run: python scripts/validate_package.py
       - name: Install optional PDF renderer for reporting tests
-        run: python -m pip install -r requirements-pdf.txt
+        run: python -m pip install -r requirements-pdf.txt 'pypdf>=5,<7'
       - name: Run offline tests
         run: python -m unittest discover -s plugins/security-guardian/skills/security-guardian/tests -v
+      - name: Measure synthetic indicator benchmark (report only; scope and completeness gate)
+        run: |
+          python scripts/benchmark_scanner.py
+          python scripts/benchmark_sql_flow.py
+          python -m unittest discover -s scripts -p test_benchmark_holdout.py -v
+          python scripts/benchmark_holdout.py --synthetic python
+      - name: Measure external OWASP Python CWE-89 corpus (pinned, source-only)
+        if: matrix.python-version == '3.12'
+        run: |
+          set -euo pipefail
+          git init --bare "$RUNNER_TEMP/sg-owasp-benchmark"
+          git -C "$RUNNER_TEMP/sg-owasp-benchmark" fetch --depth=1 --no-tags https://github.com/OWASP-Benchmark/BenchmarkPython.git f1291485808b66e20ddb6b01b10dc71b3df8c8ba
+          python scripts/benchmark_holdout.py --external-git "$RUNNER_TEMP/sg-owasp-benchmark"
+          python scripts/benchmark_semantic_context.py --external-git "$RUNNER_TEMP/sg-owasp-benchmark"
+      - name: Measure fresh externally labeled Flask SQLite pair (source-only)
+        if: matrix.python-version == '3.12'
+        run: python scripts/benchmark_semantic_context.py --fresh-flask
       - name: Verify no tracked secret-like files or generated reports
         run: |
           if git ls-files | grep -E '(^|/)(\.env(\.|$)|\.security-guardian/)|\.(pem|p12|pfx|key)$' ; then
@@ -47,3 +68,28 @@ jobs:
           find "$HOME/.claude/skill-backups" -name 'SKILL.md' -print | grep -q SKILL.md
           bash install.sh --project "$ROOT/project"
           test -f "$ROOT/project/.claude/skills/security-guardian/SKILL.md"
+
+  npm-smoke:
+    name: npm smoke (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22', '24']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install pinned optional AST parser in isolated runner directory
+        run: npm install --prefix "$RUNNER_TEMP/sg-typescript" --no-save --ignore-scripts --no-audit --no-fund typescript@5.9.3
+      - name: Test local CLI safety, upgrades and optional AST review
+        run: |
+          SG_TEST_TYPESCRIPT="$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js" npm test
+      - name: Measure post-freeze JS semantic holdout (report only)
+        run: python scripts/benchmark_holdout.py --synthetic js --typescript-module "$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js"
+      - name: Verify exact tarball manifest and offline npx install-to-report
+        run: node scripts/verify-npm-package.mjs

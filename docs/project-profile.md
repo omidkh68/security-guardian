@@ -41,3 +41,18 @@ Imports load the complete AGENTS.md, not just the owned block. Check this is app
 The helper rejects unsupported encodings, ambiguous duplicate/malformed managed markers (including examples in fenced code), unclosed Markdown code fences, oversized/symlinked/hardlinked files, invalid saved profile schemas, unresolved or incomplete discovery and stale approvals. It rechecks input snapshots and uses per-file atomic replacements; new files are no-clobber. Existing files are backed up first. Multi-file updates are not atomic as a group; a failure returns BLOCKED/PARTIAL with the changed-file list and backup path. Stop and inspect, restore deliberately if needed; do not auto-retry or overwrite unknown edits. Trusted local directories only; not protection against a hostile concurrent filesystem or agent. Backups rely on local filesystem permissions (private mode on POSIX), and audit history remains private.
 
 Package/fixture tests exercise file behavior; actual agent context loading requires a separate disposable repository validation. No expanded vulnerability coverage or independent verification claim.
+
+## Architecture and testing (#32 / PR #41)
+
+```mermaid
+flowchart TD
+ A[Explicit scope and selected agents] --> B[Inventory and file snapshots]
+ B --> C[Preview managed block and approval token]
+ C --> D[Explicit apply and recheck]
+ D --> E[Private backup and atomic file replace]
+ E --> F[Saved profile and canonical AGENTS.md]
+ F --> G[Optional native imports]
+ G --> H[Separate native loader acceptance]
+```
+
+The fixture suite checks consent, stale tokens, byte preservation, scope drift, conflict candidates and partial write failure. Native loader acceptance must use the actual authenticated client in a disposable project; versions or static file creation are not sufficient. No agent settings or credentials are added by this PR.

@@ -1,0 +1,60 @@
+# نگهداری محدوده امنیتی تأییدشده — RFC #32 (در دست توسعه)
+
+[English](project-profile.md)
+
+Security Guardian در Audit عادی فایل دستورالعمل را تغییر نمی‌دهد، Agent نصب نمی‌کند و محدوده را ذخیره نمی‌کند. پروژه قابل اعتماد متعلق به کاربر می‌تواند محدوده پیش‌فرض تأییدشده را صریحاً مقداردهی یا به‌روزرسانی کند. این قابلیت توسعه است و در انتشار v1.2.1 وجود ندارد.
+
+## CLI
+
+از دایرکتوری scripts مربوط به Skill:
+
+```bash
+python3 security_project.py status --root /path/to/project
+python3 security_project.py preview --root /path/to/project --profile backend
+python3 security_project.py preview --root /path/to/project --profile fullstack --agent claude --agent gemini
+# Only after reviewing the exact preview and existing instruction files locally:
+python3 security_project.py apply --root /path/to/project --profile fullstack \
+  --agent claude --agent gemini --approve <approval_token>
+```
+
+برای انتخاب ریشه‌های صریح، `--component <relative-root>` را تکرار کنید. پروفایل، Component و Agent انتخابی بین preview و apply یکسان باشند. Token قدیمی (تغییر محتوا، محدوده، Manifest یا Agent) مجدداً استفاده نشود. Token اتصال تأیید به پیش‌نمایش است، نه احراز هویت یا مجوز تازه. فایل‌های موجود را محلی بازبینی کنید؛ پیش‌نمایش فقط متن مدیریت‌شده پیشنهادی و مسیرها را چاپ می‌کند، نه محتوای موجود. شبکه یا Audit جدید ندارد.
+
+## فایل‌ها
+
+| فایل | هدف |
+|---|---|
+| `.security-guardian-profile.json` | Schema سخت‌گیرانه نسخه ۱: پروفایل منتخب، ریشه نسبی، Fingerprint موجودی؛ در صورت صلاحدید قابل اشتراک تیم. بدون یافته خام، Secret، فرمان تست یا مجوز. |
+| `AGENTS.md` | بلوک کوتاه مدیریت‌شده امنیتی؛ تمام بایت‌های بیرون بلوک حفظ می‌شوند. UTF-8 LF/CRLF. |
+| `CLAUDE.md`, `GEMINI.md` | Import بومی اختیاری به AGENTS.md در ریشه، فقط با انتخاب صریح؛ Import موجود دوباره استفاده می‌شود. |
+| `.security-guardian/profile-backups/` | نسخه پشتیبان خصوصی فایل‌های بازنویسی‌شده؛ Commit نشود. |
+
+Fingerprint موجودی، Componentهای کشف‌شده و محتوای محدود Manifest را متصل می‌کند، نه سورس یا نسخه وابستگی نصب‌شده. تغییر/جابجایی ریشه، تغییر Manifest، موجودی ناقص یا پروفایل نامعتبر، بازبینی صریح قبل از استفاده مجدد می‌خواهد. READY پیش‌فرض است نه اثبات پشتیبانی یا مجوز کاربر. انتخاب صریح فعلی اولویت دارد. فیلد مستقل instruction_sync راهنمای غایب یا تغییرکرده را مشخص می‌کند؛ فقط با تأیید به‌روزرسانی شود.
+
+## سازگاری Agent
+
+- [Codex](https://developers.openai.com/codex/guides/agents-md): پیش‌فرض AGENTS.md ریشه؛ AGENTS.override.md غیرخالی در همان پوشه مقدم است؛ تنظیمات nested، fallback و محدودیت اندازه زنجیره نهایی را تغییر می‌دهند. برای تأیید Session جدید شروع کنید.
+- [Claude Code](https://code.claude.com/docs/en/memory): پشتیبانی مستقیم AGENTS.md از v2.1.277 با تنظیمات مناسب. اولویت پیش‌فرض CLAUDE.md/CLAUDE.local.md ممکن است AGENTS.md را کنار بگذارد. Import اختیاری در CLAUDE.md برای اشتراک AGENTS.md؛ /memory و تنظیمات را بررسی کنید؛ تغییر خودکار تنظیمات ندارد.
+- [Gemini CLI](https://geminicli.com/docs/cli/gemini-md/): GEMINI.md پیش‌فرض، Import نسبی و نام فایل Context قابل تنظیم. پس از Reload یا Session جدید /memory show را بررسی کنید.
+
+Import تمام AGENTS.md را بارگذاری می‌کند نه فقط بلوک مدیریت‌شده؛ پیش از انتخاب مناسب بودن را بررسی کنید. فایل‌های دستورالعمل ریشه، ancestor/Component، قدیمی و nested مرتبط برای بازبینی فهرست می‌شوند؛ Import دلخواه، تنظیمات جایگزین Loader و تعارض معنایی خودکار مشخص نمی‌شوند. Helper فایل override یا nested را تغییر نمی‌دهد. موجودی Context حداکثر ۱۲۸ فایل مرتبط، ۲۵۶ KB هر فایل و ۲ MB مجموع؛ بیش از آن بازبینی دستی می‌خواهد. AGENTS.md بزرگ درباره بودجه پیش‌فرض Codex هشدار می‌گیرد. محدودیت‌های کاربر/تیم و مجوز پابرجاست. اگر Agent مستقیماً AGENTS.md را می‌خواند، Import بومی لازم نیست.
+
+## شکست‌ها و محدودیت‌ها
+
+Helper Encoding پشتیبانی‌نشده، Marker مدیریت‌شده تکراری/مبهم/نامعتبر (از جمله مثال fenced)، Fence بسته‌نشده Markdown، فایل بزرگ/Symlink/Hardlink، Schema نامعتبر، کشف ناقص یا حل‌نشده و تأیید قدیمی را رد می‌کند. Snapshot ورودی مجدداً بررسی و هر فایل اتمیک جایگزین می‌شود؛ فایل جدید بدون بازنویسی ساخته می‌شود. ابتدا فایل موجود پشتیبان می‌شود. به‌روزرسانی چندفایل به‌صورت گروهی اتمیک نیست؛ خطا BLOCKED/PARTIAL با فهرست فایل تغییرکرده و مسیر پشتیبان برمی‌گردد. توقف و بررسی کنید، در صورت نیاز آگاهانه بازیابی کنید؛ Retry خودکار یا بازنویسی تغییر ناشناخته نکنید. فقط دایرکتوری محلی قابل اعتماد؛ محافظت در برابر عامل یا فایل‌سیستم همزمان متخاصم نیست. پشتیبان به مجوز محلی (حالت خصوصی POSIX) متکی است و تاریخچه Audit خصوصی می‌ماند.
+
+تست Package/Fixture رفتار فایل را بررسی می‌کند؛ بارگذاری واقعی Context به اعتبارسنجی جدا در Repo موقت نیاز دارد. ادعای پوشش آسیب‌پذیری جدید یا Verification مستقل ندارد.
+
+## معماری و ارزش تست (#32 / PR #41)
+
+```mermaid
+flowchart TD
+ A[محدوده و Agent صریح] --> B[موجودی و Snapshot فایل]
+ B --> C[پیش‌نمایش بلوک و Token]
+ C --> D[اعمال صریح و بررسی مجدد]
+ D --> E[پشتیبان خصوصی و جایگزینی اتمیک]
+ E --> F[پروفایل و AGENTS.md مرجع]
+ F --> G[Import بومی اختیاری]
+ G --> H[پذیرش مستقل Loader بومی]
+```
+
+تست‌های Fixture مجوز، Token قدیمی، حفظ بایت، تغییر محدوده، احتمال تعارض و شکست جزئی نوشتن را بررسی می‌کنند. پذیرش Loader باید با Client احرازشده واقعی در پروژه موقت انجام شود؛ نسخه یا ایجاد فایل کافی نیست. این PR تنظیمات Agent یا Credential اضافه نمی‌کند.

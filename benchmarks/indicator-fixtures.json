@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "license": "MIT",
+  "kind": "synthetic-indicator-pairs",
+  "pairs": [
+    {
+      "pack": "web-core",
+      "framework": "React",
+      "dependency": "react",
+      "rule_id": "WEB.DOM.INNER_HTML",
+      "control_id": "ANG-01",
+      "file": "app.ts",
+      "positive": "element.innerHTML = value;",
+      "negative": "element.textContent = value;"
+    },
+    {
+      "pack": "web-core",
+      "framework": "Vue",
+      "dependency": "vue",
+      "rule_id": "WEB.STORAGE.TOKEN",
+      "control_id": "ANG-04",
+      "file": "app.ts",
+      "positive": "localStorage.setItem('accessToken', value);",
+      "negative": "localStorage.setItem('theme', value);"
+    },
+    {
+      "pack": "web-core",
+      "framework": "Angular",
+      "dependency": "@angular/core",
+      "rule_id": "WEB.NAV.DYNAMIC",
+      "control_id": "ANG-11",
+      "file": "app.ts",
+      "positive": "window.location.assign(value);",
+      "negative": "router.navigate(['/home']);"
+    },
+    {
+      "pack": "backend-core",
+      "framework": "Express",
+      "dependency": "express",
+      "rule_id": "BACKEND.HTTP.CORS_WILDCARD",
+      "control_id": "API-02",
+      "file": "app.ts",
+      "positive": "const config = {origin: '*'};",
+      "negative": "const config = {origin: 'https://example.invalid'};"
+    },
+    {
+      "pack": "backend-core",
+      "framework": "Fastify",
+      "dependency": "fastify",
+      "rule_id": "BACKEND.HTTP.ERROR_DISCLOSURE",
+      "control_id": "API-10",
+      "file": "app.ts",
+      "positive": "res.json(error.stack);",
+      "negative": "res.json({code: 'ERROR'});"
+    },
+    {
+      "pack": "backend-core",
+      "framework": "Koa",
+      "dependency": "koa",
+      "rule_id": "BACKEND.HTTP.FORWARDED_HEADER",
+      "control_id": "API-15",
+      "file": "app.ts",
+      "positive": "const ip = req.headers['x-forwarded-for'];",
+      "negative": "const ip = req.ip;"
+    },
+    {
+      "pack": "backend-core",
+      "framework": "Hono",
+      "dependency": "hono",
+      "rule_id": "BACKEND.API.PRIVILEGED_FIELD",
+      "control_id": "BIZ-02",
+      "file": "app.ts",
+      "positive": "const role = body.role;",
+      "negative": "const name = body.displayName;"
+    },
+    {
+      "pack": "react-next",
+      "framework": "React",
+      "dependency": "react",
+      "rule_id": "REACT.DOM.RAW_HTML",
+      "control_id": "ANG-01",
+      "file": "view.tsx",
+      "positive": "<div dangerouslySetInnerHTML={{__html: value}} />",
+      "negative": "<div>{value}</div>"
+    },
+    {
+      "pack": "react-next",
+      "framework": "Next.js",
+      "dependency": "next",
+      "rule_id": "NEXT.BUILD.PUBLIC_SECRET_NAME",
+      "control_id": "ANG-12",
+      "file": "app.ts",
+      "positive": "const x = process.env.NEXT_PUBLIC_PRIVATE_KEY;",
+      "negative": "const x = process.env.NEXT_PUBLIC_SITE_URL;"
+    },
+    {
+      "pack": "react-next",
+      "framework": "Next.js",
+      "dependency": "next",
+      "rule_id": "NEXT.BUILD.BROWSER_SOURCEMAPS",
+      "control_id": "ANG-12",
+      "file": "next.config.mjs",
+      "positive": "export default {productionBrowserSourceMaps: true};",
+      "negative": "export default {productionBrowserSourceMaps: false};"
+    },
+    {
+      "pack": "vue-nuxt",
+      "framework": "Vue",
+      "dependency": "vue",
+      "rule_id": "VUE.DOM.RAW_HTML",
+      "control_id": "ANG-01",
+      "file": "View.vue",
+      "positive": "<div v-html=\"value\"></div>",
+      "negative": "<div>{{ value }}</div>"
+    },
+    {
+      "pack": "vue-nuxt",
+      "framework": "Nuxt",
+      "dependency": "nuxt",
+      "rule_id": "NUXT.CONFIG.PUBLIC_SECRET_NAME",
+      "control_id": "ANG-12",
+      "file": "app.ts",
+      "positive": "const x = useRuntimeConfig().public.apiSecret;",
+      "negative": "const x = useRuntimeConfig().public.apiBase;"
+    },
+    {
+      "pack": "svelte-kit",
+      "framework": "Svelte",
+      "dependency": "svelte",
+      "rule_id": "SVELTE.DOM.RAW_HTML",
+      "control_id": "ANG-01",
+      "file": "View.svelte",
+      "positive": "<div>{@html value}</div>",
+      "negative": "<div>{value}</div>"
+    },
+    {
+      "pack": "svelte-kit",
+      "framework": "SvelteKit",
+      "dependency": "@sveltejs/kit",
+      "rule_id": "KIT.ENV.PUBLIC_SECRET_NAME",
+      "control_id": "ANG-12",
+      "file": "env.ts",
+      "positive": "import { PUBLIC_API_SECRET } from '$env/static/public';",
+      "negative": "import { PUBLIC_SITE_URL } from '$env/static/public';"
+    },
+    {
+      "pack": "express-fastify",
+      "framework": "Express",
+      "dependency": "express",
+      "rule_id": "EXPRESS.PROXY.TRUST_ALL",
+      "control_id": "API-15",
+      "file": "app.ts",
+      "positive": "app.set('trust proxy', true);",
+      "negative": "app.set('trust proxy', 'loopback');"
+    },
+    {
+      "pack": "express-fastify",
+      "framework": "Fastify",
+      "dependency": "fastify",
+      "rule_id": "FASTIFY.PROXY.TRUST_ALL",
+      "control_id": "API-15",
+      "file": "app.ts",
+      "positive": "const app = Fastify({trustProxy: true});",
+      "negative": "const app = Fastify({trustProxy: false});"
+    },
+    {
+      "pack": "express-fastify",
+      "framework": "Fastify",
+      "dependency": "fastify",
+      "rule_id": "FASTIFY.VALIDATION.HANDLER_REVIEW",
+      "control_id": "API-01",
+      "file": "app.ts",
+      "positive": "const config = {attachValidation: true};",
+      "negative": "const config = {attachValidation: false};"
+    }
+  ]
+}

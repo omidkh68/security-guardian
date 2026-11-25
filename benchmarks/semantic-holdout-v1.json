@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "kind": "POST_FREEZE_SYNTHETIC_HOLDOUT",
+  "license": "MIT",
+  "engine_freeze": "914f1a0ed7383d6cbdd1f835c0d5446f4416dcc5",
+  "provenance": "Maintainer-assisted synthetic labels authored after frozen engine; not independently adjudicated, not tuning fixtures. Preserve failures and do not tune on this corpus.",
+  "cases": [
+    {
+      "id": "py-format",
+      "family": "python-sql",
+      "dependency": "Flask",
+      "file": "view.py",
+      "rule_id": "PY.FLASK.SQL.REQUEST_FLOW",
+      "expected": true,
+      "reason": "HTTP input in formatted query text",
+      "source": "from flask import request as req\nimport sqlite3 as db\ndef view():\n    q=req.args[\"term\"]\n    c=db.connect(\":memory:\")\n    c.execute(\"SELECT name FROM items WHERE name = '{}'\".format(q))\n"
+    },
+    {
+      "id": "py-bound",
+      "family": "python-sql",
+      "dependency": "Flask",
+      "file": "view.py",
+      "rule_id": "PY.FLASK.SQL.REQUEST_FLOW",
+      "expected": false,
+      "reason": "Parameter is passed separately",
+      "source": "from flask import request as req\nimport sqlite3 as db\ndef view():\n    q=req.form.get(\"term\")\n    c=db.connect(\":memory:\")\n    c.execute(\"SELECT name FROM items WHERE name = ?\", (q,))\n"
+    },
+    {
+      "id": "py-loop",
+      "family": "python-sql",
+      "dependency": "Flask",
+      "file": "view.py",
+      "rule_id": "PY.FLASK.SQL.REQUEST_FLOW",
+      "expected": true,
+      "reason": "Input in query inside unsupported loop",
+      "source": "from flask import request as req\nimport sqlite3 as db\ndef view():\n    c=db.connect(\":memory:\")\n    for q in [req.args[\"term\"]]:\n        c.execute(\"SELECT name FROM items WHERE name = '\"+q+\"'\")\n"
+    },
+    {
+      "id": "py-fixed",
+      "family": "python-sql",
+      "dependency": "Flask",
+      "file": "view.py",
+      "rule_id": "PY.FLASK.SQL.REQUEST_FLOW",
+      "expected": false,
+      "reason": "Request read but query literal",
+      "source": "from flask import request as req\nimport sqlite3 as db\ndef view():\n    q=req.args.get(\"term\")\n    c=db.connect(\":memory:\")\n    c.execute(\"SELECT name FROM items\")\n"
+    },
+    {
+      "id": "dom-template",
+      "family": "js-dom",
+      "dependency": "react",
+      "file": "render.ts",
+      "rule_id": "JS.DOM.LOCATION_TO_HTML",
+      "expected": true,
+      "reason": "Location data inserted into HTML template",
+      "source": "function update() {\n const target=document.getElementById('output');\n const value=window.location.search; target.innerHTML=`<strong>${value}</strong>`;\n}\n"
+    },
+    {
+      "id": "dom-text",
+      "family": "js-dom",
+      "dependency": "react",
+      "file": "render.ts",
+      "rule_id": "JS.DOM.LOCATION_TO_HTML",
+      "expected": false,
+      "reason": "Text sink does not interpret markup",
+      "source": "function update() {\n const target=document.getElementById('output');\n const value=window.location.hash; target.textContent=value;\n}\n"
+    },
+    {
+      "id": "dom-transform",
+      "family": "js-dom",
+      "dependency": "react",
+      "file": "render.ts",
+      "rule_id": "JS.DOM.LOCATION_TO_HTML",
+      "expected": true,
+      "reason": "Decoded location input remains raw markup; unsupported transformation may miss",
+      "source": "function update() {\n const target=document.getElementById('output');\n target.innerHTML=decodeURIComponent(window.location.hash);\n}\n"
+    },
+    {
+      "id": "dom-fixed",
+      "family": "js-dom",
+      "dependency": "react",
+      "file": "render.ts",
+      "rule_id": "JS.DOM.LOCATION_TO_HTML",
+      "expected": false,
+      "reason": "Literal markup unrelated to input",
+      "source": "function update() {\n const target=document.getElementById('output');\n const unused=window.location.search; target.innerHTML=\"<em>fixed</em>\";\n}\n"
+    },
+    {
+      "id": "sql-template",
+      "family": "node-sql",
+      "dependency": "express",
+      "file": "route.ts",
+      "rule_id": "JS.NODE.SQL.REQUEST_FLOW",
+      "expected": true,
+      "reason": "Query parameter incorporated in text",
+      "source": "import express from \"express\";\nimport {Pool} from \"pg\";\nconst app=express(); const db=new Pool();\napp.get(\"/items\", async (req,res)=>{\nconst name=req.query.name; return db.query(`SELECT name FROM items WHERE name = '${name}'`);\n});"
+    },
+    {
+      "id": "sql-param",
+      "family": "node-sql",
+      "dependency": "express",
+      "file": "route.ts",
+      "rule_id": "JS.NODE.SQL.REQUEST_FLOW",
+      "expected": false,
+      "reason": "Driver parameters distinct from SQL text",
+      "source": "import express from \"express\";\nimport {Pool} from \"pg\";\nconst app=express(); const db=new Pool();\napp.get(\"/items\", async (req,res)=>{\nconst name=req.query.name; return db.query(\"SELECT name FROM items WHERE name=$1\",[name]);\n});"
+    },
+    {
+      "id": "sql-helper",
+      "family": "node-sql",
+      "dependency": "express",
+      "file": "route.ts",
+      "rule_id": "JS.NODE.SQL.REQUEST_FLOW",
+      "expected": true,
+      "reason": "Data reaches SQL through local helper; cross-call analysis may miss",
+      "source": "function wrap(x){return \"SELECT name FROM items WHERE name = '\"+x+\"'\";}\nimport express from \"express\";\nimport {Pool} from \"pg\";\nconst app=express(); const db=new Pool();\napp.get(\"/items\", async (req,res)=>{\nreturn db.query(wrap(req.query.name));\n});"
+    },
+    {
+      "id": "sql-static",
+      "family": "node-sql",
+      "dependency": "express",
+      "file": "route.ts",
+      "rule_id": "JS.NODE.SQL.REQUEST_FLOW",
+      "expected": false,
+      "reason": "Fixed query even when request is read",
+      "source": "import express from \"express\";\nimport {Pool} from \"pg\";\nconst app=express(); const db=new Pool();\napp.get(\"/items\", async (req,res)=>{\nconst ignored=req.params.id; return db.query(\"SELECT name FROM items\");\n});"
+    },
+    {
+      "id": "pages-template",
+      "family": "ssr-pages",
+      "dependency": "next",
+      "file": "pages/item.tsx",
+      "rule_id": "JS.NEXT.SSR.REQUEST_TO_RAW_HTML",
+      "expected": true,
+      "reason": "Request-derived prop in raw JSX",
+      "source": "export async function getServerSideProps(ctx){const x=ctx.params.slug; return {props:{title:x}};}\nexport default function Page(props){const t=props.title; return <section dangerouslySetInnerHTML={{__html:`<b>${t}</b>`}} />;}"
+    },
+    {
+      "id": "pages-text",
+      "family": "ssr-pages",
+      "dependency": "next",
+      "file": "pages/item.tsx",
+      "rule_id": "JS.NEXT.SSR.REQUEST_TO_RAW_HTML",
+      "expected": false,
+      "reason": "Ordinary JSX text",
+      "source": "export async function getServerSideProps(ctx){return {props:{title:ctx.query.title}};}\nexport default function Page(props){return <section>{props.title}</section>;}"
+    },
+    {
+      "id": "app-template",
+      "family": "ssr-app",
+      "dependency": "next",
+      "file": "app/item/page.tsx",
+      "rule_id": "JS.NEXT.APP.REQUEST_TO_RAW_HTML",
+      "expected": true,
+      "reason": "Awaited params into raw render",
+      "source": "export default async function Page(props){const p=await props.params; const x=p.slug; return <section dangerouslySetInnerHTML={{__html:`<i>${x}</i>`}} />;}"
+    },
+    {
+      "id": "app-text",
+      "family": "ssr-app",
+      "dependency": "next",
+      "file": "app/item/page.tsx",
+      "rule_id": "JS.NEXT.APP.REQUEST_TO_RAW_HTML",
+      "expected": false,
+      "reason": "Normal text child",
+      "source": "export default async function Page(props){const p=await props.params; return <section>{p.slug}</section>;}"
+    },
+    {
+      "id": "angular-template",
+      "family": "ssr-angular",
+      "dependency": "@angular/core",
+      "file": "src/server.ts",
+      "rule_id": "JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT",
+      "expected": true,
+      "reason": "Request-derived rendered document",
+      "source": "import express from \"express\";\nimport {CommonEngine} from \"@angular/ssr/node\";\nconst app=express();const engine=new CommonEngine();\napp.get(\"/\",async (req,res)=>{const x=req.body.title; return engine.render({document:`<article>${x}</article>`});});"
+    },
+    {
+      "id": "angular-fixed",
+      "family": "ssr-angular",
+      "dependency": "@angular/core",
+      "file": "src/server.ts",
+      "rule_id": "JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT",
+      "expected": false,
+      "reason": "Static document; request in unrelated option",
+      "source": "import express from \"express\";\nimport {CommonEngine} from \"@angular/ssr/node\";\nconst app=express();const engine=new CommonEngine();\napp.get(\"/\",async (req,res)=>{return engine.render({document:\"<article>fixed</article>\",url:req.query.url});});"
+    },
+    {
+      "id": "nuxt-template",
+      "family": "ssr-nuxt",
+      "dependency": "nuxt",
+      "file": "server/routes/item.ts",
+      "rule_id": "JS.NUXT.SSR.REQUEST_TO_HTML",
+      "expected": true,
+      "reason": "Query data in explicit HTML response",
+      "source": "import {defineEventHandler, getQuery, send} from \"h3\";\nexport default defineEventHandler(event=>{const q=getQuery(event); return send(event,`<article>${q.title}</article>`,\"text/html; charset=utf-8\");});"
+    },
+    {
+      "id": "nuxt-fixed",
+      "family": "ssr-nuxt",
+      "dependency": "nuxt",
+      "file": "server/routes/item.ts",
+      "rule_id": "JS.NUXT.SSR.REQUEST_TO_HTML",
+      "expected": false,
+      "reason": "Static explicit HTML response",
+      "source": "import {defineEventHandler, getQuery, send} from \"h3\";\nexport default defineEventHandler(event=>{const q=getQuery(event); return send(event,\"<article>fixed</article>\",\"text/html\");});"
+    },
+    {
+      "id": "kit-template",
+      "family": "ssr-kit",
+      "dependency": "@sveltejs/kit",
+      "file": "src/routes/item/+server.ts",
+      "rule_id": "JS.SVELTEKIT.SSR.REQUEST_TO_HTML",
+      "expected": true,
+      "reason": "Route param reaches explicit HTML body",
+      "source": "export function GET(event){const x=event.params.slug; return new Response(`<article>${x}</article>`,{headers:{\"Content-Type\":\"text/html\"}});}"
+    },
+    {
+      "id": "kit-fixed",
+      "family": "ssr-kit",
+      "dependency": "@sveltejs/kit",
+      "file": "src/routes/item/+server.ts",
+      "rule_id": "JS.SVELTEKIT.SSR.REQUEST_TO_HTML",
+      "expected": false,
+      "reason": "Static response body",
+      "source": "export function GET(event){const x=event.params.slug; return new Response(\"<article>fixed</article>\",{headers:{\"Content-Type\":\"text/html\"}});}"
+    },
+    {
+      "id": "auth-caller",
+      "family": "authorization",
+      "dependency": "fastify",
+      "file": "route.ts",
+      "rule_id": "JS.NODE.AUTHZ.RESOURCE_SCOPE",
+      "expected": "CALLER_SCOPE_REVIEW",
+      "reason": "Caller supplies tenant selector",
+      "source": "import fastify from \"fastify\";\nimport {PrismaClient} from \"@prisma/client\";\nconst app=fastify(); const db=new PrismaClient();\napp.get(\"/items\", async (req,res)=>{\nconst tenantId=req.body.tenantId; return db.item.findMany({where:{tenantId}});\n});"
+    },
+    {
+      "id": "auth-owner",
+      "family": "authorization",
+      "dependency": "fastify",
+      "file": "route.ts",
+      "rule_id": "JS.NODE.AUTHZ.RESOURCE_SCOPE",
+      "expected": "PRINCIPAL_SCOPE_EVIDENCE",
+      "reason": "Syntactic local owner predicate only",
+      "source": "import fastify from \"fastify\";\nimport {PrismaClient} from \"@prisma/client\";\nconst app=fastify(); const db=new PrismaClient();\napp.get(\"/items\", async (req,res)=>{\nconst ownerId=req.user.id; return db.item.findFirst({where:{id:req.params.id,ownerId}});\n});"
+    },
+    {
+      "id": "auth-missing",
+      "family": "authorization",
+      "dependency": "fastify",
+      "file": "route.ts",
+      "rule_id": "JS.NODE.AUTHZ.RESOURCE_SCOPE",
+      "expected": "MISSING_LOCAL_SCOPE_REVIEW",
+      "reason": "Object selector without local scope",
+      "source": "import fastify from \"fastify\";\nimport {PrismaClient} from \"@prisma/client\";\nconst app=fastify(); const db=new PrismaClient();\napp.get(\"/items\", async (req,res)=>{\nconst id=req.params.id; return db.item.update({where:{id},data:{name:req.body.name}});\n});"
+    },
+    {
+      "id": "auth-unknown",
+      "family": "authorization",
+      "dependency": "fastify",
+      "file": "route.ts",
+      "rule_id": "JS.NODE.AUTHZ.RESOURCE_SCOPE",
+      "expected": "UNKNOWN_RESOURCE_SCOPE",
+      "reason": "Collection without filter",
+      "source": "import fastify from \"fastify\";\nimport {PrismaClient} from \"@prisma/client\";\nconst app=fastify(); const db=new PrismaClient();\napp.get(\"/items\", async (req,res)=>{\nreturn db.item.count();\n});"
+    },
+    {
+      "id": "auth-unsupported",
+      "family": "authorization",
+      "dependency": "fastify",
+      "file": "route.ts",
+      "rule_id": "JS.NODE.AUTHZ.RESOURCE_SCOPE",
+      "expected": "PARTIAL",
+      "reason": "Nested logical predicate needs review",
+      "source": "import fastify from \"fastify\";\nimport {PrismaClient} from \"@prisma/client\";\nconst app=fastify(); const db=new PrismaClient();\napp.get(\"/items\", async (req,res)=>{\nreturn db.item.findMany({where:{OR:[{id:req.params.id},{tenantId:req.user.tenantId}]}});\n});"
+    }
+  ]
+}

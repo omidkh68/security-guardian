@@ -80,13 +80,63 @@ class ScopeTests(unittest.TestCase):
         self.assertEqual(next(x for x in full['controls'] if x['id']=='API-01')['applicability'],'NEEDS_DISCOVERY')
         self.assertFalse(any(x['verification']=='VERIFIED_PASS' for x in full['controls']))
 
-    def test_non_angular_frontend_no_angular_only_rule_claim(self):
+    def test_non_angular_frontend_only_common_indicators(self):
         self.package('.','react')
-        self.write('app.tsx','element.innerHTML = untrusted;')
+        self.write('app.tsx','element.innerHTML = untrusted;\nbypassSecurityTrustHtml(value);')
         result=scan.process(self.root,'frontend')
         self.assertIn('React',result['summary']['discovered_stack'])
-        self.assertNotIn('ANG-01',{x['control_id'] for x in result['signals']})
+        self.assertEqual([(x['control_id'],x['rule_id']) for x in result['signals']],
+                         [('ANG-01','WEB.DOM.INNER_HTML')])
         self.assertEqual(next(x for x in result['controls'] if x['id']=='ANG-01')['applicability'],'NEEDS_DISCOVERY')
+        self.assertEqual(result['signals'][0]['control_mapping'],'LEGACY_COMPATIBILITY')
+
+    def test_web_core_common_js_ts_positive_and_negative(self):
+        for dep in ('@angular/core','react','next','vue','nuxt','svelte','@sveltejs/kit'):
+            with self.subTest(dep=dep):
+                self.package('.',dep)
+                self.write('app.jsx','element.innerHTML = PRIVATE_WEB_FIXTURE_VALUE;\n'
+                          'localStorage.setItem("access_token", value);\n'
+                          'window.location.assign(destination);\n'
+                          'element.textContent = payload;\n')
+                self.write('safe.mjs','element.textContent = value;\nlocalStorage.setItem("theme",value);')
+                self.write('tests/fixture.js','element.innerHTML = payload;')
+                result=scan.process(self.root,'frontend')
+                self.assertEqual([x['rule_id'] for x in result['signals']],
+                                 ['WEB.DOM.INNER_HTML','WEB.STORAGE.TOKEN','WEB.NAV.DYNAMIC'])
+                self.assertEqual([x['line'] for x in result['signals']],[1,2,3])
+                self.assertEqual(result['summary']['web_core']['inspected_eligible_files'],2)
+                self.assertEqual(result['summary']['web_core']['selected_roots'],['.'])
+                self.assertTrue(all(x['status']=='HEURISTIC_REVIEW_ONLY' for x in result['signals']))
+                self.assertNotIn('PRIVATE_WEB_FIXTURE_VALUE',json.dumps(result))
+
+    def test_web_core_scope_and_legacy_compatibility(self):
+        self.package('web','react')
+        self.package('api','express')
+        self.package('unknown','unrecognized')
+        self.write('web/app.ts','element.innerHTML\n = value;')
+        self.write('api/app.ts','element.innerHTML = value;')
+        self.write('unknown/app.ts','element.innerHTML = value;')
+        front=scan.process(self.root,'frontend')
+        self.assertEqual([(x['path'],x['line']) for x in front['signals']],[('web/app.ts',1)])
+        self.assertEqual(front['signals'][0]['rule_id'],'WEB.DOM.INNER_HTML')
+        self.assertFalse(scan.process(self.root,'backend')['signals'])
+        self.assertFalse(scan.process(self.root,'custom',['unknown'])['signals'])
+        legacy=scan.process(self.root)
+        self.assertNotIn('web_core',legacy['summary'])
+        self.assertEqual(len(legacy['signals']),3)
+        self.assertFalse(any('rule_id' in x for x in legacy['signals']))
+        previous=next(x for x in legacy['signals'] if x['path']=='web/app.ts')
+        self.assertEqual((previous['control_id'],previous['signal']),
+                         (front['signals'][0]['control_id'],front['signals'][0]['signal']))
+
+    def test_web_core_does_not_claim_framework_template_checks(self):
+        self.package('.','vue')
+        self.write('View.vue','<div v-html="value"></div>')
+        result=scan.process(self.root,'frontend')
+        self.assertEqual([x['rule_id'] for x in result['signals']], ['VUE.DOM.RAW_HTML'])
+        self.assertTrue(all(x['pack_id'] == 'vue-nuxt' for x in result['signals']))
+        self.assertEqual(result['summary']['web_core']['inspected_eligible_files'],0)
+        self.assertIn('no template',result['summary']['web_core']['limitations'][0])
 
     def test_scoped_source_isolation_and_rule_families(self):
         self.workspace()

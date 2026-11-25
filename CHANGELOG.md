@@ -5,13 +5,42 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Approved persistent scope and managed instruction preview/apply (#32); native runtime acceptance pending.
+- Add pinned external CWE-89 evaluation and separate post-freeze semantic holdout reporting (#96).
+- Add versioned framework/pack coverage inventory and bilingual contributor mapping contract (#95).
+- Consolidate optional JS AST parser and evidence contracts; preserve DOM sanitizer call evidence without suppressing review candidates (#94).
+- Add optional route-to-resource authorization evidence matrix for Express, Fastify and NestJS with Prisma selectors (#93).
+- Add optional bounded Next.js Pages/App Router, Angular SSR, Nuxt H3 and SvelteKit HTML response and credential transfer AST review and manual coverage matrix (#92).
+- Add optional bounded Node request-to-SQL AST review for Express/Fastify/NestJS and local pg receivers (#91).
+- Extend Python AST SQL review with bounded direct SQLite context-manager normal paths (#90).
+- Extend optional JS/TS AST DOM flow with bounded branch paths and local helper summaries (#88).
+- Add opt-in scoped JS/TS DOM AST review via explicitly trusted external TypeScript parser (#86).
+- Extend Flask/SQLite AST review with direct import alias resolution and bounded local helper summaries (#84).
+- Extend Flask/SQLite AST review with bounded path-local if/else flow, early return and explicit path-budget coverage (#82).
+- Add bounded offline Flask/SQLite AST request-to-query candidates with explicit partial coverage (#80).
+- Add explicit framework discovery preview and conservative natural-language Skill intent routing (#76).
+- Add scoped Express/Fastify v1 indicators for broad proxy trust and validation handler review (#74).
+- Add scoped Svelte/Kit v1 indicators for raw HTML and secret-like public environment imports (#72).
+- Add scoped Vue/Nuxt v1 indicators for raw HTML and secret-like public runtime config names (#70).
+- Add scoped React/Next v1 review indicators for raw HTML, public secret-like names and production browser source maps (#68).
+- Add scoped backend-core v1 HTTP/API indicators for selected Node backend components and separate Nest-specific signals; retain legacy identities (#66).
+- Prepare a manually dispatched stable-tag npm Trusted Publishing workflow and release guards; registry connection and publication remain pending (#64).
+- Add scoped web-core v1 metadata and three reusable browser indicators for selected JS/TS frontend components; preserve legacy control identities and unscoped behavior (#62).
+- Add a private dependency-free Node CLI preview, exact npm tarball checks and offline npx install-to-report smoke; registry publication remains pending (#46).
+- Bind explicitly authorized local unittest evidence to active scoped tracker runs and findings; distinguish manual reports and recheck selected-file freshness (#58, #60).
 - Read-only project scope preview, manifest-based component inventory and explicit frontend/backend/fullstack/mobile/custom profiles; selected scanner rule families and per-run scope metadata (#31).
 - New framework names are discovery hints only, not expanded vulnerability detection coverage.
 
-- Explicitly approved persistent project scope and concise managed AGENTS.md block with optional native imports, private backups and stale-preview protection (#32).
+- Add read-only, bounded selected-file SHA-256 fingerprints as a prerequisite for stale-evidence detection (#51, #52). No automatic verification or test execution.
+- Add an opt-in POSIX Python unittest adapter with execution receipts, consent, limits and before/after selected-input fingerprints (#53, #56). Tracker verification remains unchanged.
+
+### Fixed
+- Restrict bilingual documentation to human-facing guides; retain one canonical copy of agent instructions and operational references (#54).
+- Standardize canonical English and Persian documentation filenames and track legacy translation debt (#54).
+- Preserve multiple rules per line, detect selected adjacent-line indicators and expose incomplete scan/evidence coverage (#45, #48, #50).
 
 ### Compatibility
-- Direct commands without scope flags retain legacy scanning. Ordinary audits do not update profiles or instructions; scoped specialist adapters remain future work.
+- Direct commands without scope flags retain legacy scanning. Project instruction persistence and scoped specialist adapters remain future work.
 
 ## [1.2.1] — 2026-11-18
 

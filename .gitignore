@@ -34,3 +34,7 @@ coverage/
 
 # Release bundles
 /dist/
+
+# Node packaging artifacts
+node_modules/
+*.tgz

@@ -16,7 +16,7 @@ An open-source, stack-aware security skill for Claude Code, Codex and Gemini CLI
 
 **145 controls** · **13 security domains** · **107 playbooks** · **versioned audit history**
 
-[Why Security Guardian?](#why-security-guardian) · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [Use cases](#-real-world-use-cases) · [Tracking](#-versioned-findings--audit-history) · [Documentation](#-documentation) · [فارسی](README.fa.md)
+[Why Security Guardian?](#why-security-guardian) · [Quick start](#-quick-start) · [How it works](#-how-it-works) · [Use cases](#-real-world-use-cases) · [Tracking](#-versioned-findings--audit-history) · [Documentation](#-documentation) · [فارسی](README-FA.md)
 
 </div>
 
@@ -142,10 +142,6 @@ python3 plugins/security-guardian/skills/security-guardian/scripts/security_scan
 ```
 
 Use `--profile frontend|backend|fullstack|mobile|custom` and repeat `--component <relative-root>` when selecting explicit components. See [scope contract](docs/scope-resolution.md). Existing manual invocations without a profile retain legacy behavior.
-
-## Approved project profile (development — RFC #32)
-
-Save a selected scope and concise shared project security guidance only through an explicit preview and approved apply. Normal audits never modify instructions. Optional Claude/Gemini imports preserve existing native rules. See [project profile and instruction setup](docs/project-profile.md).
 
 ## 🔍 Optional structural scanning and coverage evidence
 
@@ -387,10 +383,12 @@ GitHub Actions runs the offline test suite on three Python versions, checks the 
 | [Use cases](docs/use-cases.md) | Eight realistic security scenarios and expected outcomes |
 | [Tracking](docs/tracking.md) | Status meanings, versioning, reasons, failed fixes and regression IDs |
 | [Security model](docs/security-model.md) | Safe operation, sensitive artifacts and limits |
+| Verification fingerprints ([EN](docs/verification-fingerprint.md), [FA](docs/verification-fingerprint-FA.md)) | Selected-file evidence binding; not an independent runner |
+| Local verification runner ([EN](docs/verification-runner.md), [FA](docs/verification-runner-FA.md)) | Explicitly authorized Python unittest execution; receipts are not verified fixes |
 | [Troubleshooting](docs/troubleshooting.md) | Common installation or tracking problems |
 | [Playbook contribution](docs/contributing-playbook.md) | Add or improve controls safely |
 | [Source and provenance](docs/provenance.md) | Standards, baseline and interpretation of difficulty scores |
-| [فارسی](README.fa.md) | Persian quick start and usage |
+| [فارسی](README-FA.md) | Complete Persian translation of this README |
 
 ## 🤝 Contribute
 
@@ -421,3 +419,50 @@ For PDF re-export without creating a new audit version use
 ## Engineering vision and roadmap
 
 See the [engineering wiki source](docs/wiki/SG-Home.md) for the v1.2.1 baseline, 2026 standards and scope-aware future design. RFCs are proposals pending review, not shipped features. The [GitHub Wiki](https://github.com/omidkh68/security-guardian/wiki) is maintained separately; see [publication instructions](docs/wiki-publishing.md).
+
+The [tracker-bound execution evidence](docs/tracker-execution-evidence.md) command distinguishes direct local execution from manually reported evidence. [فارسی](docs/tracker-execution-evidence-FA.md).
+
+For contributors: [private npm/npx distribution preview](docs/npm-distribution.md) ([فارسی](docs/npm-distribution-FA.md)) — local tarball only; no public registry package has been published by this work.
+
+[Web core indicator pack](docs/web-core.md) ([فارسی](docs/web-core-FA.md)): scoped browser candidates across discovered web frameworks; not framework-specific verification.
+
+[Backend core indicator pack](docs/backend-core.md) ([فارسی](docs/backend-core-FA.md)): scoped Node HTTP/API candidates; not authorization or framework-specific verification.
+
+[React/Next.js review pack](docs/react-next.md) ([فارسی](docs/react-next-FA.md)): scoped raw HTML, public secret-like names and browser source-map candidates; SSR and server authorization still require review.
+
+[Vue/Nuxt review pack](docs/vue-nuxt.md) ([فارسی](docs/vue-nuxt-FA.md)): scoped v-html and public runtime-config candidates; manual SSR and server authorization review.
+
+[Svelte/SvelteKit review pack](docs/svelte-kit.md) ([فارسی](docs/svelte-kit-FA.md)): scoped raw HTML and public environment import candidates; manual server authorization and SSR review.
+
+[Express/Fastify review pack](docs/express-fastify.md) ([فارسی](docs/express-fastify-FA.md)): scoped proxy trust and validation-handler candidates, requiring deployment and handler review.
+
+[Intent routing](docs/intent-routing.md) ([فارسی](docs/intent-routing-FA.md)): select an explicitly named framework with a read-only preview before auditing; ambiguity requires selection.
+
+[Bounded Python SQL AST review](docs/python-sql-flow.md) ([فارسی](docs/python-sql-flow-FA.md)): selected Flask/SQLite source-to-query candidates with bounded if/else paths, direct aliases and local helper summaries, not exploit proof.
+
+[Optional JS/TS AST DOM flow](docs/js-dom-flow.md) ([فارسی](docs/js-dom-flow-FA.md)): explicitly authorized external parser; scoped location-to-innerHTML candidates, not exploit proof.
+
+[Optional Node API SQL AST review](docs/js-sql-flow.md) ([فارسی](docs/js-sql-flow-FA.md)): bounded Express/Fastify/NestJS to pg query-text review.
+
+[Optional SSR AST review](docs/js-ssr-flow.md) ([فارسی](docs/js-ssr-flow-FA.md)): bounded Next.js Pages/App Router, Angular server/credential transfer, Nuxt H3 and SvelteKit HTML endpoint flows; other SSR paths require review.
+
+[Optional authorization evidence review](docs/js-authz-flow.md) ([فارسی](docs/js-authz-flow-FA.md)): Express, Fastify and NestJS resource-scope matrix with explicit Prisma and TypeORM selectors; all rows unverified.
+
+[Semantic AST contract](docs/semantic-contract.md) ([فارسی](docs/semantic-contract-FA.md)): source/sink and binding matrix, shared parser/evidence validation and explicit sanitizer review.
+
+JS/TS DOM AST v2 adds bounded branches and same-file helper summaries (#88).
+
+Python SQL AST v4 adds direct SQLite context-manager normal-path review (#90), with transaction/exception semantics marked partial.
+
+[Framework coverage and pack contributor contract](docs/framework-coverage.md) ([فارسی](docs/framework-coverage-FA.md)): versioned read-only inventory of discovery, heuristic/AST eligibility and runtime NOT_RUN; contributor mapping and migration policy.
+
+[Independent detection benchmark](docs/independent-benchmark.md) ([فارسی](docs/independent-benchmark-FA.md)): external labeled CWE-89 slice, separate post-freeze synthetic corpus and transparent denominators.
+
+[Standards crosswalk](docs/standards-crosswalk.md) ([فارسی](docs/standards-crosswalk-FA.md)): versioned advisory relationships, separate applicability and verification.
+
+[Professional reporting](docs/pdf-reporting.md) ([فارسی](docs/pdf-reporting-FA.md)): structured management/technical PDF, JSON and Markdown views, residual risk and finalized snapshot exports.
+
+
+Expansion #107: see [semantic coverage expansion](docs/semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.
+
+[Approved project profile](docs/project-profile.md) ([فارسی](docs/project-profile-FA.md)): explicit preview/apply and reusable selected scope. Native runtime loading remains unverified.

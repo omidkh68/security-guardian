@@ -34,7 +34,7 @@ python3 security_scan.py --root . --profile backend --format json
 python3 security_tracker.py begin --root . --mode audit --profile backend --scope "Backend review"
 ```
 
-`scope_resolution` is additive in selected scanner JSON, begin output and run manifest; RUN.md and PDF human-readable scope label describe selected/excluded roots. Prior snapshots and ledger IDs are unchanged. Scope is not an OS sandbox. The agent must obey the scope; record/import formats remain compatible. The optional legacy Semgrep adapter does not implement selection isolation, so scoped skill runs explicitly skip it until #34; never report it passing or run it over the whole repo. Direct no-profile scanner/tracker calls preserve legacy whole-repository behavior for existing scripts. Normal runs do not persist scope outside per-run metadata or modify project instructions. A separately approved explicit [profile initialization](project-profile.md) is available in development (RFC #32).
+`scope_resolution` is additive in selected scanner JSON, begin output and run manifest; RUN.md and PDF human-readable scope label describe selected/excluded roots. Prior snapshots and ledger IDs are unchanged. Scope is not an OS sandbox. The agent must obey the scope; record/import formats remain compatible. The optional legacy Semgrep adapter does not implement selection isolation, so scoped skill runs explicitly skip it until #34; never report it passing or run it over the whole repo. Direct no-profile scanner/tracker calls preserve legacy whole-repository behavior for existing scripts. No profile is persisted outside the per-run metadata; project instructions are not modified (RFC #32).
 
 ## Tests
 
