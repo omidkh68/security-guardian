@@ -8,6 +8,11 @@ All notable changes to this open-source distribution are documented here. Dates 
 - Read-only project scope preview, manifest-based component inventory and explicit frontend/backend/fullstack/mobile/custom profiles; selected scanner rule families and per-run scope metadata (#31).
 - New framework names are discovery hints only, not expanded vulnerability detection coverage.
 
+- Add read-only, bounded selected-file SHA-256 fingerprints as a prerequisite for stale-evidence detection (#51, #52). No automatic verification or test execution.
+
+### Fixed
+- Preserve multiple rules per line, detect selected adjacent-line indicators and expose incomplete scan/evidence coverage (#45, #48, #50).
+
 ### Compatibility
 - Direct commands without scope flags retain legacy scanning. Project instruction persistence and scoped specialist adapters remain future work.
 
