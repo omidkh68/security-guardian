@@ -35,4 +35,4 @@ By contributing, you agree your contribution can be distributed under this repos
 
 ## Bilingual documentation
 
-Follow [AGENTS.md](AGENTS.md): English `topic.md`, complete Persian `topic-FA.md`. Update both in the same PR for any affected Skill behavior or structure. Remove completed entries from `docs/translation-backlog.json`; do not add exceptions.
+Follow [AGENTS.md](AGENTS.md): human-facing docs in `docs/`, `examples/` and the designated root guides use English `topic.md` and complete Persian `topic-FA.md`. Keep agent instructions, Skill references and GitHub templates in one canonical English version. Update the relevant human-facing pair in the same PR for any Skill behavior or structure change. Remove completed entries from `docs/translation-backlog.json`; do not add new debt.

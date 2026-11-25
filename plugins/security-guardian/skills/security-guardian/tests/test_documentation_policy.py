@@ -32,6 +32,21 @@ class DocumentationPolicyTests(unittest.TestCase):
         self.check({'README.md':'# English', 'README-FA.md':'# فارسی',
                     'docs/legacy.md':'# Existing'}, ['docs/legacy.md'])
 
+    def test_operational_files_do_not_require_translation(self):
+        self.check({'AGENTS.md':'# Instructions', 'CLAUDE.md':'# Instructions',
+                    'plugins/example/SKILL.md':'# Skill',
+                    'plugins/example/references/playbooks/a.md':'# Playbook',
+                    '.github/PULL_REQUEST_TEMPLATE.md':'# Template',
+                    'docs/wiki/guide.md':'# Guide',
+                    'docs/wiki/guide-FA.md':'# فارسی'})
+
+    def test_reject_translated_operational_files(self):
+        for path in ('AGENTS-FA.md', 'plugins/example/SKILL-FA.md',
+                     'plugins/example/references/workflows/verify-FA.md',
+                     '.github/PULL_REQUEST_TEMPLATE-FA.md'):
+            with self.subTest(path=path), self.assertRaisesRegex(AssertionError, 'operational'):
+                self.check({path:'# فارسی'})
+
     def test_reject_new_missing_or_stale_debt(self):
         with self.assertRaisesRegex(AssertionError, 'backlog mismatch'):
             self.check({'README.md':'# English'})

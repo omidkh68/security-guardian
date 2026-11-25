@@ -12,8 +12,24 @@ SKILL = ROOT/'plugins/security-guardian/skills/security-guardian'
 MARKET = ROOT/'.claude-plugin/marketplace.json'
 PLUGIN = ROOT/'plugins/security-guardian/.claude-plugin/plugin.json'
 
+HUMAN_ROOT_GUIDES = {'README', 'CHANGELOG', 'CONTRIBUTING', 'SECURITY', 'CODE_OF_CONDUCT'}
+
+
+def is_human_documentation(path):
+    if not path.lower().endswith('.md'):
+        return False
+    if path.startswith(('docs/', 'examples/')):
+        return True
+    stem = re.sub(r'(?:[.-](?:fa|en))?\.md$', '', path, flags=re.I)
+    return stem in HUMAN_ROOT_GUIDES
+
+
 def validate_documentation(tracked, root=ROOT):
-    docs = {p for p in tracked if p.lower().endswith('.md')}
+    all_markdown = {p for p in tracked if p.lower().endswith('.md')}
+    docs = {p for p in all_markdown if is_human_documentation(p)}
+    operational = all_markdown - docs
+    assert not any(re.search(r'(?:[.-](?:fa|en))\.md$', p, re.I)
+                   for p in operational), 'translated operational Markdown is not permitted'
     assert all(p.endswith('.md') and not re.search(r'(?:[.-]en|\.fa)\.md$', p, re.I)
                and (not re.search(r'-fa\.md$', p, re.I) or p.endswith('-FA.md'))
                for p in docs), 'noncanonical documentation language suffix'
@@ -42,12 +58,14 @@ def validate_documentation_changes(root, base):
         assert current <= previous, 'new translation backlog entries are forbidden'
     changed = set(git('diff', '--name-only', '--no-renames', '--diff-filter=AM',
                       base, 'HEAD').splitlines())
-    english = {p for p in changed if p.endswith('.md') and not p.endswith('-FA.md')}
+    english = {p for p in changed if is_human_documentation(p) and p.endswith('.md') and not p.endswith('-FA.md')}
     for p in english:
         assert p[:-3] + '-FA.md' in changed, 'English documentation changed without Persian companion: ' + p
     skill_prefix = 'plugins/security-guardian/skills/security-guardian/'
+    all_changes = set(git('diff', '--name-only', '--no-renames', '--diff-filter=AMD',
+                          base, 'HEAD').splitlines())
     runtime_changed = any(p.startswith(skill_prefix) and '/tests/' not in p
-                          and not p.endswith('.md') for p in changed)
+                          for p in all_changes)
     if runtime_changed:
         assert english, 'Skill runtime change requires relevant EN/FA documentation'
 
@@ -77,8 +95,8 @@ def validate():
         assert row['difficulty_pct'] + row['ease_pct'] == 100
         assert (SKILL/'references/domains'/f"{row['domain'].lower()}.md").is_file(), row['id']
         assert (SKILL/'references/playbooks'/f"{row['playbook']}.md").is_file(), row['id']
-    assert len([p for p in (SKILL/'references/playbooks').glob('*.md') if not p.name.endswith('-FA.md')]) == 107
-    assert len([p for p in (SKILL/'references/domains').glob('*.md') if not p.name.endswith('-FA.md')]) == 13
+    assert len(list((SKILL/'references/playbooks').glob('*.md'))) == 107
+    assert len(list((SKILL/'references/domains').glob('*.md'))) == 13
     assert (ROOT/'LICENSE').read_text().startswith('MIT License')
     assert (ROOT/'install.sh').is_file()
     for essential in ['README.md','README-FA.md','SECURITY.md','CONTRIBUTING.md',
