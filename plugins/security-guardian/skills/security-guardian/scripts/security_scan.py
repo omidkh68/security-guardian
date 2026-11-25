@@ -649,10 +649,13 @@ def _request_collection(node, request_names):
             and isinstance(node.value, ast.Name) and node.value.id in request_names)
 
 
-def _sql_receiver(node, receivers, db_names):
+def _sql_receiver(node, receivers, db_names, helpers=None):
     if isinstance(node, ast.Name):
         return receivers.get(node.id)
     if isinstance(node, ast.Call):
+        if (isinstance(node.func, ast.Name) and not node.args and not node.keywords
+                and (helpers or {}).get(node.func.id) == (0, (), 'connection')):
+            return 'connection'
         if (_attr(node.func, 'connect') and isinstance(node.func.value, ast.Name)
                 and node.func.value.id in db_names):
             return 'connection'
@@ -675,13 +678,13 @@ def _sql_value(node, values, receivers, request_names, db_names, helpers):
             and 1 <= len(node.args) <= 2 and isinstance(node.args[0], ast.Constant)):
         return len(node.args) == 1 or isinstance(node.args[1], ast.Constant), frozenset({node.lineno})
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in helpers:
-        arity, used = helpers[node.func.id]
+        arity, used = helpers[node.func.id][:2]
         if node.keywords or len(node.args) != arity or any(isinstance(a, ast.Starred) for a in node.args):
             return False, empty
         # No nested helper calls: a summary is a one-hop, nonrecursive substitution.
         args = [_sql_value(a, values, receivers, request_names, db_names, {}) for a in node.args]
         return all(ok for ok, _ in args), empty.union(*(args[i][1] for i in used))
-    if isinstance(node, ast.Call) and _sql_receiver(node, receivers, db_names):
+    if isinstance(node, ast.Call) and _sql_receiver(node, receivers, db_names, helpers):
         return True, empty
     if isinstance(node, ast.JoinedStr):
         children = node.values
@@ -731,6 +734,64 @@ def _helper_summary(fn):
         return None
     ok, used = _sql_value(expr, {p: frozenset({i}) for i,p in enumerate(params)}, {}, (), (), {})
     return (len(params), tuple(sorted(used))) if ok else None
+
+
+def _connection_factory(fn, db_names):
+    """Only a zero-argument, undecorated, single-return SQLite factory."""
+    if (fn.decorator_list or fn.args.args or fn.args.posonlyargs or fn.args.kwonlyargs
+            or fn.args.vararg or fn.args.kwarg or fn.args.defaults
+            or getattr(fn, 'type_params', ()) or len(fn.body)!=1 or not isinstance(fn.body[0], ast.Return)):
+        return None
+    call=fn.body[0].value
+    if (isinstance(call, ast.Call) and _attr(call.func,'connect')
+            and isinstance(call.func.value,ast.Name) and call.func.value.id in db_names
+            and len(call.args)==1 and isinstance(call.args[0],ast.Constant)
+            and isinstance(call.args[0].value,str) and not call.keywords):
+        return (0, (), 'connection')
+    return None
+
+
+def _connection_exports(content):
+    """Source-only summaries of simple sibling modules. No module import."""
+    if len(content.encode('utf-8'))>PY_SQL_MAX_BYTES:return {}
+    try:
+        tree=ast.parse(content)
+        if sum(1 for _ in ast.walk(tree))>PY_SQL_MAX_NODES:return {}
+        if any(not (isinstance(n,ast.FunctionDef) or
+                   (isinstance(n,ast.Import) and all(a.name=='sqlite3' for a in n.names)) or
+                   (isinstance(n,ast.Expr) and isinstance(n.value,ast.Constant) and isinstance(n.value.value,str)))
+               for n in tree.body):return {}
+        names={a.asname or a.name for n in tree.body if isinstance(n,ast.Import) for a in n.names}
+        bindings=Counter(name for n in tree.body for name in _module_bindings(n))
+        if not names or any(bindings[name]!=1 for name in names):return {}
+        return {n.name:summary for n in tree.body if isinstance(n,ast.FunctionDef)
+                and bindings[n.name]==1 and (summary:=_connection_factory(n,names))}
+    except (SyntaxError,RecursionError,MemoryError,ValueError):return {}
+
+
+def _nested_route_functions(fn, watched):
+    """Recognize syntactic Flask-style route registration in a factory.
+    The enclosing app parameter's runtime identity is not attested.
+    """
+    args=fn.args
+    if (fn.decorator_list or len(args.args)!=1 or args.posonlyargs or args.defaults
+            or args.kwonlyargs or args.vararg or args.kwarg or getattr(fn,'type_params',())):return []
+    app=args.args[0].arg
+    if app in watched or _binding_names(fn)&watched:return []
+    if not all(isinstance(n,ast.FunctionDef) or
+               (isinstance(n,ast.Expr) and isinstance(n.value,ast.Constant) and isinstance(n.value.value,str))
+               for n in fn.body):return []
+    nested=[]
+    for n in fn.body:
+        if not isinstance(n,ast.FunctionDef):continue
+        if len(n.decorator_list)!=1:continue
+        d=n.decorator_list[0]
+        if (isinstance(d,ast.Call) and _attr(d.func,'route') and _name(d.func.value,app)
+                and len(d.args)==1 and isinstance(d.args[0],ast.Constant) and isinstance(d.args[0].value,str)
+                and all(k.arg=='methods' and isinstance(k.value,(ast.List,ast.Tuple)) and
+                        all(isinstance(v,ast.Constant) and isinstance(v.value,str) for v in k.value.elts) for k in d.keywords)):
+            nested.append(n)
+    return nested
 
 
 def _sql_condition(node):
@@ -783,6 +844,33 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
                 partial = True
                 pending.append((tuple(stmt.body) + statements[index + 1:], values.copy(), receivers.copy()))
                 break
+            if isinstance(stmt, ast.For):
+                # Literal finite sequence only. Preserve local bindings and
+                # statement order; arbitrary iterators and control transfers
+                # are explicitly outside this normal-path model.
+                if (not isinstance(stmt.target,ast.Name) or not isinstance(stmt.iter,(ast.List,ast.Tuple))
+                        or len(stmt.iter.elts)>8 or any(isinstance(x,ast.Starred) for x in stmt.iter.elts)
+                        or any(isinstance(x,(ast.Break,ast.Continue)) for x in ast.walk(stmt))):
+                    partial=True
+                    break
+                # Evaluate sequence values once before body mutation. Synthetic
+                # names cannot collide with valid Python identifiers.
+                expanded=[]
+                for j,elt in enumerate(stmt.iter.elts):
+                    slot=f'<sg-loop-{id(stmt)}-{j}>'
+                    expanded.append(ast.Assign(targets=[ast.Name(id=slot,ctx=ast.Store())],value=elt))
+                for j in range(len(stmt.iter.elts)):
+                    slot=f'<sg-loop-{id(stmt)}-{j}>'
+                    expanded.append(ast.Assign(targets=[stmt.target],value=ast.Name(id=slot,ctx=ast.Load())))
+                    expanded.extend(stmt.body)
+                expanded.extend(stmt.orelse)
+                tail=tuple(expanded)+statements[index+1:]
+                if len(tail)>PY_SQL_MAX_STEPS:
+                    stats['path_limited_functions']+=1
+                    return sources_by_sink,True
+                stats['literal_loop_paths']+=1
+                pending.append((tail,values.copy(),receivers.copy()))
+                break
             if isinstance(stmt, ast.If):
                 if not _sql_condition(stmt.test):
                     partial = True
@@ -811,7 +899,7 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
                     partial = True
                     break
                 values[target] = lines
-                receivers[target] = _sql_receiver(value, receivers, db_names)
+                receivers[target] = _sql_receiver(value, receivers, db_names, helpers)
                 continue
             if isinstance(stmt, ast.Pass) or (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant)):
                 continue
@@ -836,7 +924,7 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
     return sources_by_sink, partial
 
 
-def python_sql_flow(content):
+def python_sql_flow(content, sibling_exports=None):
     """Bounded local AST and one-hop helper summaries, not a whole-program taint engine."""
     stats = Counter()
     hits = []
@@ -861,17 +949,25 @@ def python_sql_flow(content):
     db_names = {a.asname or a.name for n in tree.body if isinstance(n, ast.Import)
                 for a in n.names if a.name == 'sqlite3'}
     bindings = Counter(name for n in tree.body for name in _module_bindings(n))
+    imported_helpers = {}
+    for n in tree.body:
+        if isinstance(n,ast.ImportFrom) and n.level==1 and n.module and '.' not in n.module:
+            exports=(sibling_exports or {}).get(n.module,{})
+            for a in n.names:
+                alias=a.asname or a.name
+                if a.name in exports and bindings[alias]==1:imported_helpers[alias]=exports[a.name]
     watched = request_names | db_names
-    if (not request_names or not db_names or request_names & db_names
+    if (not request_names or (not db_names and not imported_helpers) or request_names & db_names
             or any(bindings[name] != 1 for name in watched)
             or any(isinstance(n, ast.ImportFrom) and any(a.name == '*' for a in n.names) for n in tree.body)):
         stats['unmodeled_import_files'] += 1
         return hits, stats
     stats['resolved_import_aliases'] += len(request_names - {'request'}) + len(db_names - {'sqlite3'})
-    helpers = {}
+    helpers = dict(imported_helpers)
+    stats['cross_file_receiver_bindings'] += len(imported_helpers)
     for n in tree.body:
         if isinstance(n, ast.FunctionDef) and bindings[n.name] == 1:
-            summary = _helper_summary(n)
+            summary = _helper_summary(n) or _connection_factory(n,db_names)
             if summary is not None:
                 helpers[n.name] = summary
     stats['recognized_helpers'] += len(helpers)
@@ -879,7 +975,13 @@ def python_sql_flow(content):
     # Nested functions/classes and async functions are outside the model.
     functions = [n for n in tree.body if isinstance(n, ast.FunctionDef)]
     stats['unsupported_functions'] += sum(isinstance(n, (ast.AsyncFunctionDef, ast.ClassDef)) for n in tree.body)
+    # Nested route bodies are analyzed independently, never merged with a
+    # closure environment. Such registrations remain partial evidence.
+    nested=[]
     for fn in functions:
+        nested.extend(_nested_route_functions(fn,watched | set(helpers)))
+    stats['nested_route_functions'] += len(nested)
+    for fn in functions+nested:
         if _binding_names(fn) & watched:
             stats['unsupported_functions'] += 1
             continue
@@ -946,6 +1048,10 @@ def process(root:Path, profile=None, components=()):
     python_sql_stats = Counter()
     rels={p.relative_to(root).as_posix():p for p in files}
     names=set(rels)
+    # Cache bounded source-only factory summaries of eligible same-owner files.
+    # No imports, target execution, dependency loading or path traversal.
+    factory_cache={}
+    factory_reads=0
     evidence=[]
     control_evidence=defaultdict(list)
     signal_counts=Counter()
@@ -1012,7 +1118,25 @@ def process(root:Path, profile=None, components=()):
             coverage['inspected_files'] += 1
             if owner in python_sql_roots and p.suffix == '.py':
                 python_sql_stats['eligible_files'] += 1
-                flow_hits, flow_stats = python_sql_flow(content)
+                siblings={}
+                if len(content.encode('utf-8'))<=PY_SQL_MAX_BYTES:
+                    try:
+                        parsed=ast.parse(content)
+                        if sum(1 for _ in ast.walk(parsed))<=PY_SQL_MAX_NODES:
+                            for n in parsed.body:
+                                if not (isinstance(n,ast.ImportFrom) and n.level==1 and n.module and '.' not in n.module):continue
+                                sibling=(Path(fn).parent/(n.module+'.py')).as_posix()
+                                if sibling==fn or sibling not in rels or _test_file(sibling) or _owner(sibling,scope['components'])!=owner:continue
+                                if sibling not in factory_cache:
+                                    if factory_reads>=128:break
+                                    factory_reads+=1
+                                    try:
+                                        with rels[sibling].open('rb') as h:raw=h.read(PY_SQL_MAX_BYTES+1)
+                                        factory_cache[sibling]=_connection_exports(raw.decode('utf-8')) if len(raw)<=PY_SQL_MAX_BYTES else {}
+                                    except (OSError,UnicodeError):factory_cache[sibling]={}
+                                siblings[n.module]=factory_cache[sibling]
+                    except (SyntaxError,RecursionError,MemoryError,ValueError):pass
+                flow_hits, flow_stats = python_sql_flow(content,siblings)
                 python_sql_stats.update(flow_stats)
                 python_sql_stats['matches'] += len(flow_hits)
                 for hit in flow_hits:
@@ -1021,7 +1145,7 @@ def process(root:Path, profile=None, components=()):
                     entry = {'control_id':cid, 'signal':'Flask request value reaches SQLite SQL argument',
                              'path':fn, 'confidence':'medium', 'suggested_severity':'high',
                              'status':'HEURISTIC_REVIEW_ONLY', 'technique':'BOUNDED_AST_FLOW',
-                             'pack_id':PY_SQL_PACK, 'pack_version':4, 'rule_id':PY_SQL_RULE,
+                             'pack_id':PY_SQL_PACK, 'pack_version':5, 'rule_id':PY_SQL_RULE,
                              'control_mapping':'LEGACY_COMPATIBILITY', **hit}
                     if len(evidence) < MAX_SIGNALS:
                         evidence.append(entry)
@@ -1220,11 +1344,11 @@ def process(root:Path, profile=None, components=()):
         }
         partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions','path_limited_functions')
         summary['python_sql_flow'] = {
-            'pack_id': PY_SQL_PACK, 'pack_version':4, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
+            'pack_id': PY_SQL_PACK, 'pack_version':5, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
             'selected_roots':sorted(python_sql_roots),
-            'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
-            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths',*partial_keys)},
-            'limitations':['Bounded local AST, if/else and one-hop helper summaries; direct SQLite context normal paths only; no loops, exception semantics, arbitrary context managers, helper chains, cross-module or exploit analysis.',
+            'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or python_sql_stats['cross_file_receiver_bindings'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
+            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings',*partial_keys)},
+            'limitations':['Bounded local paths, literal finite loops, one-hop query/connection helpers, sibling relative-import connection factories and syntactic nested route bodies; no general cross-module taint, dynamic dispatch, exception semantics or exploit analysis.',
                            'Unmodeled statements and imports are not proof of safety; no target code is executed.'],
         }
     return {'summary':summary,'signals':evidence,'controls':result,

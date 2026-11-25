@@ -20,6 +20,8 @@ function analyze(ts, file) {
     }
   }
   const sanitizerNames=new Set(sanitizerImports.keys());
+  const transforms=new Set(['decodeURI','decodeURIComponent','encodeURI','encodeURIComponent']);
+  const unsafeTransforms=new Set();
   const unsafeSanitizers=new Set();
   let count=0,shadow=false;
   const stack=[sf];
@@ -38,6 +40,10 @@ function analyze(ts, file) {
         if(q&&ts.isBinaryExpression(q)&&q.left===p) shadow=true;
         if(q&&ts.isPropertyAccessExpression(q)&&q.expression===p&&q.parent&&ts.isBinaryExpression(q.parent)&&q.parent.left===q) shadow=true;
       }
+    }
+    if(ts.isIdentifier(n)&&transforms.has(n.text)){
+      const p=n.parent;
+      if(!p||!ts.isCallExpression(p)||p.expression!==n||p.questionDotToken)unsafeTransforms.add(n.text);
     }
     if(ts.isIdentifier(n)&&sanitizerNames.has(n.text)&&sanitizerImports.get(n.text)!==n){
       const p=n.parent,q=p?.parent;
@@ -64,6 +70,14 @@ function analyze(ts, file) {
     if(ts.isCallExpression(n)&&!n.questionDotToken&&
       (prop(n.expression,'getElementById')||prop(n.expression,'querySelector'))&&name(n.expression.expression,'document')&&
       n.arguments.length===1&&ts.isStringLiteral(n.arguments[0])) return {lines:[],element:true};
+    if(ts.isCallExpression(n)&&!n.questionDotToken&&ts.isIdentifier(n.expression)&&transforms.has(n.expression.text)&&
+      !unsafeTransforms.has(n.expression.text)&&!env.has(n.expression.text)&&n.arguments.length===1&&sanitizerModule){
+      const v=value(n.arguments[0],env,depth+1,helpers);
+      if(!v||v.element)return null;
+      // Encoding/decoding is not HTML sanitization; invalidate prior sanitizer observations for this transformed value.
+      result.partial=true;
+      return {lines:v.lines,element:false,sanitizers:[]};
+    }
     if(ts.isCallExpression(n)&&!n.questionDotToken&&prop(n.expression,'sanitize')&&ts.isIdentifier(n.expression.expression)&&
       sanitizerNames.has(n.expression.expression.text)&&!unsafeSanitizers.has(n.expression.expression.text)&&!env.has(n.expression.expression.text)&&n.arguments.length===1){
       const v=value(n.arguments[0],env,depth+1,helpers);

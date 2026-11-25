@@ -13,7 +13,7 @@ function analyze(ts,file){
   const prop=n=>n&&ts.isPropertyAccessExpression(n)&&!n.questionDotToken?n.name.text:null;
   const str=n=>n&&ts.isStringLiteral(n);
   const literal=n=>n&&(str(n)||ts.isNoSubstitutionTemplateLiteral(n)||ts.isNumericLiteral(n)||[ts.SyntaxKind.TrueKeyword,ts.SyntaxKind.FalseKeyword,ts.SyntaxKind.NullKeyword].includes(n.kind));
-  const imports=new Map(), apps=new Map(), dbs=new Map(), names=new Set(), routes=[];
+  const imports=new Map(), apps=new Map(), dbs=new Map(), names=new Set(), routes=[], helperDefs=new Map(), helpers=new Map();
   const bind=n=>{if(!n||names.has(n))return false;names.add(n);return true;};
   const partial=()=>{r.partial=true;};
   const fail=()=>({...r,partial:true,reason:'unmodeled_module',hits:[]});
@@ -55,6 +55,10 @@ function analyze(ts,file){
       }
       continue;
     }
+    if(ts.isFunctionDeclaration(s)){
+      if(!bind(id(s.name))||!s.body||s.asteriskToken||s.modifiers?.length||s.parameters.length>16||s.parameters.some(p=>!id(p.name)||p.initializer||p.dotDotDotToken))return fail();
+      helperDefs.set(id(s.name),s);continue;
+    }
     if(ts.isClassDeclaration(s)&&file.frameworks?.includes('NestJS')){
       const ds=decorators(s);
       if(!bind(id(s.name))||s.heritageClauses?.length||ds.length!==1||!nestDecorator(ds[0],['Controller']))return fail();
@@ -78,6 +82,27 @@ function analyze(ts,file){
       }
     }
     return fail();
+  }
+  // Summarize only pure single-return expressions over positional parameters.
+  for(const [name,fn] of helperDefs){
+    const p=new Map(fn.parameters.map((x,i)=>[id(x.name),i]));
+    if(p.size!==fn.parameters.length||fn.body.statements.length!==1||!ts.isReturnStatement(fn.body.statements[0])){partial();continue;}
+    let visits=0;
+    function used(n,depth=0){
+      if(!n||depth>32||++visits>128)return null;
+      if(literal(n))return [];
+      if(id(n))return p.has(id(n))?[p.get(id(n))]:null;
+      if(ts.isParenthesizedExpression(n))return used(n.expression,depth+1);
+      let children;
+      if(ts.isBinaryExpression(n)&&n.operatorToken.kind===ts.SyntaxKind.PlusToken)children=[n.left,n.right];
+      else if(ts.isTemplateExpression(n))children=n.templateSpans.map(s=>s.expression);
+      else return null;
+      const v=children.map(x=>used(x,depth+1));
+      return v.some(x=>x===null)?null:[...new Set(v.flat())];
+    }
+    const u=used(fn.body.statements[0].expression);
+    if(u===null){partial();continue;}
+    helpers.set(name,{arity:p.size,used:u});
   }
   // Direct framework registration establishes the first parameter as request.
   // Do not infer provenance from parameter names or a type annotation alone.
@@ -120,6 +145,12 @@ function analyze(ts,file){
       if(ts.isElementAccessExpression(n)&&!n.questionDotToken&&str(n.argumentExpression)&&nestObjects.has(id(n.expression)))return [line(n)];
       if(req&&prop(n)&&['query','params','body'].includes(prop(n.expression))&&id(n.expression.expression)===req)return [line(n)];
       if(req&&ts.isElementAccessExpression(n)&&!n.questionDotToken&&str(n.argumentExpression)&&['query','params','body'].includes(prop(n.expression))&&id(n.expression.expression)===req)return [line(n)];
+      if(ts.isCallExpression(n)&&!n.questionDotToken&&helpers.has(id(n.expression))){
+        const h=helpers.get(id(n.expression));
+        if(n.arguments.length!==h.arity)return null;
+        const v=n.arguments.map(a=>value(a,depth+1));
+        return v.some(a=>a===null)?null:[...new Set(h.used.flatMap(i=>v[i]))].sort((a,b)=>a-b);
+      }
       let children;
       if(ts.isBinaryExpression(n)&&n.operatorToken.kind===ts.SyntaxKind.PlusToken)children=[n.left,n.right];
       else if(ts.isTemplateExpression(n))children=n.templateSpans.map(s=>s.expression);
