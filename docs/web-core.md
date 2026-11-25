@@ -27,3 +27,13 @@ The summary includes web_core pack ID/version, selected component roots, inspect
 This is offline regex triage, not parsing, taint analysis, SSR or client/server boundary analysis. Vue/Svelte templates, framework-specific JSX rendering APIs, unknown stacks, server-only components and native mobile are not included in this pack. A mixed framework component is scoped at the component root, not a proven browser/server file classification. Safe assignments may still match; an absent candidate never proves safety. No code is executed or modified; source values are not printed.
 
 Synthetic positive/negative fixtures cover each discovery family, scope isolation, multiline, stable keys and template limitations. Run package validation and the full offline suite; npm bundle checks must pass. Revert the isolated changes if needed; no ledger migration. Dedicated frontend adapters, common backend rules, semantic analysis and measured accuracy remain follow-up work.
+
+## Architecture and testing value (#62)
+
+```mermaid
+flowchart LR
+ A["Selected frontend roots"] --> B["Browser regex / suffix filter"] --> C["Stable candidate and coverage"]
+ C --> D["Manual evidence review"]
+```
+
+Positive, negative, scope, multiline and redaction fixtures exercise the three browser indicators; no runtime DOM proof.

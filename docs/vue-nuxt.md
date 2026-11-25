@@ -28,3 +28,13 @@ Trace the actual HTML source and sanitizer before accepting a finding. Review th
 No Vue parser, alias resolution, nested/computed property analysis, taint analysis, build inspection or framework version certification. The scanner does not read excluded .env files or execute target code. Missing indicators never establish safety. Run package validation, Python regression suite and npm tarball checks. Synthetic fixtures cover positive/negative, scope, Nuxt-only filtering, legacy mode and redaction. Revert this isolated change to roll back.
 
 References: [Vue security](https://vuejs.org/guide/best-practices/security.html), [Nuxt runtime config](https://nuxt.com/docs/4.x/guide/going-further/runtime-config).
+
+## Architecture and testing value (#70)
+
+```mermaid
+flowchart LR
+ A["Vue / Nuxt manifest roots"] --> B["v-html / Nuxt public config"] --> C["Legacy mapping and coverage"]
+ C --> D["Manual evidence review"]
+```
+
+Fixtures check framework gating, safe names, redaction and scope; SSR payload isolation needs separate tests.

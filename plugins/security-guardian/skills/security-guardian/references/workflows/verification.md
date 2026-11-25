@@ -9,3 +9,5 @@ Choose only tests appropriate for the installed stack and user authorization:
 - Runtime dynamic testing: ZAP/Burp only against explicitly approved owned local/staging targets. Define allowlist, rate and destructive action exclusions in advance.
 - For every result, record `tool`, `scope`, `command/method`, `date`, `expected`, `observed`, and whether it was **executed**. No test = `NEEDS_REVIEW`.
 - Production-like data, secrets, signing transactions, real accounts or privileged infrastructure must not be used as penetration-test targets by default.
+
+For authorized local Node.js 22/24 built-in node:test modules use `run-test --adapter node-test-v1` with the explicit selected test module and source/config inputs. No arbitrary shell, npm scripts, remote tests or automatic execution. Preserve LOCAL_EXECUTION versus MANUAL_REPORTED and review assertion relevance; no independent attestation.

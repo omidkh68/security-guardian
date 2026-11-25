@@ -28,3 +28,13 @@ The summary includes backend_core ID/version, selected roots, eligible inspected
 This is offline regex triage, not a parser, data-flow engine, authorization proof, CORS browser test, or framework-specific adapter. A wildcard may be intentional, a forwarded header may be trusted, and a request field may be validated. Missing hits never establish safety. Only selected component ownership is established; mixed client/server components are not proven file-level boundaries. Non-Node backends are not covered by the pack. Discovery does not verify installed framework versions or complete security coverage. Existing generic/legacy rules may still produce candidates outside the new pack.
 
 Synthetic fixtures cover five manifest families, safe alternatives, scope isolation, Nest-specific filtering, legacy identity and source redaction. Run package validation, the full offline Python test suite and the npm tarball checks. Revert this isolated change for rollback; no ledger migration. Dedicated framework adapters and measured detection quality remain separate work.
+
+## Architecture and testing value (#66)
+
+```mermaid
+flowchart LR
+ A["Selected Node backend roots"] --> B["HTTP / API regex and Nest filter"] --> C["Stable candidate and coverage"]
+ C --> D["Manual evidence review"]
+```
+
+Fixtures exercise five manifest families, safe alternatives, Nest filtering, scope and redaction.

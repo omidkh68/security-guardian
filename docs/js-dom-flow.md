@@ -23,3 +23,13 @@ The same rule supports simple if/else conditions (identifiers and boolean litera
 
 
 Expansion #107: see [semantic coverage expansion](semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.
+
+## Architecture and testing value (#86 / #88 / #107)
+
+```mermaid
+flowchart LR
+ A["Selected JS / TS and trusted parser"] --> B["Bounded AST source to DOM sink"] --> C["Source and sink lines / PARTIAL"]
+ C --> D["Evidence review"]
+```
+
+Fixtures exercise recognized sinks, branches, helper summaries and unsupported paths; no real-world accuracy claim.

@@ -32,7 +32,7 @@ def download(path):
         raise ValueError('Fresh artifact identity mismatch')
     return raw
 
-def scan_files(files):
+def scan_files(files, engine=scan):
     with tempfile.TemporaryDirectory(prefix='sg-context-') as tmp:
         root=Path(tmp)
         for name in ('app','excluded'):
@@ -42,7 +42,7 @@ def scan_files(files):
             for rel,raw in files.items():
                 dst=folder/rel;dst.parent.mkdir(parents=True,exist_ok=True);dst.write_bytes(raw)
         start=time.perf_counter()
-        result=scan.process(root,'custom',['app'])
+        result=engine.process(root,'custom',['app'])
         elapsed=round(time.perf_counter()-start,6)
         summary=result['summary']
         if (summary['scope_resolution']['selected_roots']!=['app'] or summary['scan_coverage']['truncated']
@@ -72,7 +72,7 @@ def contextual(repo):
             'cases':rows,'metrics':score(Counter(r['classification'] for r in rows)),
             'partial_cases':sum(r['coverage_status']=='PARTIAL' for r in rows),'scope_isolation':len(rows)}
 
-def fresh_flask():
+def fresh_flask(engine=scan):
     # Author labels in pinned tests and source. Exactly the direct HTTP->SQLite
     # positive/fixed pair, chosen independently of scanner results.
     app=download('app.py');tests=download('tests/test_demo.py')
@@ -81,19 +81,40 @@ def fresh_flask():
         'def test_safe_sqli_is_parameterised_and_hides_the_secret' not in tests.decode('utf-8') or
         'db.execute(query)' not in src[177] or 'db.execute(' not in src[1516]):
         raise ValueError('Fresh label anchor mismatch')
-    hits,flow,elapsed=scan_files({'app.py':app})
+    hits,flow,elapsed=scan_files({'app.py':app},engine)
     rows=[]
     for label,line,expected in [('sqli',178,True),('safe_sqli',1517,False)]:
         observed=any(x['path']=='app/app.py' and x['line']==line for x in hits)
         rows.append({'id':label,'line':line,'expected':expected,'observed':observed,
                      'classification':classify(expected,observed),'coverage_status':flow['status']})
-    return {'kind':'FRESH_EXTERNAL_AUTHOR_LABELED_HTTP_SQLITE_PAIR','upstream':FRESH_REPO,'revision':FRESH_REV,
-            'license':'MIT','source_git_blobs':FRESH_FILES,'engine_frozen_before_source_review':FROZEN_BEFORE_FRESH,
+    return {'kind':'EXTERNAL_AUTHOR_LABELED_HTTP_SQLITE_PAIR_REPLAY','upstream':FRESH_REPO,'revision':FRESH_REV,
+            'license':'MIT','source_git_blobs':FRESH_FILES,'original_engine_frozen_before_source_review':FROZEN_BEFORE_FRESH,
             'selection':'Both explicitly paired HTTP SQLite routes; source-only scan of unchanged app.py. Author tests inspected, not executed. Other routes are not labeled by this slice.',
             'cases':rows,'metrics':score(Counter(r['classification'] for r in rows)),
             'coverage_status':flow['status'],'eligible_files':flow['eligible_files'],'parsed_files':flow['parsed_files'],
             'elapsed_seconds':elapsed,'unlabeled_candidate_count':sum(x['line'] not in {178,1517} for x in hits),
             'scope_isolation':2}
+
+def matched_pair_replay():
+    import importlib.util
+    baseline='5bb9b49f126ea6feb1885a40fd7d94b6fd1c73dc'
+    rel='plugins/security-guardian/skills/security-guardian/scripts/security_scan.py'
+    # Load only our own frozen scanner code, not fixture code. Copy the
+    # unchanged handbook from the pinned baseline for identical inputs.
+    with tempfile.TemporaryDirectory(prefix='sg-frozen-engine-') as tmp:
+        skill=Path(tmp)
+        for file in (rel,rel.replace('scripts/security_scan.py','references/controls.json')):
+            out=skill/Path(file).parent.name/Path(file).name
+            out.parent.mkdir(parents=True,exist_ok=True)
+            out.write_bytes(subprocess.check_output(['git','-C',str(ROOT),'show',baseline+':'+file]))
+        spec=importlib.util.spec_from_file_location('_sg_frozen_scanner',skill/'scripts/security_scan.py')
+        engine=importlib.util.module_from_spec(spec);spec.loader.exec_module(engine)
+        previous=fresh_flask(engine)
+        current=fresh_flask()
+        if previous['source_git_blobs']!=current['source_git_blobs']:raise ValueError('Mismatched replay inputs')
+        return {'kind':'MATCHED_INPUT_EXTERNAL_PAIR_REPLAY','baseline_commit':baseline,
+                'baseline':previous,'current':current,
+                'limitations':['Previously exposed two-case cohort; regression only, not a new holdout.']}
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
@@ -103,7 +124,7 @@ def main():
     if not a.external_git and not a.fresh_flask:p.error('Choose a corpus')
     reports=[]
     if a.external_git:reports.append(contextual(a.external_git))
-    if a.fresh_flask:reports.append(fresh_flask())
+    if a.fresh_flask:reports.append(matched_pair_replay())
     print(json.dumps({'schema_version':1,'kind':'SEMANTIC_CONTEXT_EVALUATION',
         'commit':subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip(),
         'engine_sha256':digest(SKILL/'scripts/security_scan.py'),'reports':reports,

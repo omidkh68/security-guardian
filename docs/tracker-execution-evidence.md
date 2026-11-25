@@ -25,3 +25,14 @@ Run package validation and the offline unittest suite. Fixtures exercise positiv
 The receipt is also bound to the stored scope digest. Regression coverage includes malformed and unrelated receipt fields, duplicate record transitions are rejected, and the positive fixture asserts both allowed and denied property updates in a local synthetic module.
 
 The tracker rejects inputs outside the stored component scope before reading their bytes for fingerprinting.
+
+Node 22/24 support: use `--adapter node-test-v1`, matching explicit test file and selected source/config files. See [runner](verification-runner.md#nodejs-local-adapter-35). All evidence gates remain in force.
+
+## Architecture and testing value (#58 / #35)
+
+```mermaid
+flowchart LR
+ A["Active scoped run / finding"] --> B["Authorized local adapter receipt"] --> C["Review and freshness gate"]
+```
+
+Tests reject unrelated, stale, failed and forged manual execution evidence; only reviewed current receipts qualify.
