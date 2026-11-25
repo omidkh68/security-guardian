@@ -12,6 +12,15 @@ function analyze(ts, file) {
   const name=(n,v)=>ts.isIdentifier(n)&&n.text===v;
   const prop=(n,v)=>ts.isPropertyAccessExpression(n)&&!n.questionDotToken&&n.name.text===v;
   const globals=new Set(['window','document']);
+  const sanitizerImports=new Map();
+  for(const s of sf.statements){
+    if(ts.isImportDeclaration(s)&&ts.isStringLiteral(s.moduleSpecifier)&&s.moduleSpecifier.text==='dompurify'){
+      const c=s.importClause;
+      if(c&&!c.isTypeOnly&&c.name&&!c.namedBindings)sanitizerImports.set(c.name.text,c.name);
+    }
+  }
+  const sanitizerNames=new Set(sanitizerImports.keys());
+  const unsafeSanitizers=new Set();
   let count=0,shadow=false;
   const stack=[sf];
   while(stack.length){
@@ -30,11 +39,22 @@ function analyze(ts, file) {
         if(q&&ts.isPropertyAccessExpression(q)&&q.expression===p&&q.parent&&ts.isBinaryExpression(q.parent)&&q.parent.left===q) shadow=true;
       }
     }
+    if(ts.isIdentifier(n)&&sanitizerNames.has(n.text)&&sanitizerImports.get(n.text)!==n){
+      const p=n.parent,q=p?.parent;
+      if(!p||!ts.isPropertyAccessExpression(p)||p.questionDotToken||p.expression!==n||p.name.text!=='sanitize'||
+         !q||!ts.isCallExpression(q)||q.questionDotToken||q.expression!==p)unsafeSanitizers.add(n.text);
+    }
     ts.forEachChild(n,c=>{stack.push(c);});
   }
+  // A restricted module shape excludes unmodeled top-level mutations and imports.
+  const sanitizerModule=sf.statements.every(s=>ts.isFunctionDeclaration(s)||ts.isEmptyStatement(s)||
+    (ts.isImportDeclaration(s)&&s.importClause?.name&&sanitizerImports.get(s.importClause.name.text)===s.importClause.name));
+  if(!sanitizerModule)for(const n of sanitizerNames)unsafeSanitizers.add(n);
+  if(unsafeSanitizers.size)result.partial=true;
   if(shadow) return {...result,partial:true,reason:'unmodeled_global_use'};
   const literal=n=>ts.isStringLiteral(n)||ts.isNoSubstitutionTemplateLiteral(n)||ts.isNumericLiteral(n)||[ts.SyntaxKind.TrueKeyword,ts.SyntaxKind.FalseKeyword,ts.SyntaxKind.NullKeyword].includes(n.kind);
   const union=parts=>[...new Set(parts.flatMap(p=>p.lines))].sort((a,b)=>a-b);
+  const sanitizerLines=parts=>[...new Set(parts.flatMap(p=>p.sanitizers||[]))].sort((a,b)=>a-b);
   function value(n,env,depth=0,helpers=new Map()){
     if(depth>64) return null;
     if(ts.isParenthesizedExpression(n)) return value(n.expression,env,depth+1,helpers);
@@ -44,24 +64,30 @@ function analyze(ts, file) {
     if(ts.isCallExpression(n)&&!n.questionDotToken&&
       (prop(n.expression,'getElementById')||prop(n.expression,'querySelector'))&&name(n.expression.expression,'document')&&
       n.arguments.length===1&&ts.isStringLiteral(n.arguments[0])) return {lines:[],element:true};
+    if(ts.isCallExpression(n)&&!n.questionDotToken&&prop(n.expression,'sanitize')&&ts.isIdentifier(n.expression.expression)&&
+      sanitizerNames.has(n.expression.expression.text)&&!unsafeSanitizers.has(n.expression.expression.text)&&!env.has(n.expression.expression.text)&&n.arguments.length===1){
+      const v=value(n.arguments[0],env,depth+1,helpers);
+      if(!v||v.element)return null;
+      return {lines:v.lines,element:false,sanitizers:[...new Set([...(v.sanitizers||[]),line(n)])].sort((a,b)=>a-b)};
+    }
     if(ts.isCallExpression(n)&&!n.questionDotToken&&ts.isIdentifier(n.expression)&&!env.has(n.expression.text)&&helpers.has(n.expression.text)){
       const h=helpers.get(n.expression.text);
       if(n.arguments.length!==h.arity) return null;
       const args=n.arguments.map(a=>value(a,env,depth+1,new Map()));
       if(args.some(a=>!a||a.element)) return null;
-      return {lines:union(h.used.map(i=>args[i])),element:false};
+      return {lines:union(h.used.map(i=>args[i])),element:false,sanitizers:sanitizerLines(h.used.map(i=>args[i]))};
     }
     let children;
     if(ts.isBinaryExpression(n)&&n.operatorToken.kind===ts.SyntaxKind.PlusToken) children=[n.left,n.right];
     else if(ts.isTemplateExpression(n)) children=n.templateSpans.map(s=>s.expression);
     else return null;
     const vals=children.map(c=>value(c,env,depth+1,helpers));
-    return vals.every(v=>v&&!v.element)?{lines:union(vals),element:false}:null;
+    return vals.every(v=>v&&!v.element)?{lines:union(vals),element:false,sanitizers:sanitizerLines(vals)}:null;
   }
   const functions=sf.statements.filter(s=>ts.isFunctionDeclaration(s)&&s.name);
   const supportedFn=s=>s.body&&!s.asteriskToken&&!s.modifiers?.some(m=>m.kind===ts.SyntaxKind.AsyncKeyword||m.kind===ts.SyntaxKind.DeclareKeyword);
   // Module-level mutations/imports may replace a helper. Do not infer helpers in such a module.
-  const moduleSimple=sf.statements.every(s=>ts.isFunctionDeclaration(s)||ts.isEmptyStatement(s));
+  const moduleSimple=sf.statements.every(s=>ts.isFunctionDeclaration(s)||ts.isEmptyStatement(s)) || (sanitizerModule&&!unsafeSanitizers.size);
   const counts=new Map();
   for(const fn of functions) counts.set(fn.name.text,(counts.get(fn.name.text)||0)+1);
   const helpers=new Map();
@@ -144,8 +170,10 @@ function analyze(ts, file) {
             const receiver=value(left.expression,env,0,localHelpers);
             if(receiver?.element){
               if(left.name.text==='innerHTML'&&v.lines.length){
-                const key=line(left),existing=sinks.get(key)||new Set();
-                for(const n of v.lines)existing.add(n);
+                const key=line(left),existing=sinks.get(key)||{lines:new Set(),sanitizers:new Set(),withoutObservedSanitizer:false};
+                for(const n of v.lines)existing.lines.add(n);
+                for(const n of v.sanitizers||[])existing.sanitizers.add(n);
+                if(!v.sanitizers?.length)existing.withoutObservedSanitizer=true;
                 sinks.set(key,existing);
               }
               continue;
@@ -155,15 +183,18 @@ function analyze(ts, file) {
         result.partial=true;break;
       }
     }
-    for(const [line,lines] of [...sinks].sort((a,b)=>a[0]-b[0])){
-      const sorted=[...lines].sort((a,b)=>a-b);
-      result.hits.push({line,source_lines:sorted.slice(0,MAX_LINES),source_lines_truncated:sorted.length>MAX_LINES});
+    for(const [line,evidence] of [...sinks].sort((a,b)=>a[0]-b[0])){
+      const sorted=[...evidence.lines].sort((a,b)=>a-b),sanitizers=[...evidence.sanitizers].sort((a,b)=>a-b);
+      result.hits.push({line,source_lines:sorted.slice(0,MAX_LINES),source_lines_truncated:sorted.length>MAX_LINES,
+        sanitizer_lines:sanitizers.slice(0,MAX_LINES),sanitizer_lines_truncated:sanitizers.length>MAX_LINES,
+        sanitizer_evidence:sanitizers.length?'OBSERVED_CALL_REVIEW_REQUIRED':'NONE_OBSERVED',
+        path_without_observed_sanitizer:evidence.withoutObservedSanitizer});
     }
   }
   for(const s of sf.statements){
     if(ts.isFunctionDeclaration(s)&&supportedFn(s)){
       if(!helpers.has(s.name?.text)) body(s);
-    } else if(!ts.isEmptyStatement(s)) result.partial=true;
+    } else if(!ts.isEmptyStatement(s)&&!(ts.isImportDeclaration(s)&&sanitizerModule&&s.importClause?.name&&sanitizerImports.get(s.importClause.name.text)===s.importClause.name)) result.partial=true;
   }
   return result;
 }

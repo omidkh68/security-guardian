@@ -2,20 +2,18 @@
 """Optional scoped Next.js and Angular server-render trust-boundary AST review. Explicit trusted parser; no target execution."""
 import argparse
 import json
-import os
 from pathlib import Path
-import shutil
 import subprocess
-import tempfile
 from collections import Counter
 
 import security_scan as scan
+import security_ast_contract as contract
 
 SUFFIXES = {'.js', '.ts', '.jsx', '.tsx'}
-MAX_BYTES = 128_000
-MAX_BATCH_BYTES = 2_000_000
-MAX_FILES = 128
-MAX_HITS = 100
+MAX_BYTES = contract.MAX_BYTES
+MAX_BATCH_BYTES = contract.MAX_BATCH_BYTES
+MAX_FILES = contract.MAX_FILES
+MAX_HITS = contract.MAX_HITS
 RULE = 'JS.NEXT.SSR.REQUEST_TO_RAW_HTML'
 
 
@@ -31,7 +29,7 @@ def review(root, profile, components, parser):
                 and set(c['frameworks']) & {'Next.js','Angular','Nuxt','SvelteKit'}}
     roots = set(selected)
     stats = Counter()
-    result = {'schema_version':1, 'pack_id':'js-ssr-flow', 'pack_version':4,
+    result = {'schema_version':1, 'contract_version':contract.CONTRACT_VERSION, 'pack_id':'js-ssr-flow', 'pack_version':4,
               'rule_id':RULE, 'rule_ids':[RULE,'JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT','JS.ANGULAR.SSR.REQUEST_TO_RESPONSE_HTML','JS.ANGULAR.SSR.CREDENTIAL_TO_TRANSFER_STATE','JS.NEXT.APP.REQUEST_TO_RAW_HTML','JS.NUXT.SSR.REQUEST_TO_HTML','JS.SVELTEKIT.SSR.REQUEST_TO_HTML'], 'legacy_control_id':'ANG-01', 'status':'NOT_AVAILABLE',
               'selected_roots':sorted(roots), 'signals':[],
               'unsupported_frameworks':[],
@@ -47,14 +45,11 @@ def review(root, profile, components, parser):
         return result
     if not roots:
         return finish('NOT_SELECTED')
-    if not parser:
-        return finish('NOT_AVAILABLE')
-    compiler = Path(parser).expanduser().resolve()
-    node = shutil.which('node')
-    if not Path(parser).expanduser().is_absolute() or not compiler.is_file() or not node:
-        return finish('NOT_AVAILABLE')
-    node = Path(node).resolve()
-    if compiler.is_relative_to(root) or node.is_relative_to(root):
+    try:
+        runtime = contract.trusted_runtime(root, parser)
+    except (OSError, ValueError, RuntimeError):
+        runtime = None
+    if runtime is None:
         return finish('NOT_AVAILABLE')
     inputs, paths, sizes = [], [], []
     total = 0
@@ -100,29 +95,15 @@ def review(root, profile, components, parser):
         paths.append(rel)
         sizes.append(len(content.splitlines())+1)
     try:
-        with tempfile.TemporaryDirectory(prefix='sg-js-parser-') as cwd:
-            # Do not inherit NODE_OPTIONS, NODE_PATH or target working directory.
-            env = {'PATH':os.defpath,'LANG':'C.UTF-8','HOME':cwd}
-            cp = subprocess.run([str(node),'--max-old-space-size=128',
-                    str(Path(__file__).with_name('js_ssr_flow.mjs')),str(compiler)],
-                    input=json.dumps(inputs,ensure_ascii=False),encoding='utf-8',
-                    capture_output=True,timeout=20,cwd=cwd,env=env,check=False)
-        if cp.returncode or len(cp.stdout)>2_000_000:
-            return finish('NOT_AVAILABLE')
-        data = json.loads(cp.stdout)
-        if data.get('status')!='OK' or data.get('version')!='5.9.3':
-            return finish('NOT_AVAILABLE')
-        rows = data['results']
-        if not isinstance(rows,list) or len(rows)!=len(inputs):
-            return finish('NOT_AVAILABLE')
-        result['parser_version'] = data['version']
-        for rel, limit, row in zip(paths,sizes,rows):
+        rows = contract.run_parser('js_ssr_flow.mjs', runtime, inputs, sizes)
+        result['parser_version'] = contract.VERSION
+        for rel, limit, row in sorted(zip(paths,sizes,rows),key=lambda item:item[0]):
             stats['parsed_files'] += int(row['parsed'] is True)
             stats['partial_files'] += int(row['partial'] is True)
             stats['parse_errors'] += int(row['reason']=='parse_error')
             stats['node_limited_files'] += int(row['reason']=='node_limit')
             stats['path_limited_files'] += int(row['reason']=='path_limit')
-            for hit in row['hits']:
+            for hit in contract.unique_hits(row['hits']):
                 line, source = hit['line'], hit['source_lines']
                 if type(line) is not int or not 1<=line<=limit or not isinstance(source,list) or not source or len(source)>16 or any(type(n) is not int or not 1<=n<=limit for n in source):
                     raise ValueError('Invalid parser evidence')
@@ -147,7 +128,7 @@ def review(root, profile, components, parser):
                     'source_lines_truncated':hit['source_lines_truncated'] is True,
                     'status':'HEURISTIC_REVIEW_ONLY','technique':'BOUNDED_AST_FLOW',
                     'confidence':'medium','suggested_severity':'high'})
-    except (OSError,ValueError,TypeError,KeyError,AttributeError,subprocess.TimeoutExpired):
+    except (OSError,ValueError,TypeError,KeyError,AttributeError,RecursionError,subprocess.TimeoutExpired):
         result['signals'] = []
         return finish('NOT_AVAILABLE')
     partial = result['unsupported_frameworks'] or coverage.get('truncated') or any(stats[k] for k in ('partial_files','omitted_files','unmodeled_files','unreadable_files','omitted_matches'))

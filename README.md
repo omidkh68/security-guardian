@@ -448,6 +448,8 @@ For contributors: [private npm/npx distribution preview](docs/npm-distribution.m
 
 [Optional authorization evidence review](docs/js-authz-flow.md) ([فارسی](docs/js-authz-flow-FA.md)): Express, Fastify and NestJS resource-scope matrix with explicit Prisma and TypeORM selectors; all rows unverified.
 
+[Semantic AST contract](docs/semantic-contract.md) ([فارسی](docs/semantic-contract-FA.md)): source/sink and binding matrix, shared parser/evidence validation and explicit sanitizer review.
+
 JS/TS DOM AST v2 adds bounded branches and same-file helper summaries (#88).
 
 Python SQL AST v4 adds direct SQLite context-manager normal-path review (#90), with transaction/exception semantics marked partial.
