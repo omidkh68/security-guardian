@@ -51,6 +51,30 @@ class CoverageTests(unittest.TestCase):
             self.assertTrue(coverage['truncated'])
             self.assertFalse(result['signals'])
 
+    def test_unreadable_selected_source_is_counted_without_leaking_error(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'bad.ts').write_text('element.innerHTML = payload;')
+            (root / 'safe.ts').write_text('const safe = true;')
+            read_text = Path.read_text
+
+            def guarded_read(path, *args, **kwargs):
+                if path.name == 'bad.ts':
+                    raise PermissionError('PRIVATE_ERROR_DETAIL')
+                return read_text(path, *args, **kwargs)
+
+            with patch.object(Path, 'read_text', guarded_read):
+                result = scan.process(root)
+            coverage = result['summary']['scan_coverage']
+            self.assertTrue(coverage['truncated'])
+            self.assertEqual(coverage['skipped']['unreadable_source'], 1)
+            self.assertEqual(coverage['selected_files'], 2)
+            self.assertEqual(coverage['read_files'], 1)
+            self.assertEqual(coverage['inspected_files'], 1)
+            self.assertFalse(result['signals'])
+            self.assertNotIn('PRIVATE_ERROR_DETAIL', json.dumps(result))
+
     def test_global_and_per_control_signal_caps_are_explicit(self):
         from unittest.mock import patch
         with tempfile.TemporaryDirectory() as temp:
