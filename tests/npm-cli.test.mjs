@@ -43,6 +43,7 @@ test('install all, share Codex/Gemini, protect existing files and back up upgrad
     assert.ok(fs.existsSync(path.join(target, 'scripts/js_sql_flow.mjs')));
     assert.ok(fs.existsSync(path.join(target, 'scripts/js_ssr_flow.mjs')));
     assert.ok(fs.existsSync(path.join(target, 'scripts/js_authz_flow.mjs')));
+    assert.ok(fs.existsSync(path.join(target, 'scripts/security_ast_contract.py')));
     assert.ok(fs.existsSync(path.join(target, 'scripts/security_js_authz_flow.py')));
     assert.ok(fs.existsSync(path.join(target, 'scripts/security_js_ssr_flow.py')));
     assert.ok(!fs.existsSync(path.join(target, 'tests')));

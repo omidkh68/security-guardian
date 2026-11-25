@@ -99,3 +99,21 @@ test('bounded branches, helper binding and block scope', {skip:!parser},t=>{
   assert.equal(r.status,'PARTIAL');
   assert.equal(r.coverage.path_limited_files,1);
 });
+
+test('explicit sanitizer binding preserves review and tracks observed call evidence',{skip:!parser},t=>{
+  const imp='import clean from "dompurify";\n';
+  for(const [label,code,count,observed] of [
+    ['direct',imp+source+'el.innerHTML=clean.sanitize(window.location.hash);'+close,1,true],
+    ['alias',imp+source+'const input=window.location.hash; const a=clean.sanitize(input); const b=a; el.innerHTML=b;'+close,1,true],
+    ['mixed',imp+source+'el.innerHTML=clean.sanitize(window.location.hash)+window.location.search;'+close,1,true],
+    ['branch',imp+source+'let x=window.location.hash; if(flag){x=clean.sanitize(x);} el.innerHTML=x;'+close,1,true],
+    ['text',imp+source+'el.textContent=clean.sanitize(window.location.hash);'+close,0,false],
+    ['fake',source+'el.innerHTML=clean.sanitize(window.location.hash);'+close,0,false],
+    ['shadow',imp+source+'const clean="fake"; el.innerHTML=clean.sanitize(window.location.hash);'+close,0,false],
+    ['options',imp+source+'el.innerHTML=clean.sanitize(window.location.hash,{ADD_TAGS:["x"]});'+close,0,false]
+  ]){
+    const r=run(fixture(t,code));assert.equal(r.contract_version,1,label);assert.equal(r.signals.length,count,label);
+    if(count){const h=r.signals[0];assert.equal(h.sanitizer_evidence,observed?'OBSERVED_CALL_REVIEW_REQUIRED':'NONE_OBSERVED',label);assert.ok(h.sanitizer_lines.length,label);assert.equal(h.status,'HEURISTIC_REVIEW_ONLY');if(label==='branch')assert.equal(h.path_without_observed_sanitizer,true);}
+    if(['fake','shadow','options'].includes(label))assert.equal(r.status,'PARTIAL',label);
+  }
+});
