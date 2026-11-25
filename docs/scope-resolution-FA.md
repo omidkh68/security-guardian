@@ -45,3 +45,13 @@ python3 -m unittest discover -s plugins/security-guardian/skills/security-guardi
 ```
 
 Fixture مصنوعی کشف، جداسازی سورس منتخب، ابهام چند Component، Fallback عمومی، Flag محدوده، Manifest نامعتبر، محصور بودن مسیر و عدم ایجاد Ledger برای محدوده حل‌نشده را بررسی می‌کند. این تست‌ها Benchmark Recall آسیب‌پذیری نیستند.
+
+## معماری و ارزش تست (#31)
+
+```mermaid
+flowchart LR
+ A["Manifest inventory and user selection"] --> B["Resolve component ownership"] --> C["Selected roots / unresolved scope"]
+ C --> D["Evidence review"]
+```
+
+تست محدوده ریشه منتخب و خارج را می‌سنجد؛ ابهام نباید بی‌صدا محدوده را توسعه دهد.

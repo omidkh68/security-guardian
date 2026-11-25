@@ -23,3 +23,13 @@ python3 <skill-dir>/scripts/security_js_flow.py --root /path/to/project --profil
 
 
 توسعه #107: برای مدل‌های جاری و محدودیت‌ها و ارزیابی جداگانه، [توسعه پوشش معنایی](semantic-expansion-FA.md) را ببینید. توضیحات نسخه‌های قبلی خط مبنای تاریخی هستند.
+
+## معماری و ارزش تست (#86 / #88 / #107)
+
+```mermaid
+flowchart LR
+ A["Selected JS / TS and trusted parser"] --> B["Bounded AST source to DOM sink"] --> C["Source and sink lines / PARTIAL"]
+ C --> D["Evidence review"]
+```
+
+نمونه‌ها Sink شناخته‌شده، شاخه، خلاصه Helper و مسیر پشتیبانی‌نشده را می‌سنجند؛ ادعای دقت واقعی نیست.

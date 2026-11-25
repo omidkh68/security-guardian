@@ -17,3 +17,13 @@ python3 -m unittest discover -s plugins/security-guardian/skills/security-guardi
 
 ## محدودیت‌ها و بازگردانی
 این روش اکتشافی است، نه Parser یا یافته تأییدشده. عبارت‌های سه‌خطی یا بیشتر، قوانین انتخاب‌نشده، پنجره‌های بزرگ و کامنت‌ها یا رشته‌های پیچیده ممکن است پوشش داده نشوند؛ نبود Candidate به‌معنی امنیت نیست. سقف خروجی و گزارش خواندن ناقص در مرحله مستقل P0 بررسی می‌شوند. در صورت نیاز تغییر اسکنر و تست‌های آن بازگردانده شوند؛ مهاجرت یا بازنویسی Ledger لازم نیست.
+
+## معماری و ارزش تست (#48)
+
+```mermaid
+flowchart LR
+ A["Eligible source lines"] --> B["Bounded multiline matching"] --> C["Deduplicated candidate location"]
+ C --> D["Evidence review"]
+```
+
+رگرسیون تطابق و عدم تطابق چندخطی محدود را می‌سنجد؛ Parser چندخطی دلخواه نیست.
