@@ -205,6 +205,32 @@ class SemanticFlowTests(unittest.TestCase):
         self.assertEqual(r['summary']['python_sql_flow']['status'],'PARTIAL')
         self.assertFalse(any(c['verification']=='VERIFIED_PASS' for c in r['controls']))
 
+    def test_sqlite_context_manager_flow(self):
+        r=self.run_scan('    with sqlite3.connect("fixture.db") as db:\n'
+                        '        query = request.args["q"]\n'
+                        '        db.execute(query)\n',prefix='def search():\n')
+        self.assertEqual([(h['line'],h['source_lines']) for h in self.hits(r)],[(6,[5])])
+        self.assertGreater(r['summary']['python_sql_flow']['context_manager_paths'],0)
+
+    def test_context_manager_branches_and_parameter_binding(self):
+        r=self.run_scan('    with sqlite3.connect("fixture.db") as db:\n'
+                        '        if flag:\n'
+                        '            db.execute("SELECT ?",(request.args["q"],))\n'
+                        '        else:\n'
+                        '            db.execute(request.args["q"])\n'
+                        '    db.execute(request.args["q"])\n',prefix='def search():\n')
+        self.assertEqual([h['line'] for h in self.hits(r)],[8,9])
+
+    def test_unknown_context_manager_is_partial(self):
+        for body in (
+            '    with unknown() as db:\n        db.execute(request.args["q"])\n',
+            '    with sqlite3.connect(name) as db:\n        db.execute(request.args["q"])\n',
+            '    with sqlite3.connect("fixture.db") as db, unknown():\n        db.execute(request.args["q"])\n',
+        ):
+            r=self.run_scan(body,prefix='def search():\n')
+            self.assertFalse(self.hits(r))
+            self.assertEqual(r['summary']['python_sql_flow']['status'],'PARTIAL')
+
     def test_unknown_receiver_not_inferred(self):
         r = self.run_scan('    other.execute(request.args["q"])\n')
         self.assertFalse(self.hits(r))
