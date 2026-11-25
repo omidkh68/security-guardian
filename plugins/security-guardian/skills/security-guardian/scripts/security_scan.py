@@ -645,14 +645,32 @@ def _name(node, name):
 
 
 def _request_collection(node, request_names):
-    return (isinstance(node, ast.Attribute) and node.attr in {'args', 'form'}
+    return (isinstance(node, ast.Attribute) and node.attr in {'args', 'form', 'headers', 'cookies'}
             and isinstance(node.value, ast.Name) and node.value.id in request_names)
+
+
+def _qualified_parts(node):
+    if isinstance(node,ast.Name):return (node.id,)
+    if isinstance(node,ast.Attribute):
+        parts=_qualified_parts(node.value)
+        if parts:return (*parts,node.attr)
+    return ()
+
+
+def _imported_member(node, receivers):
+    parts=_qualified_parts(node)
+    if len(parts)<2:return None
+    mod=receivers.get(('import','.'.join(parts[:-1])))
+    return (mod,parts[-1]) if mod else None
 
 
 def _sql_receiver(node, receivers, db_names, helpers=None):
     if isinstance(node, ast.Name):
         return receivers.get(node.id)
     if isinstance(node, ast.Call):
+        imported=_imported_member(node.func,receivers)
+        if imported and not node.args and not node.keywords and (helpers or {}).get(imported)==(0, (), 'connection'):
+            return 'connection'
         if (isinstance(node.func, ast.Name) and not node.args and not node.keywords
                 and (helpers or {}).get(node.func.id) == (0, (), 'connection')):
             return 'connection'
@@ -670,7 +688,13 @@ def _sql_value(node, values, receivers, request_names, db_names, helpers):
     if isinstance(node, ast.Constant):
         return True, empty
     if isinstance(node, ast.Name):
+        if receivers.get(node.id)=='dictionary':return False,empty
         return True, values.get(node.id, empty)
+    if (isinstance(node,ast.Subscript) and isinstance(node.value,ast.Name)
+            and receivers.get(node.value.id)=='dictionary' and isinstance(node.slice,ast.Constant)
+            and isinstance(node.slice.value,str)):
+        key=('dict',node.value.id,node.slice.value)
+        return key in values,values.get(key,empty)
     if isinstance(node, ast.Subscript) and _request_collection(node.value, request_names):
         return isinstance(node.slice, ast.Constant), frozenset({node.lineno})
     if (isinstance(node, ast.Call) and _attr(node.func, 'get')
@@ -684,6 +708,12 @@ def _sql_value(node, values, receivers, request_names, db_names, helpers):
         # No nested helper calls: a summary is a one-hop, nonrecursive substitution.
         args = [_sql_value(a, values, receivers, request_names, db_names, {}) for a in node.args]
         return all(ok for ok, _ in args), empty.union(*(args[i][1] for i in used))
+    if isinstance(node,ast.Call) and not node.keywords:
+        imported=_imported_member(node.func,receivers)
+        if imported in {('base64','b64encode'),('base64','b64decode'),('urllib.parse','unquote_plus'),('urllib.parse','unquote')} and len(node.args)==1:
+            return _sql_value(node.args[0],values,receivers,request_names,db_names,helpers)
+        if (_attr(node.func,'encode') or _attr(node.func,'decode')) and len(node.args)<=1 and all(isinstance(a,ast.Constant) and a.value in {'utf-8','utf8','ascii'} for a in node.args):
+            return _sql_value(node.func.value,values,receivers,request_names,db_names,helpers)
     if isinstance(node, ast.Call) and _sql_receiver(node, receivers, db_names, helpers):
         return True, empty
     if isinstance(node, ast.JoinedStr):
@@ -736,7 +766,7 @@ def _helper_summary(fn):
     return (len(params), tuple(sorted(used))) if ok else None
 
 
-def _connection_factory(fn, db_names):
+def _connection_factory(fn, db_names, allow_named_path=False):
     """Only a zero-argument, undecorated, single-return SQLite factory."""
     if (fn.decorator_list or fn.args.args or fn.args.posonlyargs or fn.args.kwonlyargs
             or fn.args.vararg or fn.args.kwarg or fn.args.defaults
@@ -745,8 +775,8 @@ def _connection_factory(fn, db_names):
     call=fn.body[0].value
     if (isinstance(call, ast.Call) and _attr(call.func,'connect')
             and isinstance(call.func.value,ast.Name) and call.func.value.id in db_names
-            and len(call.args)==1 and isinstance(call.args[0],ast.Constant)
-            and isinstance(call.args[0].value,str) and not call.keywords):
+            and len(call.args)==1 and (isinstance(call.args[0],ast.Constant) and isinstance(call.args[0].value,str)
+                or allow_named_path and isinstance(call.args[0],ast.Name)) and not call.keywords):
         return (0, (), 'connection')
     return None
 
@@ -766,6 +796,29 @@ def _connection_exports(content):
         if not names or any(bindings[name]!=1 for name in names):return {}
         return {n.name:summary for n in tree.body if isinstance(n,ast.FunctionDef)
                 and bindings[n.name]==1 and (summary:=_connection_factory(n,names))}
+    except (SyntaxError,RecursionError,MemoryError,ValueError):return {}
+
+
+def _qualified_connection_exports(content):
+    """Syntactic candidate summaries, not import-time behavior attestation.
+    Allow module setup code, but refuse explicit rebinding/mutation of the
+    imported sqlite3 alias or exported factory. Caller is always PARTIAL.
+    """
+    if len(content.encode('utf-8'))>PY_SQL_MAX_BYTES:return {}
+    try:
+        tree=ast.parse(content)
+        if sum(1 for _ in ast.walk(tree))>PY_SQL_MAX_NODES:return {}
+        names={a.asname or a.name for n in tree.body if isinstance(n,ast.Import) for a in n.names if a.name=='sqlite3'}
+        bindings=Counter(name for n in tree.body for name in _module_bindings(n))
+        if not names or any(bindings[name]!=1 for name in names):return {}
+        if any(isinstance(n,ast.ImportFrom) and any(a.name=='*' for a in n.names) for n in ast.walk(tree)):return {}
+        for n in ast.walk(tree):
+            if isinstance(n,ast.Attribute) and isinstance(n.ctx,(ast.Store,ast.Del)):
+                parts=_qualified_parts(n)
+                if parts and parts[0] in names:return {}
+            if isinstance(n,(ast.Global,ast.Nonlocal)) and set(n.names)&names:return {}
+        return {n.name:summary for n in tree.body if isinstance(n,ast.FunctionDef) and bindings[n.name]==1
+                and not (_binding_names(n)&names) and (summary:=_connection_factory(n,names,True))}
     except (SyntaxError,RecursionError,MemoryError,ValueError):return {}
 
 
@@ -804,7 +857,7 @@ def _sql_condition(node):
         return _sql_condition(node.operand)
     if isinstance(node, ast.BoolOp) and isinstance(node.op, (ast.And, ast.Or)):
         return all(_sql_condition(v) for v in node.values)
-    if isinstance(node, ast.Compare) and all(isinstance(op, (ast.Eq, ast.NotEq, ast.Is, ast.IsNot, ast.Lt, ast.LtE, ast.Gt, ast.GtE)) for op in node.ops):
+    if isinstance(node, ast.Compare) and all(isinstance(op, (ast.Eq, ast.NotEq, ast.Is, ast.IsNot, ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.In, ast.NotIn)) for op in node.ops):
         return all(_sql_condition(v) for v in [node.left, *node.comparators])
     return False
 
@@ -823,6 +876,31 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
             if steps > PY_SQL_MAX_STEPS:
                 stats['path_limited_functions'] += 1
                 return sources_by_sink, True
+            if isinstance(stmt,ast.Import):
+                # Explicit import at this point in the current path; never
+                # execute it. Absolute module resolution is component-root
+                # source-only, not a claim about runtime sys.path.
+                valid=True
+                for a in stmt.names:
+                    alias=a.asname or a.name
+                    root=alias.split('.')[0]
+                    if (root in values or root in request_names or root in db_names
+                        or (a.name not in {'base64','urllib.parse'} and not any(isinstance(k,tuple) and k[0]==a.name for k in helpers))):
+                        valid=False;break
+                    receivers[('import',alias)]=a.name
+                partial=True
+                if not valid:break
+                continue
+            if isinstance(stmt,ast.Assign) and len(stmt.targets)==1 and isinstance(stmt.targets[0],ast.Subscript):
+                dst=stmt.targets[0]
+                if (not isinstance(dst.value,ast.Name) or receivers.get(dst.value.id)!='dictionary'
+                    or not isinstance(dst.slice,ast.Constant) or not isinstance(dst.slice.value,str)):
+                    partial=True;break
+                known,lines=_sql_value(stmt.value,values,receivers,request_names,db_names,helpers)
+                if not known or sum(isinstance(k,tuple) and k[:2]==('dict',dst.value.id) for k in values)>=32:
+                    partial=True;break
+                values[('dict',dst.value.id,dst.slice.value)]=lines
+                continue
             if isinstance(stmt, ast.With):
                 # sqlite3.Connection.__enter__ returns the connection. Its
                 # context manager commits/rolls back, not closes or scopes it.
@@ -894,10 +972,24 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
             else:
                 target, value = None, None
             if target is not None:
+                for k in list(receivers):
+                    if isinstance(k,tuple) and k[0]=='import' and k[1].split('.')[0]==target:del receivers[k]
+                if isinstance(value,ast.Dict):
+                    if len(value.keys)>32 or any(not isinstance(k,ast.Constant) or not isinstance(k.value,str) for k in value.keys):
+                        partial=True;break
+                    pairs=[_sql_value(v,values,receivers,request_names,db_names,helpers) for v in value.values]
+                    if not all(ok for ok,_ in pairs):partial=True;break
+                    for k in list(values):
+                        if isinstance(k,tuple) and k[:2]==('dict',target):del values[k]
+                    for k,(_,lines) in zip(value.keys,pairs):values[('dict',target,k.value)]=lines
+                    values[target]=frozenset();receivers[target]='dictionary'
+                    continue
                 known, lines = _sql_value(value, values, receivers, request_names, db_names, helpers)
                 if not known:
                     partial = True
                     break
+                for k in list(values):
+                    if isinstance(k,tuple) and k[:2]==('dict',target):del values[k]
                 values[target] = lines
                 receivers[target] = _sql_receiver(value, receivers, db_names, helpers)
                 continue
@@ -924,7 +1016,7 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
     return sources_by_sink, partial
 
 
-def python_sql_flow(content, sibling_exports=None):
+def python_sql_flow(content, sibling_exports=None, qualified_exports=None):
     """Bounded local AST and one-hop helper summaries, not a whole-program taint engine."""
     stats = Counter()
     hits = []
@@ -957,14 +1049,16 @@ def python_sql_flow(content, sibling_exports=None):
                 alias=a.asname or a.name
                 if a.name in exports and bindings[alias]==1:imported_helpers[alias]=exports[a.name]
     watched = request_names | db_names
-    if (not request_names or (not db_names and not imported_helpers) or request_names & db_names
+    if (not request_names or (not db_names and not imported_helpers and not qualified_exports) or request_names & db_names
             or any(bindings[name] != 1 for name in watched)
             or any(isinstance(n, ast.ImportFrom) and any(a.name == '*' for a in n.names) for n in tree.body)):
         stats['unmodeled_import_files'] += 1
         return hits, stats
     stats['resolved_import_aliases'] += len(request_names - {'request'}) + len(db_names - {'sqlite3'})
     helpers = dict(imported_helpers)
-    stats['cross_file_receiver_bindings'] += len(imported_helpers)
+    for mod,exports in (qualified_exports or {}).items():
+        for name,summary in exports.items():helpers[(mod,name)]=summary
+    stats['cross_file_receiver_bindings'] += len(imported_helpers)+sum(len(x) for x in (qualified_exports or {}).values())
     for n in tree.body:
         if isinstance(n, ast.FunctionDef) and bindings[n.name] == 1:
             summary = _helper_summary(n) or _connection_factory(n,db_names)
@@ -1119,6 +1213,7 @@ def process(root:Path, profile=None, components=()):
             if owner in python_sql_roots and p.suffix == '.py':
                 python_sql_stats['eligible_files'] += 1
                 siblings={}
+                qualified={}
                 if len(content.encode('utf-8'))<=PY_SQL_MAX_BYTES:
                     try:
                         parsed=ast.parse(content)
@@ -1135,8 +1230,24 @@ def process(root:Path, profile=None, components=()):
                                         factory_cache[sibling]=_connection_exports(raw.decode('utf-8')) if len(raw)<=PY_SQL_MAX_BYTES else {}
                                     except (OSError,UnicodeError):factory_cache[sibling]={}
                                 siblings[n.module]=factory_cache[sibling]
+                            for n in ast.walk(parsed):
+                                if not isinstance(n,ast.Import):continue
+                                for a in n.names:
+                                    if '.' not in a.name:continue
+                                    module_path=(Path(owner)/Path(*a.name.split('.'))).as_posix()
+                                    candidate=module_path+'.py'
+                                    if candidate==fn or candidate not in rels or module_path+'/__init__.py' in rels or _test_file(candidate) or _owner(candidate,scope['components'])!=owner:continue
+                                    cache_key=('qualified',candidate)
+                                    if cache_key not in factory_cache:
+                                        if factory_reads>=128:break
+                                        factory_reads+=1
+                                        try:
+                                            with rels[candidate].open('rb') as h:raw=h.read(PY_SQL_MAX_BYTES+1)
+                                            factory_cache[cache_key]=_qualified_connection_exports(raw.decode('utf-8')) if len(raw)<=PY_SQL_MAX_BYTES else {}
+                                        except (OSError,UnicodeError):factory_cache[cache_key]={}
+                                    if factory_cache[cache_key]:qualified[a.name]=factory_cache[cache_key]
                     except (SyntaxError,RecursionError,MemoryError,ValueError):pass
-                flow_hits, flow_stats = python_sql_flow(content,siblings)
+                flow_hits, flow_stats = python_sql_flow(content,siblings,qualified)
                 python_sql_stats.update(flow_stats)
                 python_sql_stats['matches'] += len(flow_hits)
                 for hit in flow_hits:
@@ -1348,7 +1459,7 @@ def process(root:Path, profile=None, components=()):
             'selected_roots':sorted(python_sql_roots),
             'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or python_sql_stats['cross_file_receiver_bindings'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
             **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings',*partial_keys)},
-            'limitations':['Bounded local paths, literal finite loops, one-hop query/connection helpers, sibling relative-import connection factories and syntactic nested route bodies; no general cross-module taint, dynamic dispatch, exception semantics or exploit analysis.',
+            'limitations':['Bounded local paths, literal loops, dictionary slots, selected encoding transformations, request headers/cookies, one-hop query helpers, sibling and component-root qualified connection factories, nested route bodies; no generic cross-module taint, dynamic import/dispatch, exception semantics or exploit analysis.',
                            'Unmodeled statements and imports are not proof of safety; no target code is executed.'],
         }
     return {'summary':summary,'signals':evidence,'controls':result,
