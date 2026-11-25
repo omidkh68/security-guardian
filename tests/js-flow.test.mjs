@@ -61,9 +61,9 @@ test('optional AST flow benchmark, source evidence and scope', {skip:!parser}, t
     counts[positive?(hit?'tp':'fn'):(hit?'fp':'tn')]++;
     if(r.status==='PARTIAL') partial++;
     if(name==='direct') assert.deepEqual(r.signals.map(s=>[s.line,s.source_lines]),[[3,[3]]]);
-    if(name==='branch'||name==='helper'||name==='unknown-receiver') assert.equal(r.status,'PARTIAL',name);
+    if(name==='helper'||name==='unknown-receiver') assert.equal(r.status,'PARTIAL',name);
   }
-  assert.deepEqual(counts,{tp:3,tn:5,fp:0,fn:2});
+  assert.deepEqual(counts,{tp:4,tn:5,fp:0,fn:1});
   console.log(JSON.stringify({kind:'SYNTHETIC_JS_DOM_FLOW_BASELINE',cases:10,...counts,partial,
     precision:{numerator:counts.tp,denominator:counts.tp+counts.fp,value:counts.tp/(counts.tp+counts.fp)},
     recall:{numerator:counts.tp,denominator:counts.tp+counts.fn,value:counts.tp/(counts.tp+counts.fn)},
@@ -77,4 +77,25 @@ test('shadowing and malformed source never certify', {skip:!parser},t=>{
     assert.equal(r.status,'PARTIAL');
     assert.deepEqual(r.signals,[]);
   }
+});
+
+test('bounded branches, helper binding and block scope', {skip:!parser},t=>{
+  const cases=[
+    ['function build(a,b) { return "prefix"+b; }\n'+source+'  el.innerHTML = build("fixed",window.location.hash);'+close,1],
+    ['function build(a,b) { return b; }\n'+source+'  el.innerHTML = build(window.location.hash,"fixed");'+close,0],
+    [source+'  let q=window.location.hash;\n  if(flag){return;} else {q="fixed";}\n  el.innerHTML=q;'+close,0],
+    [source+'  if(false){el.innerHTML=window.location.hash;}'+close,0],
+    [source+'  if(flag){let q=window.location.hash;}\n  el.innerHTML=q;'+close,0],
+    [source+'  let q="fixed"; if(flag){q=window.location.hash;} else {q="fixed";}\n  el.innerHTML=q;'+close,1],
+    ['function build(a){return a;}\n'+source+'  const build="fixed";\n  el.innerHTML=build(window.location.hash);'+close,0],
+    ['function build(a){return a;}\nfunction build(a){return "fixed";}\n'+source+'  el.innerHTML=build(window.location.hash);'+close,0],
+    [source+'  let q=window.location.hash;\n  if(flag){let q="fixed";el.innerHTML=q;}'+close,0]
+  ];
+  for(const [code,count] of cases) {
+    const r=run(fixture(t,code));
+    assert.equal(r.signals.length,count,code);
+  }
+  const r=run(fixture(t,source+'  '+Array.from({length:12},(_,i)=>'if(flag'+i+'){}').join('\n')+'\n el.innerHTML=window.location.hash;'+close));
+  assert.equal(r.status,'PARTIAL');
+  assert.equal(r.coverage.path_limited_files,1);
 });

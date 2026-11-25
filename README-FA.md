@@ -438,3 +438,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 [بازبینی محدود SQL با AST پایتون](docs/python-sql-flow-FA.md) ([English](docs/python-sql-flow.md)): نشانه جریان ورودی تا Query در Flask/SQLite منتخب با مسیرهای محدود شرطی، Alias مستقیم و خلاصه تابع کمکی محلی؛ نه اثبات بهره‌برداری.
 
 [تحلیل اختیاری AST جریان DOM در JS/TS](docs/js-dom-flow-FA.md) ([English](docs/js-dom-flow.md)): Parser خارجی با مجوز صریح؛ Candidate محدود جریان Location تا innerHTML، نه اثبات بهره‌برداری.
+
+نسخه ۲ تحلیل AST جریان DOM در JS/TS مسیرهای شرطی و خلاصه تابع کمکی همان فایل را اضافه می‌کند (#88).

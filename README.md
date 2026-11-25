@@ -441,3 +441,5 @@ For contributors: [private npm/npx distribution preview](docs/npm-distribution.m
 [Bounded Python SQL AST review](docs/python-sql-flow.md) ([فارسی](docs/python-sql-flow-FA.md)): selected Flask/SQLite source-to-query candidates with bounded if/else paths, direct aliases and local helper summaries, not exploit proof.
 
 [Optional JS/TS AST DOM flow](docs/js-dom-flow.md) ([فارسی](docs/js-dom-flow-FA.md)): explicitly authorized external parser; scoped location-to-innerHTML candidates, not exploit proof.
+
+JS/TS DOM AST v2 adds bounded branches and same-file helper summaries (#88).
