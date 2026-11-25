@@ -80,3 +80,16 @@ test('parse errors and unrelated frontend component are not certified',{skip:!pa
   assert.equal(unrelated.status,'NOT_SELECTED');
   assert.deepEqual(unrelated.signals,[]);
 });
+
+test('local SQL helpers preserve exact parameter dependencies and reject dynamic bindings',{skip:!parser},t=>{
+  const cases=[
+    ['function statement(a,b){return "SELECT "+b;}\n'+route('express','db.query(statement("fixed",input.body.value));'),1],
+    ['function statement(a,b){return b;}\n'+route('express','db.query(statement(input.body.value,"constant"));'),0],
+    ['function statement(a){return a;}\n'+route('express','db.query("SELECT $1",[statement(input.body.value)]);'),0],
+    ['function statement(a){return a;}\n'+route('express','const statement=other;db.query(statement(input.body.value));'),0],
+    ['function statement(a){return statement(a);}\n'+route('express','db.query(statement(input.body.value));'),0],
+    ['function statement(a){return a;}\n'+route('express','db.query(statement(input.body.value,"extra"));'),0],
+    ['function statement(a){return a;}\n'+route('fastify','db.query(statement(statement(input.params.value)));'),1]
+  ];
+  for(const [code,count] of cases){const r=run(fixture(t,code,code.includes("'fastify'")?'fastify':'express'));assert.equal(r.signals.length,count,code);}
+});

@@ -28,7 +28,7 @@ flowchart TD
 | SSR | درخواست Route/Page شناخته‌شده و هدر اعتبارنامه مشخص | HTML خام یا Response یا TransferState | ورودی و Import فناوری و اتصال محلی؛ JSON.stringify معادل Escape HTML نیست |
 | Authorization | درخواست و فیلد ظاهری Principal | شرط منبع Prisma/TypeORM | Route و گیرنده صریح و Alias محلی؛ Guard صرفاً شاهد است |
 
-دامنه دقیق در مستندات [Python](python-sql-flow-FA.md)، [DOM](js-dom-flow-FA.md)، [SQL](js-sql-flow-FA.md)، [SSR](js-ssr-flow-FA.md) و [Authorization](js-authz-flow-FA.md) تعریف شده است. Helper میان فایل‌ها، Sanitizer سفارشی، Dispatch پویا و اتصال کل برنامه مدل نشده‌اند. قالب و Hydration در Vue/Svelte، DI سفارشی، شرط تودرتو و سیاست بین ماژول‌ها نیازمند بازبینی دستی هستند. Benchmark مستقل (#96) و Verification واقعی (#35) معیارهای جداگانه‌اند.
+دامنه دقیق در مستندات [Python](python-sql-flow-FA.md)، [DOM](js-dom-flow-FA.md)، [SQL](js-sql-flow-FA.md)، [SSR](js-ssr-flow-FA.md) و [Authorization](js-authz-flow-FA.md) تعریف شده است. تحلیل عمومی Helper میان فایل‌ها، Sanitizer سفارشی، Dispatch پویا و اتصال کل برنامه مدل نشده‌اند. قالب و Hydration در Vue/Svelte، DI سفارشی، شرط تودرتو و سیاست بین ماژول‌ها نیازمند بازبینی دستی هستند. Benchmark مستقل (#96) و Verification واقعی (#35) معیارهای جداگانه‌اند.
 
 ## مدل Sanitizer
 
@@ -51,3 +51,6 @@ flowchart TD
 | Manifest سخت‌گیرانه npm | وجود فایل اجرایی Python مشترک |
 
 تست واحد Timeout شکست Subprocess را بدون انتظار شبیه‌سازی می‌کند؛ CI مجموعه رگرسیون واقعی Parser نسخه ثابت را نیز اجرا می‌کند. این قرارداد Benchmark مستقل جدید آسیب‌پذیری نیست. بازگشت با Revert و بدون مهاجرت Ledger است.
+
+
+توسعه #107: برای مدل‌های جاری و محدودیت‌ها و ارزیابی جداگانه، [توسعه پوشش معنایی](semantic-expansion-FA.md) را ببینید. توضیحات نسخه‌های قبلی خط مبنای تاریخی هستند.

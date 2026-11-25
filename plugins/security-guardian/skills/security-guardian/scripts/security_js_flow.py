@@ -26,11 +26,11 @@ def review(root, profile, components, parser):
         raise ValueError('Scope unresolved; use the standard scope preview')
     roots = {c['root'] for c in scope['selected_components'] if scan._web_core(c)}
     stats = Counter()
-    result = {'schema_version':1, 'contract_version':contract.CONTRACT_VERSION, 'pack_id':'js-dom-flow', 'pack_version':3,
+    result = {'schema_version':1, 'contract_version':contract.CONTRACT_VERSION, 'pack_id':'js-dom-flow', 'pack_version':4,
               'rule_id':RULE, 'legacy_control_id':'ANG-01', 'status':'NOT_AVAILABLE',
               'selected_roots':sorted(roots), 'signals':[],
               'limitations':['Optional syntactic AST flow, not exploit proof or full taint analysis.',
-                             'Bounded synchronous functions, if/else and one-hop local helper summaries; no cross-module, loop, framework template or SSR analysis.',
+                             'Bounded synchronous functions, if/else, one-hop local helper summaries and explicit URI encoding/decoding calls; no cross-module, loop, framework template or SSR analysis.',
                              'Trusted parser execution is not an OS sandbox; no project code or config loaded.',
                              'No ledger update; review and record candidates manually.']}
     def finish(status):

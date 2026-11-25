@@ -43,11 +43,11 @@ All rows have manifest discovery and manual review. H = named heuristic pack; A 
 | Nuxt | web-core, vue-nuxt | DOM; explicit H3 HTML endpoint |
 | Svelte | web-core, svelte-kit (Svelte rules) | DOM only, not Svelte templates |
 | SvelteKit | web-core, svelte-kit | DOM; +server HTML response |
-| NestJS | backend-core | pg SQL; Prisma/TypeORM resource evidence |
+| NestJS | backend-core | pg SQL with bounded local helpers; Prisma/TypeORM resource evidence |
 | Express | backend-core, express-fastify (Express rules) | pg SQL; Prisma/TypeORM resource evidence |
 | Fastify | backend-core, express-fastify (Fastify rules) | pg SQL; Prisma/TypeORM resource evidence |
 | Koa, Hono | backend-core | No named AST model |
-| Flask | No named heuristic pack | Flask/SQLite SQL flow in scoped scanner |
+| Flask | No named heuristic pack | Flask/SQLite SQL flow in scoped scanner; bounded helper context, loops and data slots |
 | Django, FastAPI, Spring Boot, ASP.NET Core, Laravel | No named heuristic pack | No named AST model |
 | Flutter | No named heuristic pack; legacy mobile indicators | No named AST model |
 
@@ -73,3 +73,6 @@ Generic legacy indicators are applicability-filtered and separate from named pac
 | Deterministic CLI and redaction | No target code execution, raw manifest versions or ledger mutation |
 
 This inventory is additive; scanner and tracker formats, rule keys and default scan behavior remain unchanged. Rollback is PR revert with no ledger migration. Independent detection evaluation (#96), multi-technology verification (#35) and runtime agent tests (#32) remain separate.
+
+
+Expansion #107: see [semantic coverage expansion](semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.

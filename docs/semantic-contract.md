@@ -22,13 +22,13 @@ flowchart TD
 
 | Model | Source | Sink | Binding and exclusion |
 |---|---|---|---|
-| Python Flask SQL | imported request.args/form | sqlite3 execute SQL argument | direct import aliases, local paths and one-hop helper, bounded context manager; bound parameters separate |
+| Python Flask SQL | imported request.args/form/headers/cookies | sqlite3 execute SQL argument | direct import aliases, local paths, bounded loops/slots, simple source-only helper context and bounded context manager; bound parameters separate |
 | JS DOM | window.location.hash/search | recognized DOM element innerHTML | local alias, branch paths, one-hop local helper; textContent is not raw HTML |
 | Node SQL | explicit route request / Nest parameters | imported pg Pool/Client query text | local alias, concatenation; parameter array separate |
 | SSR | recognized route/page request, explicit credential headers | framework raw HTML / response / TransferState | framework-specific entry/import and local bindings; JSON.stringify is not HTML escaping |
 | Authorization | request and principal-shaped fields | Prisma / TypeORM resource selectors | explicit routes and receiver identity, local aliases; guards are evidence only |
 
-See the paired [Python](python-sql-flow.md), [DOM](js-dom-flow.md), [SQL](js-sql-flow.md), [SSR](js-ssr-flow.md) and [authorization](js-authz-flow.md) docs for exact supported syntax and residuals. No cross-file helper inference, custom sanitizers, arbitrary dynamic dispatch or whole-program binding is claimed. Vue/Svelte template and hydration, custom DI, nested predicates and cross-module authorization remain manual review. Independent corpus (#96) and runtime verification (#35) remain separate acceptance gates.
+See the paired [Python](python-sql-flow.md), [DOM](js-dom-flow.md), [SQL](js-sql-flow.md), [SSR](js-ssr-flow.md) and [authorization](js-authz-flow.md) docs for exact supported syntax and residuals. No general cross-file taint or arbitrary helper inference, custom sanitizers, arbitrary dynamic dispatch or whole-program binding is claimed. Vue/Svelte template and hydration, custom DI, nested predicates and cross-module authorization remain manual review. Independent corpus (#96) and runtime verification (#35) remain separate acceptance gates.
 
 ## Sanitizer model
 
@@ -51,3 +51,6 @@ JS adapters share a 20-second timeout, 128-file/128,000-byte per file/2,000,000-
 | Strict npm manifest | Shared Python runtime asset included automatically |
 
 The timeout unit test simulates a subprocess timeout without sleeping; CI also runs the real pinned compiler regression suite. The contract is not a new independent vulnerability benchmark. Revert PR to roll back; no ledger migration.
+
+
+Expansion #107: see [semantic coverage expansion](semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.

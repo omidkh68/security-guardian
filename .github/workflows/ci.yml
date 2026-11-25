@@ -42,6 +42,10 @@ jobs:
           git init --bare "$RUNNER_TEMP/sg-owasp-benchmark"
           git -C "$RUNNER_TEMP/sg-owasp-benchmark" fetch --depth=1 --no-tags https://github.com/OWASP-Benchmark/BenchmarkPython.git f1291485808b66e20ddb6b01b10dc71b3df8c8ba
           python scripts/benchmark_holdout.py --external-git "$RUNNER_TEMP/sg-owasp-benchmark"
+          python scripts/benchmark_semantic_context.py --external-git "$RUNNER_TEMP/sg-owasp-benchmark"
+      - name: Measure fresh externally labeled Flask SQLite pair (source-only)
+        if: matrix.python-version == '3.12'
+        run: python scripts/benchmark_semantic_context.py --fresh-flask
       - name: Verify no tracked secret-like files or generated reports
         run: |
           if git ls-files | grep -E '(^|/)(\.env(\.|$)|\.security-guardian/)|\.(pem|p12|pfx|key)$' ; then

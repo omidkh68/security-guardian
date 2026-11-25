@@ -29,11 +29,11 @@ def review(root, profile, components, parser):
                 and set(c['frameworks']) & {'Express','Fastify','NestJS'}}
     roots = set(selected)
     stats = Counter()
-    result = {'schema_version':1, 'contract_version':contract.CONTRACT_VERSION, 'pack_id':'js-sql-flow', 'pack_version':1,
+    result = {'schema_version':1, 'contract_version':contract.CONTRACT_VERSION, 'pack_id':'js-sql-flow', 'pack_version':2,
               'rule_id':RULE, 'legacy_control_id':'API-07', 'status':'NOT_AVAILABLE',
               'selected_roots':sorted(roots), 'signals':[],
               'limitations':['Optional syntactic AST flow, not exploit proof or full taint analysis.',
-                             'Direct Express/Fastify registrations or NestJS route/parameter decorators and module-local pg Pool/Client only; branch, helper, DI, ORM and cross-module flows remain unsupported.',
+                             'Direct Express/Fastify registrations or NestJS route/parameter decorators and module-local pg Pool/Client only; pure single-return local helpers supported; branch, DI, ORM and cross-module flows remain unsupported.',
                              'Trusted parser execution is not an OS sandbox; no project code or config loaded.',
                              'No ledger update; review and record candidates manually.']}
     def finish(status):
