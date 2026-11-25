@@ -31,12 +31,12 @@ def review(root, profile, components, parser):
                 and set(c['frameworks']) & {'Next.js','Angular','Nuxt','SvelteKit'}}
     roots = set(selected)
     stats = Counter()
-    result = {'schema_version':1, 'pack_id':'js-ssr-flow', 'pack_version':2,
-              'rule_id':RULE, 'rule_ids':[RULE,'JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT'], 'legacy_control_id':'ANG-01', 'status':'NOT_AVAILABLE',
+    result = {'schema_version':1, 'pack_id':'js-ssr-flow', 'pack_version':3,
+              'rule_id':RULE, 'rule_ids':[RULE,'JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT','JS.ANGULAR.SSR.REQUEST_TO_RESPONSE_HTML','JS.ANGULAR.SSR.CREDENTIAL_TO_TRANSFER_STATE'], 'legacy_control_id':'ANG-01', 'status':'NOT_AVAILABLE',
               'selected_roots':sorted(roots), 'signals':[],
               'unsupported_frameworks':sorted({f for fs in selected.values() for f in fs if f not in {'Next.js','Angular'}}),
               'limitations':['Optional syntactic AST flow, not exploit proof or full taint analysis.',
-                             'Next.js Pages Router and direct Angular CommonEngine document inputs only. App Router, Angular TransferState/templates/other server engines, Nuxt, SvelteKit, caching, helpers and cross-module flow require manual review.',
+                             'Next.js Pages Router, bounded Angular CommonEngine and NodeAppEngine response flow, and explicit credential headers to TransferState. Other templates, DI paths, App Router, Nuxt, SvelteKit, caching, helpers and cross-module flow require manual review.',
                              'Trusted parser execution is not an OS sandbox; no project code or config loaded.',
                              'No ledger update; review and record candidates manually.']}
     def finish(status):
@@ -69,7 +69,8 @@ def review(root, profile, components, parser):
         pages_route = ('Next.js' in selected[owner] and bool(route) and route[0]!='api'
                        and route[-1].split('.')[0] not in {'_app','_document','_error'})
         angular_server = ('Angular' in selected[owner] and parts in {('server.ts',),('src','server.ts'),('server.js',),('src','server.js')})
-        if not pages_route and not angular_server:
+        angular_transfer = ('Angular' in selected[owner] and p.name.endswith('.server.ts') and not angular_server)
+        if not pages_route and not angular_server and not angular_transfer:
             stats['unmodeled_files'] += 1
             continue
         if len(inputs) >= MAX_FILES:
@@ -87,7 +88,7 @@ def review(root, profile, components, parser):
             continue
         total += len(raw)
         inputs.append({'suffix':p.suffix,'content':content,
-                       'frameworks':selected[owner], 'pages_route':pages_route, 'angular_server':angular_server})
+                       'frameworks':selected[owner], 'pages_route':pages_route, 'angular_server':angular_server, 'angular_transfer':angular_transfer})
         paths.append(rel)
         sizes.append(len(content.splitlines())+1)
     try:
@@ -124,9 +125,13 @@ def review(root, profile, components, parser):
                 if len(result['signals'])>=MAX_HITS:
                     stats['omitted_matches'] += 1
                     continue
-                result['signals'].append({'rule_id':rule,'control_id':'ANG-01',
-                    'signal':('Angular request input reaches CommonEngine HTML document' if rule!=RULE else
-                              'Next.js server-derived page prop reaches raw HTML render'),
+                labels = {RULE: 'Next.js server-derived page prop reaches raw HTML render',
+                          'JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT': 'Angular request input reaches CommonEngine HTML document',
+                          'JS.ANGULAR.SSR.REQUEST_TO_RESPONSE_HTML': 'Angular request input reaches post-render Express HTML response',
+                          'JS.ANGULAR.SSR.CREDENTIAL_TO_TRANSFER_STATE': 'Angular request credential header reaches client transfer state'}
+                result['signals'].append({'rule_id':rule,
+                    'control_id':'ANG-04' if rule.endswith('CREDENTIAL_TO_TRANSFER_STATE') else 'ANG-01',
+                    'signal':labels[rule],
                     'path':rel,'line':line,'source_lines':source,
                     'source_lines_truncated':hit['source_lines_truncated'] is True,
                     'status':'HEURISTIC_REVIEW_ONLY','technique':'BOUNDED_AST_FLOW',

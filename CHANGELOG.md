@@ -5,7 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
-- Add optional bounded Next.js Pages Router SSR raw-render AST review and manual coverage matrix (#92).
+- Add optional bounded Next.js Pages Router and Angular SSR raw-render and credential transfer AST review and manual coverage matrix (#92).
 - Add optional bounded Node request-to-SQL AST review for Express/Fastify/NestJS and local pg receivers (#91).
 - Extend Python AST SQL review with bounded direct SQLite context-manager normal paths (#90).
 - Extend optional JS/TS AST DOM flow with bounded branch paths and local helper summaries (#88).

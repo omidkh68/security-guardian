@@ -12,7 +12,7 @@ Run `python3 <skill-dir>/scripts/security_js_ssr_flow.py --root . --profile fron
 |---|---|
 | Next.js Pages Router | Bounded same-file request-to-raw-render candidate |
 | Next.js App Router | Manual review of server components and serialization |
-| Angular SSR | Bounded direct CommonEngine document flow; other render paths and TransferState manual |
+| Angular SSR | Bounded CommonEngine, NodeAppEngine response and explicit credential-to-TransferState flow; other paths manual |
 | Nuxt | Manual review of server routes, v-html and payload serialization |
 | SvelteKit | Manual review of server load, raw HTML and serialized data |
 | Cache isolation | Manual two-account authorized tests; inspect cache keys, cookies, personalization and response headers |
@@ -53,3 +53,31 @@ The Angular rule `JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT` requires an explicit Angul
 | Evidence | Source/sink line numbers, stable rule identity, selected roots and redacted output enable targeted manual verification. |
 
 The Next.js baseline was measured in CI run 45628382963: TP 4/5, TN 7/7, FP 0/7, FN 1/5, partial 5/12; precision 4/4, recall 4/5. Angular expected counts are assertions until its CI runs. For an authorized runtime test, inspect the rendered response and confirm context-aware serialization/escaping and user isolation; AST does not execute the application.
+
+## Angular NodeAppEngine and TransferState (pack v3)
+
+```mermaid
+flowchart TD
+  A["Approved Angular server entry"] --> B["AngularNodeAppEngine.handle(request)"]
+  B --> C["Explicit non-null response guard"]
+  C --> D["Imported writeResponseToNodeResponse"]
+  C --> E["Read response.text"]
+  E --> F["Append request-derived content"]
+  F --> G["Express response.send"]
+  G --> H["Raw response review candidate"]
+  D --> I["No raw response signal"]
+  J["Selected .server.ts + imported inject(REQUEST)"] --> K["Non-null request guard"]
+  K --> L["Explicit credential header"]
+  L --> M["Imported TransferState instance + makeStateKey"]
+  M --> N["Credential exposure review candidate"]
+  H --> O["Redacted rule and line evidence"]
+  I --> O
+  N --> O
+```
+
+- JS.ANGULAR.SSR.REQUEST_TO_RESPONSE_HTML (ANG-01): direct await of a locally constructed AngularNodeAppEngine.handle with the route request, a simple non-null early-return guard, then response.text and Express response.send. Only a request-derived value combined with the modeled response body is a candidate. Native forwarding using the imported writer is not a raw-render signal. No proof of actual HTML content type, execution, or response status preservation.
+- JS.ANGULAR.SSR.CREDENTIAL_TO_TRANSFER_STATE (ANG-04, related credential exposure review, not a claim about Web Storage): selected .server.ts file, explicit @angular/core imports, exported synchronous zero-argument function, local inject(REQUEST), non-null guard, direct credential header read (cookie, authorization, proxy-authorization), inject(TransferState), literal makeStateKey and set. This is a possible server-to-browser confidentiality boundary, not XSS. It does not prove the function runs in an injection context, the key reaches the browser, or another user can read it. Other header names do not trigger this specific rule.
+
+Positive fixtures target direct postprocessing and credential headers; negatives target native forwarding, constant content and ordinary locale headers; unsupported receivers, missing guards and shadowed imports remain PARTIAL. The 8-case CommonEngine baseline measured in CI 45631179074 was TP 3, TN 4, FP 0, FN 1, partial 3, precision 3/3 and recall 3/4. Existing benchmarks remain unchanged. New regression fixtures are not measurements until CI executes. For manual testing, inspect actual response content type and context-aware encoding; verify credentials are absent from serialized HTML and compare authorized isolated sessions. Never emit credential values in evidence.
+
+API references: [Angular SSR](https://angular.dev/guide/ssr), [AngularNodeAppEngine](https://angular.dev/api/ssr/node/AngularNodeAppEngine), [REQUEST](https://angular.dev/api/core/REQUEST), [TransferState](https://angular.dev/api/core/TransferState). Promise chains, generic middleware, component injection, HTTP transfer cache, custom headers and cross-file flow remain outside this subset.

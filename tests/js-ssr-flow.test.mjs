@@ -103,3 +103,43 @@ test('Angular SSR document and JSON-LD candidates; bounded negatives', {skip:!pa
     recall:{numerator:counts.tp,denominator:counts.tp+counts.fn,value:counts.tp/(counts.tp+counts.fn)},
     scope_isolation:{passed:cases.length,total:cases.length}}));
 });
+
+const nodeApp=body=>'import express from "express";\nimport {AngularNodeAppEngine as Engine, writeResponseToNodeResponse as write} from "@angular/ssr/node";\nconst app=express();\nconst engine=new Engine();\napp.get("/", async (input,res)=>{\n'+body+'\n});';
+const pre='const response=await engine.handle(input); if(!response)return; ';
+test('Angular NodeAppEngine distinguishes native response forwarding from raw postprocessing',{skip:!parser},t=>{
+  for(const [label,body,count,partial] of [
+    ['native',pre+'return write(response,res);',0,false],
+    ['postprocess',pre+'const html=await response.text(); return res.send(html+input.query.name);',1,false],
+    ['static',pre+'const html=await response.text(); return res.send(html+"fixed");',0,false],
+    ['no-guard','const response=await engine.handle(input); const html=await response.text(); return res.send(html+input.query.name);',0,true],
+    ['unknown-response',pre+'const html=await other.text(); return res.send(html+input.query.name);',0,true],
+    ['unknown-receiver',pre+'const html=await response.text(); return other.send(html+input.query.name);',0,true]
+  ]){
+    const r=run(fixture(t,nodeApp(body),'@angular/core','src/server.ts'));
+    assert.equal(r.signals.length,count,label);
+    assert.equal(r.status==='PARTIAL',partial,label);
+    assert.ok(r.signals.every(s=>s.rule_id==='JS.ANGULAR.SSR.REQUEST_TO_RESPONSE_HTML'&&s.path==='web/src/server.ts'),label);
+  }
+});
+const state=body=>'import {inject as di, REQUEST as Req, TransferState as State, makeStateKey as key} from "@angular/core";\nexport function copy(){\n'+body+'\n}';
+const statePre='const request=di(Req); const state=di(State); if(!request)return; ';
+test('Angular TransferState explicit credential boundary, redaction and scope',{skip:!parser},t=>{
+  const cases=[
+    ['cookie',state(statePre+'const secret=request.headers.get("Cookie"); state.set(key("sample"),secret);'),1,false],
+    ['authorization',state(statePre+'state.set(key("sample"),request.headers.get("authorization"));'),1,false],
+    ['language',state(statePre+'state.set(key("sample"),request.headers.get("accept-language"));'),0,false],
+    ['constant',state(statePre+'state.set(key("sample"),"PRIVATE_SYNTHETIC_TEXT");'),0,false],
+    ['unknown-state',state(statePre+'other.set(key("sample"),request.headers.get("cookie"));'),0,true],
+    ['no-guard',state('const request=di(Req); const state=di(State); state.set(key("sample"),request.headers.get("cookie"));'),0,true],
+    ['shadow',state('const di="fixed"; '+statePre+'state.set(key("sample"),request.headers.get("cookie"));'),0,true]
+  ];
+  for(const [label,code,count,partial] of cases){
+    const r=run(fixture(t,code,'@angular/core','src/copy.server.ts'));
+    assert.equal(r.signals.length,count,label);
+    assert.equal(r.status==='PARTIAL',partial,label);
+    assert.ok(r.signals.every(s=>s.rule_id==='JS.ANGULAR.SSR.CREDENTIAL_TO_TRANSFER_STATE'&&s.control_id==='ANG-04'&&s.path==='web/src/copy.server.ts'),label);
+    assert.ok(!JSON.stringify(r).includes('PRIVATE_SYNTHETIC_TEXT'),label);
+  }
+  const client=run(fixture(t,cases[0][1],'@angular/core','src/copy.ts'));
+  assert.equal(client.status,'PARTIAL');assert.deepEqual(client.signals,[]);
+});

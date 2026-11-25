@@ -10,7 +10,7 @@ function analyzeAngular(ts,file,sf,r){
   const id=n=>n&&ts.isIdentifier(n)?n.text:null;
   const prop=n=>n&&ts.isPropertyAccessExpression(n)&&!n.questionDotToken?n.name.text:null;
   const str=n=>n&&ts.isStringLiteral(n);
-  const names=new Set(['JSON']),imports=new Map(),apps=new Set(),engines=new Set(),routes=[];
+  const names=new Set(['JSON']),imports=new Map(),apps=new Set(),engines=new Set(),nodeEngines=new Set(),routes=[];
   const bind=n=>{if(!n||names.has(n))return false;names.add(n);return true;};
   for(const s of sf.statements){
     if(ts.isImportDeclaration(s)&&str(s.moduleSpecifier)&&s.importClause){
@@ -33,30 +33,32 @@ function analyzeAngular(ts,file,sf,r){
         const imported=imports.get(id(v.expression));
         if(ts.isCallExpression(v)&&imported?.[0]==='express'&&imported[1]==='default')apps.add(n);
         else if(ts.isNewExpression(v)&&['@angular/ssr','@angular/ssr/node'].includes(imported?.[0])&&imported[1]==='CommonEngine')engines.add(n);
+        else if(ts.isNewExpression(v)&&imported?.[0]==='@angular/ssr/node'&&imported[1]==='AngularNodeAppEngine')nodeEngines.add(n);
         else return fail();
       }
       continue;
     }
     if(ts.isExpressionStatement(s)&&ts.isCallExpression(s.expression)){
       const c=s.expression,e=c.expression,fn=c.arguments[1];
-      if(!c.questionDotToken&&['get','post','all'].includes(prop(e))&&apps.has(id(e.expression))&&c.arguments.length===2&&str(c.arguments[0])&&
+      if(!c.questionDotToken&&['get','post','all','use'].includes(prop(e))&&apps.has(id(e.expression))&&c.arguments.length===2&&str(c.arguments[0])&&
         (ts.isArrowFunction(fn)||ts.isFunctionExpression(fn))&&!fn.asteriskToken&&ts.isBlock(fn.body)){
         routes.push(fn);continue;
       }
     }
     return fail();
   }
-  if(!routes.length||!engines.size)return fail();
+  if(!routes.length||(!engines.size&&!nodeEngines.size))return fail();
   const hits=[];
   for(const fn of routes){
-    const params=new Set(),env=new Map();
+    const params=new Set(),env=new Map(),responses=new Set(),guarded=new Set();
     if(fn.parameters.length<1||fn.parameters.length>3){r.partial=true;continue;}
     let valid=true;
     for(const p of fn.parameters){
       const n=id(p.name);if(!n||names.has(n)||params.has(n)||p.initializer||p.dotDotDotToken){valid=false;break;}params.add(n);
     }
     if(!valid){r.partial=true;continue;}
-    const req=id(fn.parameters[0].name);
+    const req=id(fn.parameters[0].name),res=id(fn.parameters[1]?.name);
+    const directCall=(n,method,set)=>n&&ts.isCallExpression(n)&&!n.questionDotToken&&prop(n.expression)===method&&set.has(id(n.expression.expression));
     const fields=n=>{
       if(!n||!ts.isObjectLiteralExpression(n))return null;
       const out=new Map();
@@ -74,6 +76,7 @@ function analyzeAngular(ts,file,sf,r){
       if(ts.isParenthesizedExpression(n))return value(n.expression,depth+1);
       if(str(n)||ts.isNoSubstitutionTemplateLiteral(n)||ts.isNumericLiteral(n)||[ts.SyntaxKind.TrueKeyword,ts.SyntaxKind.FalseKeyword,ts.SyntaxKind.NullKeyword].includes(n.kind))return [];
       if(id(n))return env.get(id(n))??null;
+      if(ts.isAwaitExpression(n)&&directCall(n.expression,'text',guarded)&&n.expression.arguments.length===0)return [0];
       if((prop(n)||(ts.isElementAccessExpression(n)&&!n.questionDotToken&&str(n.argumentExpression)))&&
          ['query','params','body'].includes(prop(n.expression))&&id(n.expression.expression)===req)return [line(n)];
       let children;
@@ -87,10 +90,20 @@ function analyzeAngular(ts,file,sf,r){
     }
     function sink(n){
       if(n&&ts.isAwaitExpression(n))n=n.expression;
-      if(!n||!ts.isCallExpression(n)||n.questionDotToken||prop(n.expression)!=='render'||!engines.has(id(n.expression.expression))||n.arguments.length!==1)return false;
+      if(!n||!ts.isCallExpression(n)||n.questionDotToken)return false;
+      const imp=imports.get(id(n.expression));
+      if(imp?.[0]==='@angular/ssr/node'&&imp[1]==='writeResponseToNodeResponse'&&n.arguments.length===2&&guarded.has(id(n.arguments[0]))&&res&&id(n.arguments[1])===res)return true;
+      if(res&&prop(n.expression)==='send'&&id(n.expression.expression)===res&&n.arguments.length===1){
+        const a=value(n.arguments[0]);if(!a||!a.includes(0))return false;
+        const src=a.filter(x=>x>0);
+        if(src.length)hits.push({rule_id:'JS.ANGULAR.SSR.REQUEST_TO_RESPONSE_HTML',line:line(n),source_lines:src.slice(0,16),source_lines_truncated:src.length>16});
+        return true;
+      }
+      if(prop(n.expression)!=='render'||!engines.has(id(n.expression.expression))||n.arguments.length!==1)return false;
       const f=fields(n.arguments[0]);if(!f||!f.has('document')||f.has('documentFilePath'))return false;
       for(const [k,v] of f){if(k!=='document'&&value(v)===null&&!(k==='bootstrap'&&imports.has(id(v))))return false;}
       const v=value(f.get('document'));if(v===null)return false;
+      if(v.includes(0))return false;
       if(v.length)hits.push({rule_id:'JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT',line:line(n),source_lines:v.slice(0,16),source_lines_truncated:v.length>16});
       return true;
     }
@@ -99,12 +112,14 @@ function analyzeAngular(ts,file,sf,r){
       if(ts.isVariableStatement(s)&&(s.declarationList.flags&ts.NodeFlags.Const)){
         let ok=true;
         for(const d of s.declarationList.declarations){
-          const n=id(d.name),v=value(d.initializer);
-          if(!n||names.has(n)||params.has(n)||env.has(n)||v===null){ok=false;break;}
-          env.set(n,v);
+          const n=id(d.name),init=d.initializer;
+          if(!n||names.has(n)||params.has(n)||env.has(n)||responses.has(n)||!init){ok=false;break;}
+          if(ts.isAwaitExpression(init)&&directCall(init.expression,'handle',nodeEngines)&&init.expression.arguments.length===1&&id(init.expression.arguments[0])===req){responses.add(n);continue;}
+          const v=value(init);if(v===null){ok=false;break;}env.set(n,v);
         }
         if(ok)continue;
       }
+      if(ts.isIfStatement(s)&&!s.elseStatement&&ts.isPrefixUnaryExpression(s.expression)&&s.expression.operator===ts.SyntaxKind.ExclamationToken&&responses.has(id(s.expression.operand))&&ts.isReturnStatement(s.thenStatement)&&!s.thenStatement.expression){guarded.add(id(s.expression.operand));continue;}
       if(ts.isReturnStatement(s)&&s.expression&&sink(s.expression))break;
       if(ts.isExpressionStatement(s)&&sink(s.expression))continue;
       r.partial=true;break;
@@ -112,6 +127,84 @@ function analyzeAngular(ts,file,sf,r){
   }
   r.hits=hits;
   return r;
+}
+
+
+function analyzeTransfer(ts,file,sf,r){
+  const fail=()=>({...r,partial:true,reason:'unmodeled_transfer_state',hits:[]});
+  const id=n=>n&&ts.isIdentifier(n)?n.text:null;
+  const prop=n=>n&&ts.isPropertyAccessExpression(n)&&!n.questionDotToken?n.name.text:null;
+  const str=n=>n&&ts.isStringLiteral(n);
+  const line=n=>sf.getLineAndCharacterOfPosition(n.getStart(sf)).line+1;
+  const imports=new Map(),names=new Set(),functions=[];
+  for(const s of sf.statements){
+    if(ts.isImportDeclaration(s)&&str(s.moduleSpecifier)&&s.importClause){
+      const c=s.importClause;
+      if(c.name){const n=id(c.name);if(names.has(n))return fail();names.add(n);}
+      if(c.namedBindings){
+        if(!ts.isNamedImports(c.namedBindings))return fail();
+        for(const e of c.namedBindings.elements){
+          const n=id(e.name);if(names.has(n))return fail();names.add(n);
+          if(!c.isTypeOnly&&!e.isTypeOnly&&s.moduleSpecifier.text==='@angular/core')imports.set(n,(e.propertyName||e.name).text);
+        }
+      }
+      continue;
+    }
+    if(ts.isEmptyStatement(s))continue;
+    if(!ts.isFunctionDeclaration(s)||!s.body||!s.name||s.parameters.length||s.asteriskToken||
+      !s.modifiers?.some(m=>m.kind===ts.SyntaxKind.ExportKeyword)||
+      s.modifiers?.some(m=>m.kind===ts.SyntaxKind.AsyncKeyword||m.kind===ts.SyntaxKind.DefaultKeyword))return fail();
+    const n=id(s.name);if(names.has(n))return fail();names.add(n);functions.push(s);
+  }
+  if(!functions.length)return fail();
+  const call=(n,member)=>n&&ts.isCallExpression(n)&&!n.questionDotToken&&imports.get(id(n.expression))===member;
+  const hits=[];
+  for(const fn of functions){
+    const bindings=new Set(),reqs=new Set(),guarded=new Set(),states=new Set(),keys=new Set(),env=new Map();
+    const value=n=>{
+      if(!n)return null;
+      if(str(n)||ts.isNoSubstitutionTemplateLiteral(n)||ts.isNumericLiteral(n)||[ts.SyntaxKind.TrueKeyword,ts.SyntaxKind.FalseKeyword,ts.SyntaxKind.NullKeyword].includes(n.kind))return [];
+      if(id(n))return env.get(id(n))??null;
+      if(ts.isCallExpression(n)&&!n.questionDotToken&&prop(n.expression)==='get'&&prop(n.expression.expression)==='headers'&&
+         guarded.has(id(n.expression.expression.expression))&&n.arguments.length===1&&str(n.arguments[0])){
+        return ['authorization','cookie','proxy-authorization'].includes(n.arguments[0].text.toLowerCase())?[line(n)]:[];
+      }
+      return null;
+    };
+    const isKey=n=>keys.has(id(n))||(call(n,'makeStateKey')&&n.arguments.length===1&&str(n.arguments[0]));
+    for(const s of fn.body.statements){
+      if(ts.isEmptyStatement(s))continue;
+      if(ts.isVariableStatement(s)&&(s.declarationList.flags&ts.NodeFlags.Const)){
+        let ok=true;
+        for(const d of s.declarationList.declarations){
+          const n=id(d.name),v=d.initializer;
+          if(!n||names.has(n)||bindings.has(n)||!v){ok=false;break;}
+          bindings.add(n);
+          if(call(v,'inject')&&v.arguments.length===1&&imports.get(id(v.arguments[0]))==='REQUEST')reqs.add(n);
+          else if(call(v,'inject')&&v.arguments.length===1&&imports.get(id(v.arguments[0]))==='TransferState')states.add(n);
+          else if(isKey(v))keys.add(n);
+          else{const a=value(v);if(a===null){ok=false;break;}env.set(n,a);}
+        }
+        if(ok)continue;
+      }
+      if(ts.isIfStatement(s)&&!s.elseStatement&&ts.isPrefixUnaryExpression(s.expression)&&s.expression.operator===ts.SyntaxKind.ExclamationToken&&reqs.has(id(s.expression.operand))&&ts.isReturnStatement(s.thenStatement)&&!s.thenStatement.expression){
+        guarded.add(id(s.expression.operand));continue;
+      }
+      if(ts.isExpressionStatement(s)&&ts.isCallExpression(s.expression)){
+        const c=s.expression;
+        if(!c.questionDotToken&&prop(c.expression)==='set'&&states.has(id(c.expression.expression))&&c.arguments.length===2&&isKey(c.arguments[0])){
+          const a=value(c.arguments[1]);
+          if(a!==null){
+            if(a.length)hits.push({rule_id:'JS.ANGULAR.SSR.CREDENTIAL_TO_TRANSFER_STATE',line:line(c),source_lines:a,source_lines_truncated:false});
+            continue;
+          }
+        }
+      }
+      if(ts.isReturnStatement(s)&&!s.expression)break;
+      r.partial=true;break;
+    }
+  }
+  r.hits=hits;return r;
 }
 
 function analyze(ts,file){
@@ -122,6 +215,7 @@ function analyze(ts,file){
   while(pending.length){const n=pending.pop();if(++nodes>10000)return {...r,partial:true,reason:'node_limit'};ts.forEachChild(n,c=>{pending.push(c);});}
   const fail=()=>({...r,partial:true,reason:'unmodeled_page',hits:[]});
   if(file.angular_server)return analyzeAngular(ts,file,sf,r);
+  if(file.angular_transfer)return analyzeTransfer(ts,file,sf,r);
   if(!file.frameworks?.includes('Next.js')||!file.pages_route)return fail();
   const line=n=>sf.getLineAndCharacterOfPosition(n.getStart(sf)).line+1;
   const id=n=>n&&ts.isIdentifier(n)?n.text:null;
