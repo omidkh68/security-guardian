@@ -33,7 +33,7 @@ The agent reads relevant sources, traces authorization and state changes, tests 
 
 ## Tracker
 
-`security_tracker.py` uses a sequential run index and cumulative ledger. Every run has immutable snapshots **after finish**, plus an event chronology, human-readable summary and evidence references. Stable IDs are derived from the control ID and a finding key; line numbers alone should not form identity. Tracker-generated status is only as reliable as the submitted evidence. It does not execute tests or corroborate results.
+`security_tracker.py` uses a sequential run index and cumulative ledger. Every run has immutable snapshots **after finish**, plus an event chronology, human-readable summary and evidence references. Stable IDs are derived from the control ID and a finding key; line numbers alone should not form identity. Tracker-generated status is only as reliable as the submitted evidence. Default tracker commands do not execute tests; the explicitly authorized `run-test` command delegates to a local adapter. Neither manual evidence nor local receipts constitute independent attestation.
 
 ## Lifecycle
 
@@ -49,6 +49,6 @@ The agent reads relevant sources, traces authorization and state changes, tests 
 
 ## Optional verification adapter
 
-The [local verification runner](verification-runner.md) is a separate opt-in component alongside the original three elements. It runs a selected trusted Python unittest module, records actual execution counts, bounded receipt metadata and selected-file fingerprints before/after. The Tracker remains separate; receipts do not establish VERIFIED_FIXED until a later integration validates scope, freshness and finding relevance.
+The [local verification runner](verification-runner.md) is a separate opt-in component alongside the original three elements. It runs a selected trusted Python unittest module, records actual execution counts, bounded receipt metadata and selected-file fingerprints before/after. The tracker integration validates run, finding, selected scope and freshness; a passing receipt alone never changes finding status.
 
 The tracker now also offers an explicitly authorized `run-test` command, which delegates to the local adapter and records evidence quality. Default commands remain non-executing. See [tracker-bound execution evidence](tracker-execution-evidence.md).

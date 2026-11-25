@@ -1,6 +1,6 @@
 # Persistent security issue tracking — mandatory workflow
 
-**Purpose:** Maintain truthful, durable and versioned findings on every Skill execution, regardless of whether a fix was possible. This is a reporting tool; it does not execute tests or change source code. Storage is always `<repo>/.security-guardian/`, independent of Skill installation location, unless you intentionally choose a different repository root.
+**Purpose:** Maintain truthful, durable and versioned findings on every Skill execution, regardless of whether a fix was possible. Default commands are reporting-only. The separate explicitly authorized `run-test` command delegates to a trusted local Python unittest adapter and records a receipt; test code may have side effects. Storage is always `<repo>/.security-guardian/`, independent of Skill installation location, unless you intentionally choose a different repository root.
 
 ## Layout / contract
 
@@ -107,7 +107,7 @@ Do not fabricate verification evidence. In a second run, reporting a regression 
 ]
 ```
 
-Commands are plain metadata; they are **never executed by this script**. Log both passed and failed tests, including expected/observed data when safe. Test result `PASS` must correspond to real observation. To log an interrupted test use `BLOCKED` or `NOT_RUN` with a reason.
+Commands submitted to `test` are plain metadata; they are **never executed by that command**. Log both passed and failed tests, including expected/observed data when safe. Test result `PASS` must correspond to real observation. To log an interrupted test use `BLOCKED` or `NOT_RUN` with a reason.
 
 ## Decision and privacy rules
 
@@ -176,3 +176,7 @@ The finding's *security status* can remain NEEDS_REVIEW pending tests against
 the actual reverse proxy; matching a catalog ID alone proves nothing.
 For old BIZ-01 records, reclassify explicitly in a new run and preserve its
 original NEEDS_REVIEW status.
+
+## Direct local execution evidence (`run-test`)
+
+Use only in a resolved fix/verify run with an existing confirmed or fixed-unverified finding and explicit user consent. Example: `python3 "$TRACKER" run-test --root . --run <run-id> --finding-id <finding-id> --test-file api/test_security.py --file api/test_security.py --file api/app.py --timeout 15 --authorize-local-test`. Include every recorded fix file and relevant trusted test input inside selected components. Inspect JSON result; exit 0 means the attempt was recorded. `LOCAL_EXECUTION` distinguishes the directly collected receipt from `MANUAL_REPORTED`; it does not imply independent attestation. To use a passing receipt for an explicit verified transition, give the linked test ID and `verification.security_assertion_review` describing the relevant assertion. The tracker rechecks current fingerprints, run/finding/scope identity and counts; do not reuse stale receipts. Never run untrusted tests or production operations. See human-facing `docs/tracker-execution-evidence.md` in the repository.

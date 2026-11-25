@@ -447,7 +447,9 @@ def record(args):
                     if field not in row and previous.get(field) is not None:
                         row[field] = previous[field]
             entries.append(validate_finding(row))
-        # Validate target ID matches existing and don't allow duplicate conflicting IDs in same batch.
+        # Disallow ambiguous finding transitions in the same batch.
+        if len({e['id'] for e in entries}) != len(entries):
+            raise ValueError('Duplicate finding IDs in record batch')
         for e in entries:
             if e['id'] in ledger['findings'] and ledger['findings'][e['id']]['status'] == 'SUPERSEDED':
                 raise ValueError(f"Finding ID {e['id']} was reclassified; use {ledger['findings'][e['id']].get('superseded_by')}")
@@ -478,8 +480,8 @@ def record(args):
                         raise ValueError('Local execution requires explicit security assertion review')
                     existing = ledger['findings'].get(e['id'])
                     validate_execution_receipt(root, run, existing, test['execution_receipt'])
-                    if e['location'] != existing['location'] or e['fix'] != existing['fix']:
-                        raise ValueError('Finding location or fix changed after execution; rerun')
+                    if any(e[k] != existing[k] for k in ('location', 'title', 'fix')):
+                        raise ValueError('Finding title, location or fix changed after execution; rerun')
                 verification['evidence_quality'] = quality
                 verification['independently_verified_fix'] = False
         for e in entries:
@@ -548,6 +550,7 @@ def validate_execution_receipt(root, run, finding, receipt):
     if (receipt.get('schema_version') != 1 or receipt.get('adapter') != 'python-unittest-v1'
             or receipt.get('run_id') != run['id'] or receipt.get('finding_id') != finding['id']
             or receipt.get('finding_stamp') != _finding_stamp(finding)
+            or receipt.get('scope_stamp') != _finding_stamp(run.get('scope_resolution'))
             or receipt.get('result') != 'PASS' or receipt.get('executed') is not True
             or type(receipt.get('exit_code')) is not int or receipt['exit_code'] != 0
             or receipt.get('independently_verified_fix') is not False):
@@ -596,7 +599,8 @@ def run_test(args):
         scope = run['scope_resolution']
     # Do not hold the ledger lock while executing user-authorized test code.
     receipt = security_test_runner.run(args)
-    receipt.update({'run_id': args.run, 'finding_stamp': stamp})
+    receipt.update({'run_id': args.run, 'finding_stamp': stamp,
+                    'scope_stamp': _finding_stamp(scope)})
     with locked(store):
         index, ledger = load_state(store)
         rdir, run = ensure_run(store, index, args.run)

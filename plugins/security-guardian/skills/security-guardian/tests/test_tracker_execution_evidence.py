@@ -18,10 +18,12 @@ class TrackerExecutionTests(unittest.TestCase):
         self.api = self.root/'api'
         self.api.mkdir()
         (self.api/'package.json').write_text('{"dependencies":{"@nestjs/core":"11"}}')
-        (self.api/'app.py').write_text('VALUE = 1\n')
+        (self.api/'app.py').write_text("def accepts_update(fields): return set(fields) <= {'display_name'}\n")
         (self.api/'test_security.py').write_text(
-            'import unittest\nclass Tests(unittest.TestCase):\n'
-            '    def test_guard(self): self.assertEqual(1, 1)\n')
+            'import unittest\nfrom app import accepts_update\nclass Tests(unittest.TestCase):\n'
+            '    def test_guard(self):\n'
+            '        self.assertTrue(accepts_update({"display_name": "test"}))\n'
+            '        self.assertFalse(accepts_update({"role": "admin"}))\n')
         self.other = self.root/'web'
         self.other.mkdir()
         (self.other/'package.json').write_text('{"dependencies":{"react":"19"}}')
@@ -69,7 +71,7 @@ class TrackerExecutionTests(unittest.TestCase):
         self.assertEqual(test['execution_receipt']['finding_id'],self.ident)
         self.assertEqual(test['execution_receipt']['counts']['tests_run'],1)
         self.verified(result['test_id'],expected=2)
-        (self.api/'app.py').write_text('VALUE = 2\n')
+        (self.api/'app.py').write_text("# changed after test\ndef accepts_update(fields): return set(fields) <= {'display_name'}\n")
         self.verified(result['test_id'],review='Reviewed synthetic assertion relevance',expected=2)
         result=self.execute()
         self.verified(result['test_id'],review='Reviewed synthetic assertion relevance')
@@ -97,6 +99,24 @@ class TrackerExecutionTests(unittest.TestCase):
         self.verified(r['test_ids'][0])
         ledger=json.loads((self.root/'.security-guardian/ledger.json').read_text())
         self.assertEqual(ledger['findings'][self.ident]['verification']['evidence_quality'],'MANUAL_REPORTED')
+
+    def test_invalid_receipt_fields_are_rejected(self):
+        result = self.execute()
+        index_path = self.root/'.security-guardian/index.json'
+        original = index_path.read_text()
+        for fields in ({'run_id':'other-run'}, {'finding_id':'SG-API-01-000000000000'},
+                       {'scope_stamp':'0'*64}, {'adapter':'unknown'}, {'schema_version':2},
+                       {'exit_code':False}, {'result':'BLOCKED'}, {'executed':False},
+                       {'counts':{'tests_run':0}}, {'fingerprint_before':None},
+                       {'started_at':'bad timestamp'}, {'output_sha256':'invalid'}):
+            with self.subTest(fields=fields):
+                index = json.loads(original)
+                run = next(x for x in index['runs'] if x['id'] == self.run_id)
+                run['tests'][-1]['execution_receipt'].update(fields)
+                index_path.write_text(json.dumps(index))
+                self.verified(result['test_id'],review='Reviewed synthetic assertion relevance',expected=2)
+        index_path.write_text(original)
+        self.verified(result['test_id'],review='Reviewed synthetic assertion relevance')
 
     def test_failed_execution_never_verifies_and_finalized_run_is_immutable(self):
         (self.api/'test_security.py').write_text(

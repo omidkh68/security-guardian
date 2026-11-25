@@ -9,7 +9,7 @@ Security Guardian is for defensive auditing and remediation of software **you ow
 | Component | Project files | Local history | External network | Production operations |
 |---|---|---|---|---|
 | Python scanner | Reads eligible sources/configuration | None by itself | None | None |
-| Python tracker | Reads a small subset, including Git metadata; writes evidence | Writes `.security-guardian/` | None | None |
+| Python tracker | Default commands read a small subset and write evidence; authorized `run-test` delegates to trusted test code | Writes `.security-guardian/` | No network by default; executed test code is not sandboxed | Not authorized |
 | Claude Code agent | Subject to platform/user permissions | Writes report and may edit source under `fix` | Only via separately authorized tools | Requires separate user approval |
 
 ## Threats to consider
