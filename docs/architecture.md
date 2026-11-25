@@ -46,3 +46,7 @@ The agent reads relevant sources, traces authorization and state changes, tests 
 - Heuristic findings are not vulnerability proof; `VERIFIED_FIXED` requires actual executed verification evidence.
 - Tracking artifacts can be sensitive and should be access-controlled, kept out of public repositories and rotated/retained according to policy.
 - A Python script cannot verify server firewall, cloud IAM, real key storage or deployed runtime controls by reading source alone.
+
+## Optional verification adapter
+
+The [local verification runner](verification-runner.md) is a separate opt-in component alongside the original three elements. It runs a selected trusted Python unittest module, records actual execution counts, bounded receipt metadata and selected-file fingerprints before/after. The Tracker remains separate; receipts do not establish VERIFIED_FIXED until a later integration validates scope, freshness and finding relevance.

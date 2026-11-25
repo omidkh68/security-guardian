@@ -384,6 +384,7 @@ GitHub Actions runs the offline test suite on three Python versions, checks the 
 | [Tracking](docs/tracking.md) | Status meanings, versioning, reasons, failed fixes and regression IDs |
 | [Security model](docs/security-model.md) | Safe operation, sensitive artifacts and limits |
 | Verification fingerprints ([EN](docs/verification-fingerprint.md), [FA](docs/verification-fingerprint-FA.md)) | Selected-file evidence binding; not an independent runner |
+| Local verification runner ([EN](docs/verification-runner.md), [FA](docs/verification-runner-FA.md)) | Explicitly authorized Python unittest execution; receipts are not verified fixes |
 | [Troubleshooting](docs/troubleshooting.md) | Common installation or tracking problems |
 | [Playbook contribution](docs/contributing-playbook.md) | Add or improve controls safely |
 | [Source and provenance](docs/provenance.md) | Standards, baseline and interpretation of difficulty scores |
