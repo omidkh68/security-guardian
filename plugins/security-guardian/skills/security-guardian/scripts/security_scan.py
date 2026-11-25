@@ -87,6 +87,36 @@ MULTILINE_LABELS = {
 }
 MAX_MULTILINE_CHARS = 4096
 
+# Initial framework-neutral pack: stable rule identities are separate from
+# legacy handbook control IDs. Existing regexes and labels remain canonical
+# so historical tracker finding keys do not change.
+WEB_CORE_PACK = 'web-core'
+WEB_CORE_VERSION = 1
+WEB_CORE_FRAMEWORKS = {'Angular', 'React', 'Next.js', 'Vue', 'Nuxt', 'Svelte', 'SvelteKit'}
+WEB_CORE_SUFFIXES = {'.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'}
+WEB_CORE_RULES = {
+    ('ANG-01', 'Direct assignment to innerHTML'): 'WEB.DOM.INNER_HTML',
+    ('ANG-04', 'Long-lived browser token storage hint'): 'WEB.STORAGE.TOKEN',
+    ('ANG-11', 'Dynamic browser location navigation'): 'WEB.NAV.DYNAMIC',
+}
+
+
+def _web_core(component):
+    return ('frontend' in component['roles']
+            and bool(WEB_CORE_FRAMEWORKS.intersection(component['frameworks'])))
+
+
+def _rules_for_file(p, allowed_domains, web_core):
+    """Select once per inspected file; preserve unscoped legacy behavior."""
+    for cid, label, regex, extensions, confidence, severity in PATTERNS:
+        pack_rule = WEB_CORE_RULES.get((cid, label)) if web_core and p.suffix in WEB_CORE_SUFFIXES else None
+        if pack_rule is None:
+            if allowed_domains is not None and cid.split('-')[0] not in allowed_domains:
+                continue
+            if p.suffix not in extensions and p.name not in extensions:
+                continue
+        yield cid, label, regex, confidence, severity, pack_rule
+
 
 def _multiline_window(line, following):
     """Return a bounded two-line window, or None at an obvious barrier."""
@@ -416,6 +446,9 @@ def process(root:Path, profile=None, components=()):
         coverage['skipped']['outside_selected_scope']=len(files)-len(included)
         coverage['scanned_files']=len(included)
         files=included
+    web_roots = {root_id for root_id, component in selected_by_root.items() if _web_core(component)}
+    web_files = 0
+    web_counts = Counter()
     rels={p.relative_to(root).as_posix():p for p in files}
     names=set(rels)
     evidence=[]
@@ -473,19 +506,22 @@ def process(root:Path, profile=None, components=()):
         if re.search(r'(?i)\b(webhook)\b',fn+' '+content[:100000]):features.add('webhook')
         # Skip test fixtures where suspicious examples are intentional; keep real source.
         is_test=_test_file(fn)
-        allowed_domains=_domains(selected_by_root[_owner(fn,scope['components'])]) if scope else None
+        owner = _owner(fn, scope['components']) if scope else None
+        allowed_domains = _domains(selected_by_root[owner]) if scope else None
+        web_core = owner in web_roots
         if is_test:
             coverage['skipped']['test_fixture']=coverage['skipped'].get('test_fixture',0)+1
         else:
             coverage['inspected_files'] += 1
+            rules = tuple(_rules_for_file(p, allowed_domains, web_core))
+            if web_core and p.suffix in WEB_CORE_SUFFIXES:
+                web_files += 1
             source_lines = content.splitlines()
             for lineno,line in enumerate(source_lines,1):
                 if not line.strip() or line.lstrip().startswith(('*','//','#','<!--')):continue
                 window = (_multiline_window(line, source_lines[lineno])
                           if lineno < len(source_lines) else None)
-                for cid,label,regex,extensions,confidence,severity in PATTERNS:
-                    if allowed_domains is not None and cid.split('-')[0] not in allowed_domains:continue
-                    if p.suffix not in extensions and p.name not in extensions:continue
+                for cid,label,regex,confidence,severity,pack_rule in rules:
                     matched = bool(regex.search(line))
                     if not matched and window is not None and label in MULTILINE_LABELS:
                         # Only count matches starting on this line and crossing
@@ -494,10 +530,15 @@ def process(root:Path, profile=None, components=()):
                                       for m in regex.finditer(window))
                     if matched:
                         signal_counts[cid] += 1
+                        if pack_rule:
+                            web_counts[pack_rule] += 1
                         if len(evidence) < MAX_SIGNALS or len(control_evidence[cid]) < MAX_CONTROL_SIGNALS:
                             entry={'control_id':cid,'signal':label,'path':fn,'line':lineno,
                                 'confidence':confidence,'suggested_severity':severity,
                                 'status':'HEURISTIC_REVIEW_ONLY'}
+                            if pack_rule:
+                                entry.update({'pack_id': WEB_CORE_PACK, 'pack_version': WEB_CORE_VERSION,
+                                              'rule_id': pack_rule, 'control_mapping': 'LEGACY_COMPATIBILITY'})
                             if len(evidence) < MAX_SIGNALS:
                                 evidence.append(entry)
                             if len(control_evidence[cid]) < MAX_CONTROL_SIGNALS:
@@ -527,7 +568,9 @@ def process(root:Path, profile=None, components=()):
                 if needed not in roles:
                     status,reason=('NEEDS_DISCOVERY','Unknown stack: agent review must establish applicability.') if not roles else (('CROSS_REPO','Backend enforcement may live outside selected components.') if d in {'API','BIZ'} else ('OUT_OF_SCOPE','Layer not selected for this run.'))
                 elif d=='ANG' and 'Angular' not in stack:
-                    status,reason='NEEDS_DISCOVERY','Non-Angular frontend requires general security review; no dedicated pack in this revision.'
+                    status,reason='NEEDS_DISCOVERY','Non-Angular frontend requires general security review; no dedicated framework pack in this revision.'
+                    if web_roots and id in {key[0] for key in WEB_CORE_RULES}:
+                        reason='Common web-core indicator maps to this legacy control for triage; review actual applicability, not Angular-specific acceptance.'
                 elif d in {'API','BIZ'} and 'NestJS' not in stack:
                     status,reason='NEEDS_DISCOVERY','Non-Nest backend: verify applicable controls in actual framework; no dedicated pack in this revision.'
                 elif d=='MOB' and 'Flutter' not in stack:
@@ -559,6 +602,16 @@ def process(root:Path, profile=None, components=()):
       'timestamp_utc':datetime.now(timezone.utc).isoformat()}
     if scope:
         summary['scope_resolution']=scope
+        summary['web_core'] = {
+            'pack_id': WEB_CORE_PACK, 'pack_version': WEB_CORE_VERSION,
+            'selected_roots': sorted(web_roots),
+            'status': 'HEURISTIC_REVIEW_ONLY' if web_roots else 'NOT_SELECTED',
+            'inspected_eligible_files': web_files,
+            'rules': [{'rule_id': rule, 'legacy_control_id': cid, 'matches': web_counts[rule]}
+                      for (cid, label), rule in WEB_CORE_RULES.items()],
+            'limitations': ['JS/TS text indicators only; no template, data-flow or client/server semantic analysis.',
+                            'Framework discovery does not certify version compatibility or vulnerability coverage.'],
+        }
     return {'summary':summary,'signals':evidence,'controls':result,
       'limitations':['Regex signatures are not vulnerability proof.',
       'No network requests or dynamic tests were executed.',
@@ -582,6 +635,12 @@ def markdown(result):
         lines += [f"- Selected profile: {scope['selected_profile']}",
                   f"- Selected roots: {', '.join(scope['selected_roots'])}",
                   f"- Excluded component roots: {', '.join(scope['excluded_components']) or 'None'}",'']
+    if s.get('web_core'):
+        pack = s['web_core']
+        lines += [f"- Web core v{pack['pack_version']}: {pack['status']}",
+                  f"- Web core component roots: {', '.join(pack['selected_roots']) or 'None'}",
+                  f"- Web core eligible files inspected: {pack['inspected_eligible_files']}",
+                  '- Web core uses legacy control mappings for triage only; no framework-specific verification.', '']
     for status,qty in sorted(s['applicability'].items()):lines.append(f'- {status}: {qty}')
     lines+=['', '## Scan coverage and limitations', '']
     lines += [f'- {key}: {value}' for key,value in sorted(s['scan_coverage']['skipped'].items())]

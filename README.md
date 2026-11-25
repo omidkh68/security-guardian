@@ -423,3 +423,5 @@ See the [engineering wiki source](docs/wiki/SG-Home.md) for the v1.2.1 baseline,
 The [tracker-bound execution evidence](docs/tracker-execution-evidence.md) command distinguishes direct local execution from manually reported evidence. [فارسی](docs/tracker-execution-evidence-FA.md).
 
 For contributors: [private npm/npx distribution preview](docs/npm-distribution.md) ([فارسی](docs/npm-distribution-FA.md)) — local tarball only; no public registry package has been published by this work.
+
+[Web core indicator pack](docs/web-core.md) ([فارسی](docs/web-core-FA.md)): scoped browser candidates across discovered web frameworks; not framework-specific verification.
