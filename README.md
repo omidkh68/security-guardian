@@ -425,3 +425,5 @@ The [tracker-bound execution evidence](docs/tracker-execution-evidence.md) comma
 For contributors: [private npm/npx distribution preview](docs/npm-distribution.md) ([فارسی](docs/npm-distribution-FA.md)) — local tarball only; no public registry package has been published by this work.
 
 [Web core indicator pack](docs/web-core.md) ([فارسی](docs/web-core-FA.md)): scoped browser candidates across discovered web frameworks; not framework-specific verification.
+
+[Backend core indicator pack](docs/backend-core.md) ([فارسی](docs/backend-core-FA.md)): scoped Node HTTP/API candidates; not authorization or framework-specific verification.
