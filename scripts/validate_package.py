@@ -2,6 +2,7 @@
 """Strict, dependency-free structural validation of the OSS package."""
 from __future__ import annotations
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -50,6 +51,8 @@ def validate_documentation(tracked, root=ROOT):
         import subprocess
         tracked = subprocess.check_output(['git', '-C', str(ROOT), 'ls-files'], text=True).splitlines()
         validate_documentation(tracked)
+        if os.environ.get('SG_DOC_BASE'):
+            validate_documentation_changes(ROOT, os.environ['SG_DOC_BASE'])
         for rel in tracked:
             p = Path(rel)
             assert '__pycache__' not in p.parts and p.suffix != '.pyc', f'generated artifact tracked {rel}'
@@ -122,6 +125,30 @@ if __name__ == '__main__':
     assert missing == set(declared), 'translation backlog mismatch: ' + str(sorted(missing ^ set(declared)))
     for p in persian:
         assert re.search(r'[\u0600-\u06ff]', (root/p).read_text(encoding='utf-8')), 'empty or non-Persian translation: ' + p
+
+
+def validate_documentation_changes(root, base):
+    import subprocess
+    def git(*args):
+        return subprocess.check_output(['git', '-C', str(root), *args], text=True)
+    assert re.fullmatch(r'[0-9a-f]{40}', base), 'invalid documentation comparison base'
+    current = set(json.loads((root/'docs/translation-backlog.json').read_text())['missing_persian'])
+    # The migration PR introduces the initial inventory; later PRs may only shrink it.
+    old = subprocess.run(['git', '-C', str(root), 'show', base + ':docs/translation-backlog.json'],
+                         capture_output=True, text=True)
+    if old.returncode == 0:
+        previous = set(json.loads(old.stdout)['missing_persian'])
+        assert current <= previous, 'new translation backlog entries are forbidden'
+    changed = set(git('diff', '--name-only', '--no-renames', '--diff-filter=AM',
+                      base, 'HEAD').splitlines())
+    english = {p for p in changed if p.endswith('.md') and not p.endswith('-FA.md')}
+    for p in english:
+        assert p[:-3] + '-FA.md' in changed, 'English documentation changed without Persian companion: ' + p
+    skill_prefix = 'plugins/security-guardian/skills/security-guardian/'
+    runtime_changed = any(p.startswith(skill_prefix) and '/tests/' not in p
+                          and not p.endswith('.md') for p in changed)
+    if runtime_changed:
+        assert english, 'Skill runtime change requires relevant EN/FA documentation'
 
 
 def validate():
