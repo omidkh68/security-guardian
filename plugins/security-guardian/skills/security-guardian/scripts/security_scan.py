@@ -600,6 +600,7 @@ def preview_framework(root, framework):
             'matching_roots': [c['root'] for c in matches],
             'status': 'NEEDS_SELECTION', 'selected_roots': [], 'selected_components': [],
             'selected_domains': [], 'selected_profile': None,
+            'excluded_components': [c['root'] for c in preview['components']],
             'reasons': ['Framework match is missing, multiple, mixed, incomplete or changed; choose explicit verified roots.']}
 
 

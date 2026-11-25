@@ -3,6 +3,8 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import subprocess
+import sys
 import unittest
 
 spec = importlib.util.spec_from_file_location('scope_scanner', Path(__file__).resolve().parents[1]/'scripts/security_scan.py')
@@ -55,6 +57,17 @@ class FrameworkIntentTests(unittest.TestCase):
         result = scan.preview_framework(self.root,'React')
         self.assertEqual(result['status'],'NEEDS_SELECTION')
         self.assertEqual(result['selected_roots'],[])
+
+    def test_unmatched_single_component_and_cli_guard(self):
+        self.package('other','vue')
+        result=scan.preview_framework(self.root,'React')
+        self.assertEqual(result['status'],'NEEDS_SELECTION')
+        self.assertEqual(result['selected_roots'],[])
+        self.assertEqual(result['excluded_components'],['other'])
+        cp=subprocess.run([sys.executable,str(Path(scan.__file__)), '--root',str(self.root),
+                           '--framework','React'],capture_output=True,text=True,timeout=15)
+        self.assertEqual(cp.returncode,2)
+        self.assertIn('--framework requires --discover',cp.stderr)
 
     def test_workspace_container_not_selected(self):
         self.package('.','react')
