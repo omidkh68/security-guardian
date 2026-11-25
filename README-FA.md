@@ -419,4 +419,4 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 
 فرمان [شواهد اجرای متصل به Tracker](docs/tracker-execution-evidence-FA.md) اجرای مستقیم محلی را از شواهد دستی تفکیک می‌کند. [English](docs/tracker-execution-evidence.md).
 
-برای مشارکت‌کنندگان: [پیش‌نمایش خصوصی توزیع npm/npx](docs/npm-distribution-FA.md) — فقط tarball محلی؛ در این مرحله بسته عمومی در رجیستری منتشر نشده است.
+برای مشارکت‌کنندگان: [پیش‌نمایش خصوصی توزیع npm/npx](docs/npm-distribution-FA.md) ([English](docs/npm-distribution.md)) — فقط tarball محلی؛ در این مرحله بسته عمومی در رجیستری منتشر نشده است.
