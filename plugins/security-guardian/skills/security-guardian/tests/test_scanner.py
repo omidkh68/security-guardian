@@ -89,6 +89,67 @@ class ScanTests(unittest.TestCase):
             self.assertEqual(result['signals'], [])
             self.assertEqual(result['summary']['heuristic_signals'], 0)
 
+    def test_multiline_selected_rules_and_start_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root/'package.json').write_text('{"dependencies":{"@nestjs/core":"11"}}')
+            (root/'main.ts').write_text(
+                'new ValidationPipe({\n'
+                '  whitelist:\n'
+                '    false,\n'
+                '  forbidNonWhitelisted\n'
+                '    : false\n'
+                '});\n'
+                'prisma.$queryRawUnsafe\n'
+                '  (query);\n'
+            )
+            found = scan.process(root, 'backend')['signals']
+            self.assertEqual(
+                [(s['control_id'], s['line']) for s in found],
+                [('API-01', 2), ('API-01', 4), ('API-07', 7)]
+            )
+            self.assertTrue(all(s['status'] == 'HEURISTIC_REVIEW_ONLY' for s in found))
+
+    def test_multiline_frontend_and_no_next_line_duplicate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root/'package.json').write_text('{"dependencies":{"@angular/core":"22"}}')
+            (root/'app.ts').write_text(
+                'element.innerHTML\n'
+                '  = payload;\n'
+                'const unrelated = 1;\n'
+                'another.innerHTML = payload;\n'
+                'whitelist:\n'
+                '  false;\n'
+            )
+            found = scan.process(root, 'frontend')['signals']
+            self.assertEqual(
+                [(s['control_id'], s['line']) for s in found],
+                [('ANG-01', 1), ('ANG-01', 4)]
+            )
+
+    def test_multiline_barriers_and_safe_negative(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root/'main.ts').write_text(
+                'whitelist:\n'
+                '  true,\n'
+                'whitelist:\n'
+                '\n'
+                '  false,\n'
+                'whitelist:\n'
+                '  // comment\n'
+                '  false,\n'
+                'whitelist: // comment\n'
+                '  false,\n'
+                'whitelist:\n'
+                '  unrelated = false;\n'
+                'whitelist:' + ' ' * scan.MAX_MULTILINE_CHARS + '\n'
+                '  false;\n'
+                'const x = 0;\n'
+            )
+            self.assertEqual(scan.process(root)['signals'], [])
+
     def test_no_secret_contents_echoed_and_no_source_write(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
