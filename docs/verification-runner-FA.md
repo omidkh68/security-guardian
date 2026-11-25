@@ -36,3 +36,23 @@ Timeout بین ۱ تا ۶۰ ثانیه است؛ خروجی ترکیبی ذخیر
 `python3 scripts/validate_package.py` و `python3 -m unittest discover -s plugins/security-guardian/skills/security-guardian/tests -v` را اجرا کنید. تست‌های مصنوعی مجوز، محدوده، موفقیت/شکست واقعی، تست صفر/Skip، Timeout، سورس تغییرکرده و سقف خروجی مستقیم را بررسی می‌کنند. Windows و Adapterهای تخصصی فریم‌ورک هنوز پیاده‌سازی نشده‌اند. در صورت نیاز Adapter مستقل، تست‌ها و مستندات را بازگردانید؛ رکوردهای Ledger قبلی مهاجرت نمی‌کنند.
 
 برای ثبت شواهد در اجرای فعال، به‌جای واردکردن JSON مستقل، از [یکپارچه‌سازی مجاز Tracker](tracker-execution-evidence-FA.md) استفاده کنید. فرمان مستقل همچنان وضعیت یافته را تغییر نمی‌دهد.
+
+## Adapter محلی Node.js (#35)
+
+گزینه `--adapter node-test-v1` باینری قابل اعتماد Node 22/24 خارج از پروژه در PATH و یک ماژول تست صریح JS/MJS/CJS با نام `*.test.*` یا `test_*` را انتخاب می‌کند. npm script، نصب، Shell دلخواه یا اجرای Production ندارد. Worker ثابت خلاصه نهایی node:test را خوانده، تعدادها را اعتبارسنجی و شکست/لغو/Skip/Todo را نگاشت می‌کند؛ stdout تست را برنمی‌گرداند. نسخه Runtime و Fingerprint ورودی‌های انتخاب‌شده در Receipt هستند. Node غایب/ناسازگار BLOCKED، تست صفر یا Skip/Todo برابر INCOMPLETE و شکست FAIL است. محدودیت گروه پردازه، خروجی و زمان مانند Python است. فقط Fixture محلی بازبینی‌شده را اجرا کنید؛ Sandbox، Attestation احرازشده یا اثبات امنیت کل Framework نیست.
+
+```bash
+python3 <skill-dir>/scripts/security_tracker.py run-test --root . --run <run-id> --finding-id <finding-id> --adapter node-test-v1 --test-file api/guard.test.mjs --file api/guard.test.mjs --file api/guard.mjs --timeout 15 --authorize-local-test
+```
+
+```mermaid
+flowchart TD
+ A[مجوز صریح و ورودی انتخاب‌شده] --> B[Fingerprint و محدوده]
+ B --> C[Adapter ثابت Python یا Node]
+ C --> D[خلاصه تست واقعی و Hash خروجی محدود]
+ D --> E[مقایسه Digest ورودی جاری]
+ E --> F[Receipt در Tracker و بازبینی Assertion]
+ F --> G[تغییر صریح وضعیت؛ بدون تأیید خودکار]
+```
+
+Fixture رگرسیون Assertion مالک/غیرمالک، تغییر ورودی تست، شکست، Skip، Todo، Component خارج از محدوده و اتصال صریح Receipt را بررسی می‌کند. Adapter مرورگر/Flutter/Android/JVM و پذیرش واقعی SSR/cache/race باقی است. شواهد شکست قبل از اصلاح و کفایت پوشش نیازمند نظر بازبین است؛ ادعای پذیرش کامل RFC وجود ندارد.

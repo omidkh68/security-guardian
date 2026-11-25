@@ -11,6 +11,7 @@ from pathlib import Path
 import platform
 import re
 import selectors
+import shutil
 import signal
 import subprocess
 import sys
@@ -53,6 +54,45 @@ sys.exit(0 if result.wasSuccessful() else 1)
 """
 
 
+NODE_WORKER = r"""
+import {run} from 'node:test';
+const summaries=[];
+try {
+  for await(const event of run({files:[process.argv[1]],concurrency:1})) {
+    if(event.type==='test:summary' && !event.data.file) summaries.push(event.data);
+  }
+  if(summaries.length!==1)throw Error('summary');
+  const {counts:c,success}=summaries[0];
+  if(typeof success!=='boolean'||!c||!['tests','failed','passed','cancelled','skipped','todo'].every(k=>Number.isSafeInteger(c[k])&&c[k]>=0)
+       ||c.tests!==c.failed+c.passed+c.cancelled+c.skipped+c.todo)throw Error('counts');
+  const payload={tests_run:c.tests,failures:c.failed,errors:c.cancelled,skipped:c.skipped,
+      expected_failures:c.todo,unexpected_successes:0};
+  console.log(JSON.stringify(payload));
+  process.exitCode=success&&!c.failed&&!c.cancelled?0:1;
+} catch {console.log(JSON.stringify({adapter_error:true}));process.exitCode=2;}
+"""
+
+ADAPTERS=('python-unittest-v1','node-test-v1')
+
+def valid_test_file(path,adapter):
+    if not isinstance(path,str):return False
+    p=Path(path)
+    if adapter=='python-unittest-v1':return p.name.startswith('test_') and p.suffix=='.py'
+    if adapter=='node-test-v1':return p.suffix in {'.js','.mjs','.cjs'} and (p.stem.endswith('.test') or p.stem.startswith('test_'))
+    return False
+
+def _node_runtime(root):
+    binary=shutil.which('node')
+    if not binary:raise ValueError('Node unavailable')
+    binary=Path(binary).resolve(strict=True)
+    if binary.is_relative_to(root):raise ValueError('Project-local executable refused')
+    cp=subprocess.run([str(binary),'--version'],cwd=root,stdin=subprocess.DEVNULL,
+        capture_output=True,timeout=3,env={k:os.environ[k] for k in ('PATH','LANG','LC_ALL') if k in os.environ})
+    version=cp.stdout.decode('ascii').strip()
+    if cp.returncode or not re.fullmatch(r'v(?:22|24)\.\d+\.\d+',version):
+        raise ValueError('Node 22/24 required')
+    return str(binary),version
+
 def _now():
     return datetime.now(timezone.utc).isoformat()
 
@@ -70,11 +110,12 @@ def _terminate(proc):
         return None
 
 
-def _execute(root, test_file, timeout):
+def _execute(root, test_file, timeout, node=None):
     """Bound wall time and retained output; never return raw worker output."""
     started = time.monotonic()
     proc = subprocess.Popen(
-        [sys.executable, '-I', '-B', '-c', WORKER, str(root), test_file],
+        ([node, '--input-type=module', '-e', NODE_WORKER, str(root/test_file)] if node else
+         [sys.executable, '-I', '-B', '-c', WORKER, str(root), test_file]),
         cwd=root, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT, start_new_session=True,
         env={k: os.environ[k] for k in ('PATH', 'LANG', 'LC_ALL') if k in os.environ})
@@ -139,7 +180,8 @@ def _execute(root, test_file, timeout):
 
 
 def run(args):
-    receipt = {'schema_version': 1, 'adapter': 'python-unittest-v1',
+    adapter=getattr(args,'adapter','python-unittest-v1')
+    receipt = {'schema_version': 1, 'adapter': adapter,
                'python_version': platform.python_version(), 'finding_id': args.finding_id,
                'test_file': args.test_file, 'timeout_seconds': args.timeout,
                'started_at': _now(), 'finished_at': None, 'result': 'BLOCKED',
@@ -155,14 +197,17 @@ def run(args):
             receipt['reason'] = 'Invalid finding ID.'
         elif not 1 <= args.timeout <= MAX_TIMEOUT:
             receipt['reason'] = 'Timeout outside allowed range.'
-        elif (not Path(args.test_file).name.startswith('test_')
-              or Path(args.test_file).suffix != '.py'
-              or args.test_file not in args.file):
-            receipt['reason'] = 'Explicit selected test_*.py file required in fingerprint scope.'
+        elif not valid_test_file(args.test_file,adapter) or args.test_file not in args.file:
+            receipt['reason'] = 'Explicit selected test module matching adapter required in fingerprint scope.'
         else:
             root = Path(args.root).resolve(strict=True)
             receipt['fingerprint_before'] = fingerprint(root, args.file)
-            result = _execute(root, args.test_file, args.timeout)
+            if adapter=='node-test-v1':
+                node,version=_node_runtime(root)
+                receipt['node_version']=version
+                result=_execute(root,args.test_file,args.timeout,node=node)
+            else:
+                result=_execute(root,args.test_file,args.timeout)
             receipt.update(result)
             receipt['executed'] = True
             receipt['execution_result'] = result['result']
@@ -176,10 +221,10 @@ def run(args):
                     receipt['result'] = 'STALE'
                     receipt['reason'] = 'Selected inputs changed during execution.'
                 elif result['result'] == 'PASS':
-                    receipt['reason'] = 'Selected local unittest assertions completed; not a verified fix.'
+                    receipt['reason'] = 'Selected local test assertions completed; not a verified fix.'
                 else:
                     receipt['reason'] = 'Adapter did not produce an eligible passing execution.'
-    except (OSError, ValueError, UnicodeError, RuntimeError):
+    except (OSError, ValueError, UnicodeError, RuntimeError, subprocess.TimeoutExpired):
         receipt['reason'] = 'Selected inputs or local execution unavailable.'
     receipt['finished_at'] = _now()
     return receipt
@@ -188,6 +233,7 @@ def run(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', default='.')
+    parser.add_argument('--adapter',choices=ADAPTERS,default=ADAPTERS[0])
     parser.add_argument('--test-file', required=True)
     parser.add_argument('--finding-id', required=True)
     parser.add_argument('--file', action='append', default=[])

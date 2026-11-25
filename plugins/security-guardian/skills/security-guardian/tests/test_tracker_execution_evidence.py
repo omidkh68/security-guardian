@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 import tempfile
 import unittest
@@ -130,6 +131,34 @@ class TrackerExecutionTests(unittest.TestCase):
         self.call('finish','--run',self.run_id,'--result','PARTIAL')
         self.execute(expected=2)
 
+
+    @unittest.skipUnless(shutil.which('node'), 'Node runtime unavailable')
+    def test_node_adapter_receipt_scope_and_failure(self):
+        version=subprocess.check_output(['node','--version'],text=True).strip()
+        if not version.startswith(('v22.','v24.')):self.skipTest('Node 22 or 24 required')
+        (self.api/'guard.mjs').write_text('export const allowed=(actor,owner)=>actor===owner;\n')
+        fixture='api/guard.test.mjs'
+        good='import test from "node:test";import assert from "node:assert/strict";import {allowed} from "./guard.mjs";test("owner",()=>assert.equal(allowed("a","a"),true));test("other",()=>assert.equal(allowed("b","a"),false));'
+        (self.root/fixture).write_text(good)
+        cmd=['run-test','--run',self.run_id,'--finding-id',self.ident,'--adapter','node-test-v1','--test-file',fixture,
+             '--file',fixture,'--file','api/guard.mjs','--file','api/app.py','--timeout','5','--authorize-local-test']
+        result=self.call(*cmd)
+        self.assertEqual(result['result'],'PASS')
+        receipt=self.run_data()['tests'][-1]['execution_receipt']
+        self.assertEqual(receipt['adapter'],'node-test-v1')
+        self.assertEqual(receipt['node_version'],version)
+        self.assertEqual(receipt['counts']['tests_run'],2)
+        (self.root/fixture).write_text(good.replace(',"a"),false',',"a"),true'))
+        self.verified(result['test_id'],review='Reviewed Node fixture assertion relevance',expected=2)
+        self.assertEqual(self.call(*cmd)['result'],'FAIL')
+        (self.root/fixture).write_text('import test from "node:test";test.skip("skipped",()=>{});')
+        self.assertEqual(self.call(*cmd)['result'],'INCOMPLETE')
+        (self.root/fixture).write_text('import test from "node:test";test("pending", {todo:true},()=>{});')
+        self.assertEqual(self.call(*cmd)['result'],'INCOMPLETE')
+        self.call(*cmd,'--file','web/other.py',expected=2)
+        (self.root/fixture).write_text(good)
+        result=self.call(*cmd)
+        self.verified(result['test_id'],review='Reviewed selected owner and nonowner assertions')
 
 if __name__ == '__main__':
     unittest.main()
