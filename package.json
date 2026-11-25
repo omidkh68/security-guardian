@@ -34,7 +34,7 @@
     "docs/npm-distribution-FA.md"
   ],
   "scripts": {
-    "test": "node --test tests/npm-cli.test.mjs tests/npm-release.test.mjs"
+    "test": "node --test tests/npm-cli.test.mjs tests/npm-release.test.mjs tests/js-flow.test.mjs"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
