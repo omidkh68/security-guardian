@@ -306,5 +306,18 @@ class SemanticFlowTests(unittest.TestCase):
         self.assertFalse(self.hits(self.run_scan(before+'    config.set("sample","selected","constant")\n    cur.execute(config.get("sample","selected"))\n')))
         self.assertFalse(self.hits(self.run_scan(before+'    cp=unknown\n    config=cp.ConfigParser()\n    cur.execute(config.get("sample","selected"))\n')))
 
+    def test_named_factory_try_chain(self):
+        header=HEADER+'PATH="fixture.db"\ndef connect():\n    return sqlite3.connect(PATH)\n'
+        prefix='def view():\n    db=connect()\n'
+        for query,count in [('request.args["q"]',1),('"SELECT ?",(request.args["q"],)',0)]:
+            result=self.run_scan('    try:\n        rows=db.execute('+query+').fetchall()\n    finally:\n        db.close()\n',header,prefix)
+            self.assertEqual(len(self.hits(result)),count)
+            self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+            self.assertGreater(result['summary']['python_sql_flow']['try_normal_paths'],0)
+        self.assertFalse(self.hits(self.run_scan('    try:\n        return "fixed"\n    finally:\n        db.execute(request.args["q"])\n',header,prefix)))
+        self.assertFalse(self.hits(self.run_scan('    db.execute(request.args["q"]).unknown()\n',header,prefix)))
+        self.assertFalse(self.hits(self.run_scan('    db.execute(request.args["q"])\n',header+'sqlite3.connect=unknown\n',prefix)))
+        self.assertFalse(self.hits(self.run_scan('    db.execute(request.args["q"])\n',header,prefix.replace('view()','view(connect)'))))
+
 if __name__=='__main__':
     unittest.main()
