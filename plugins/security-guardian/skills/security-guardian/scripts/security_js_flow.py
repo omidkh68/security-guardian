@@ -28,17 +28,17 @@ def review(root, profile, components, parser):
         raise ValueError('Scope unresolved; use the standard scope preview')
     roots = {c['root'] for c in scope['selected_components'] if scan._web_core(c)}
     stats = Counter()
-    result = {'schema_version':1, 'pack_id':'js-dom-flow', 'pack_version':1,
+    result = {'schema_version':1, 'pack_id':'js-dom-flow', 'pack_version':2,
               'rule_id':RULE, 'legacy_control_id':'ANG-01', 'status':'NOT_AVAILABLE',
               'selected_roots':sorted(roots), 'signals':[],
               'limitations':['Optional syntactic AST flow, not exploit proof or full taint analysis.',
-                             'Top-level synchronous function bodies only; no branch, helper, template or SSR analysis (JS template expressions supported).',
+                             'Bounded synchronous functions, if/else and one-hop local helper summaries; no cross-module, loop, framework template or SSR analysis.',
                              'Trusted parser execution is not an OS sandbox; no project code or config loaded.',
                              'No ledger update; review and record candidates manually.']}
     def finish(status):
         result['status'] = status
         result['coverage'] = {k:stats[k] for k in ('eligible_files','parsed_files','partial_files',
-            'omitted_files','parse_errors','node_limited_files','unreadable_files','matches','omitted_matches')}
+            'omitted_files','parse_errors','node_limited_files','path_limited_files','unreadable_files','matches','omitted_matches')}
         result['coverage']['discovery_truncated'] = bool(coverage.get('truncated'))
         return result
     if not roots:
@@ -98,6 +98,7 @@ def review(root, profile, components, parser):
             stats['partial_files'] += int(row['partial'] is True)
             stats['parse_errors'] += int(row['reason']=='parse_error')
             stats['node_limited_files'] += int(row['reason']=='node_limit')
+            stats['path_limited_files'] += int(row['reason']=='path_limit')
             for hit in row['hits']:
                 line, source = hit['line'], hit['source_lines']
                 if type(line) is not int or not 1<=line<=limit or not isinstance(source,list) or not source or len(source)>16 or any(type(n) is not int or not 1<=n<=limit for n in source):
