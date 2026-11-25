@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Extend Python AST SQL review with bounded direct SQLite context-manager normal paths (#90).
 - Extend optional JS/TS AST DOM flow with bounded branch paths and local helper summaries (#88).
 - Add opt-in scoped JS/TS DOM AST review via explicitly trusted external TypeScript parser (#86).
 - Extend Flask/SQLite AST review with direct import alias resolution and bounded local helper summaries (#84).
