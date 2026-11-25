@@ -433,3 +433,5 @@ For contributors: [private npm/npx distribution preview](docs/npm-distribution.m
 [Vue/Nuxt review pack](docs/vue-nuxt.md) ([فارسی](docs/vue-nuxt-FA.md)): scoped v-html and public runtime-config candidates; manual SSR and server authorization review.
 
 [Svelte/SvelteKit review pack](docs/svelte-kit.md) ([فارسی](docs/svelte-kit-FA.md)): scoped raw HTML and public environment import candidates; manual server authorization and SSR review.
+
+[Express/Fastify review pack](docs/express-fastify.md) ([فارسی](docs/express-fastify-FA.md)): scoped proxy trust and validation-handler candidates, requiring deployment and handler review.
