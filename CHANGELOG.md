@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Add scoped React/Next v1 review indicators for raw HTML, public secret-like names and production browser source maps (#68).
 - Add scoped backend-core v1 HTTP/API indicators for selected Node backend components and separate Nest-specific signals; retain legacy identities (#66).
 - Prepare a manually dispatched stable-tag npm Trusted Publishing workflow and release guards; registry connection and publication remain pending (#64).
 - Add scoped web-core v1 metadata and three reusable browser indicators for selected JS/TS frontend components; preserve legacy control identities and unscoped behavior (#62).

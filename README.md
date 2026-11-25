@@ -427,3 +427,5 @@ For contributors: [private npm/npx distribution preview](docs/npm-distribution.m
 [Web core indicator pack](docs/web-core.md) ([فارسی](docs/web-core-FA.md)): scoped browser candidates across discovered web frameworks; not framework-specific verification.
 
 [Backend core indicator pack](docs/backend-core.md) ([فارسی](docs/backend-core-FA.md)): scoped Node HTTP/API candidates; not authorization or framework-specific verification.
+
+[React/Next.js review pack](docs/react-next.md) ([فارسی](docs/react-next-FA.md)): scoped raw HTML, public secret-like names and browser source-map candidates; SSR and server authorization still require review.
