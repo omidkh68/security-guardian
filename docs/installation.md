@@ -109,3 +109,7 @@ claude plugin validate .
 ```
 
 Validation results depend on the installed Claude Code version. Also run `python3 scripts/validate_package.py` for repository-local structural checks.
+
+## npm local preview (unpublished)
+
+See [npm distribution](npm-distribution.md) for the private tarball preview, explicit consent, safe upgrade and offline npx tests. Registry installation is not available or claimed yet.
