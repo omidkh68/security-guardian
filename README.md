@@ -435,3 +435,5 @@ For contributors: [private npm/npx distribution preview](docs/npm-distribution.m
 [Svelte/SvelteKit review pack](docs/svelte-kit.md) ([فارسی](docs/svelte-kit-FA.md)): scoped raw HTML and public environment import candidates; manual server authorization and SSR review.
 
 [Express/Fastify review pack](docs/express-fastify.md) ([فارسی](docs/express-fastify-FA.md)): scoped proxy trust and validation-handler candidates, requiring deployment and handler review.
+
+[Intent routing](docs/intent-routing.md) ([فارسی](docs/intent-routing-FA.md)): select an explicitly named framework with a read-only preview before auditing; ambiguity requires selection.
