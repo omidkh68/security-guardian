@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Add optional route-to-resource authorization evidence matrix for Express, Fastify and NestJS with Prisma selectors (#93).
 - Add optional bounded Next.js Pages/App Router, Angular SSR, Nuxt H3 and SvelteKit HTML response and credential transfer AST review and manual coverage matrix (#92).
 - Add optional bounded Node request-to-SQL AST review for Express/Fastify/NestJS and local pg receivers (#91).
 - Extend Python AST SQL review with bounded direct SQLite context-manager normal paths (#90).
