@@ -386,7 +386,7 @@ GitHub Actions runs the offline test suite on three Python versions, checks the 
 | [Troubleshooting](docs/troubleshooting.md) | Common installation or tracking problems |
 | [Playbook contribution](docs/contributing-playbook.md) | Add or improve controls safely |
 | [Source and provenance](docs/provenance.md) | Standards, baseline and interpretation of difficulty scores |
-| [فارسی](README.fa.md) | Persian quick start and usage |
+| [فارسی](README.fa.md) | Complete Persian translation of this README |
 
 ## 🤝 Contribute
 
