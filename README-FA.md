@@ -432,3 +432,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 [بسته بازبینی Svelte/SvelteKit](docs/svelte-kit-FA.md) ([English](docs/svelte-kit.md)): نشانه‌های محدوده‌دار HTML خام و Import محیطی عمومی؛ بازبینی دستی SSR و مجوز سرور.
 
 [بسته بازبینی Express/Fastify](docs/express-fastify-FA.md) ([English](docs/express-fastify.md)): نشانه‌های محدوده‌دار اعتماد Proxy و پردازش خطای اعتبارسنجی؛ نیازمند بازبینی محیط و Handler.
+
+[هدایت درخواست](docs/intent-routing-FA.md) ([English](docs/intent-routing.md)): انتخاب فریم‌ورک صریح با پیش‌نمایش فقط خواندنی پیش از ممیزی؛ ابهام نیازمند انتخاب است.
