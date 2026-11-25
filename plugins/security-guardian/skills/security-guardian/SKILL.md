@@ -153,3 +153,5 @@ Provide before/after for edits, tests run (or not), changes deferred for approva
 - `/security-guardian verify` — create a new report version and recheck prior fixes; do not mark untested items as passed.
 - `/security-guardian release-gate` — prepare evidence-based Go/No-Go assessment.
 - `/security-guardian roadmap` — produce risk-ranked 90-day control implementation plan.
+
+Optional JS/TS AST DOM review: only with explicit authorization and a trusted external TypeScript 5.9.3 compiler path, run `security_js_flow.py --root <repo-root> --profile <requested-profile> --typescript-module <absolute-trusted-parser-path>` with the same approved component roots. Never install/load a target dependency or execute project code automatically. Inspect PARTIAL/NOT_AVAILABLE and record reviewed candidate evidence manually in the current run; no automatic confirmation or ledger mutation. This narrow adapter does not analyze framework templates, server authorization or SSR.

@@ -106,7 +106,7 @@ function runtimeFiles() {
       const rel = path.relative(source, p).split(path.sep).join('/');
       if (rel.split('/').some(x => x.startsWith('.') || x === '__pycache__')) return;
       if ((dir === 'references' && /\.(md|json|yaml)$/.test(rel)) ||
-          (dir === 'scripts' && /^scripts\/[^/]+\.py$/.test(rel))) files.push(rel);
+          (dir === 'scripts' && (/^scripts\/[^/]+\.py$/.test(rel) || rel === 'scripts/js_dom_flow.mjs'))) files.push(rel);
     });
   }
   for (const required of ['references/controls.json', 'scripts/security_scan.py', 'scripts/security_tracker.py']) {

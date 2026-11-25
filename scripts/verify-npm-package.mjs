@@ -26,7 +26,7 @@ try {
   const runtime = tracked.filter(p => p.startsWith(prefix) && (
     /^(SKILL\.md|VERSION|LICENSE)$/.test(p.slice(prefix.length)) ||
     /^references\/.+\.(md|json|yaml)$/.test(p.slice(prefix.length)) ||
-    /^scripts\/[^/]+\.py$/.test(p.slice(prefix.length))));
+    (/^scripts\/[^/]+\.py$/.test(p.slice(prefix.length)) || p === prefix+'js_dom_flow.mjs' || p === prefix+'scripts/js_dom_flow.mjs')));
   const expected = [...runtime, 'package.json', 'LICENSE', 'README.md', 'README-FA.md',
     'bin/security-guardian.mjs', 'docs/npm-distribution.md', 'docs/npm-distribution-FA.md'].sort();
   for (const dry of [true, false]) {
