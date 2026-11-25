@@ -529,7 +529,7 @@ def _finding_stamp(finding):
     return hashlib.sha256(dump(finding).encode('utf-8')).hexdigest()
 
 
-def _selected_inputs(root, run, finding, files, test_file):
+def _selected_inputs(root, run, finding, files, test_file, adapter='python-unittest-v1'):
     if run['mode'] not in {'fix', 'verify'}:
         raise ValueError('Local execution requires an active fix or verify run')
     if not finding or finding['status'] not in {'CONFIRMED_OPEN', 'FIXED_UNVERIFIED'}:
@@ -537,8 +537,8 @@ def _selected_inputs(root, run, finding, files, test_file):
     scope = run.get('scope_resolution') or {}
     if scope.get('status') != 'RESOLVED' or not scope.get('selected_roots'):
         raise ValueError('Local execution requires an explicitly resolved run scope')
-    if not isinstance(test_file, str) or not Path(test_file).name.startswith('test_') or Path(test_file).suffix != '.py':
-        raise ValueError('An explicit test_*.py module is required')
+    if not security_test_runner.valid_test_file(test_file,adapter):
+        raise ValueError('An explicit test module matching the selected adapter is required')
     location = re.sub(r':\d+(?::\d+)?$', '', finding['location'])
     if location not in files or test_file not in files or location == test_file:
         raise ValueError('Select the finding source file and a distinct test module')
@@ -555,7 +555,7 @@ def validate_execution_receipt(root, run, finding, receipt):
     """Validate a directly collected receipt; not cryptographic attestation."""
     if not isinstance(receipt, dict) or not finding:
         raise ValueError('Missing local execution evidence')
-    if (receipt.get('schema_version') != 1 or receipt.get('adapter') != 'python-unittest-v1'
+    if (receipt.get('schema_version') != 1 or receipt.get('adapter') not in security_test_runner.ADAPTERS
             or receipt.get('run_id') != run['id'] or receipt.get('finding_id') != finding['id']
             or receipt.get('finding_stamp') != _finding_stamp(finding)
             or receipt.get('scope_stamp') != _finding_stamp(run.get('scope_resolution'))
@@ -588,7 +588,9 @@ def validate_execution_receipt(root, run, finding, receipt):
             or type(receipt.get('output_bytes')) is not int
             or not 0 <= receipt['output_bytes'] <= security_test_runner.MAX_OUTPUT):
         raise ValueError('Invalid local execution metadata')
-    current = _selected_inputs(root, run, finding, files, receipt.get('test_file'))
+    if receipt['adapter']=='node-test-v1' and not re.fullmatch(r'v(?:22|24)\.\d+\.\d+',str(receipt.get('node_version',''))):
+        raise ValueError('Invalid Node execution version')
+    current = _selected_inputs(root, run, finding, files, receipt.get('test_file'),receipt['adapter'])
     if before != after or after != current:
         raise ValueError('Local execution evidence is stale; rerun verification')
 
@@ -602,7 +604,7 @@ def run_test(args):
         index, ledger = load_state(store)
         _, run = ensure_run(store, index, args.run)
         finding = ledger['findings'].get(args.finding_id)
-        before = _selected_inputs(root, run, finding, args.file, args.test_file)
+        before = _selected_inputs(root, run, finding, args.file, args.test_file, args.adapter)
         stamp = _finding_stamp(finding)
         scope = run['scope_resolution']
     # Do not hold the ledger lock while executing user-authorized test code.
@@ -621,10 +623,10 @@ def run_test(args):
             validate_execution_receipt(root, run, finding, receipt)
         outcome = receipt.get('result')
         status = outcome if outcome in {'PASS', 'FAIL'} else 'BLOCKED'
-        entry = validate_test({'name': 'Authorized local unittest regression',
+        entry = validate_test({'name': 'Authorized local test regression',
                                'result': status, 'reason': receipt.get('reason', ''),
                                'finding_ids': [args.finding_id],
-                               'command_or_method': 'python-unittest-v1',
+                               'command_or_method': args.adapter,
                                'evidence': ['Local execution receipt in run manifest']})
         entry.update({'test_id': 'SGT-' + secrets.token_hex(8).upper(),
                       'evidence_quality': 'LOCAL_EXECUTION',
@@ -797,7 +799,8 @@ def main():
     p.add_argument('--run', required=True)
     p.add_argument('--file')
     p.set_defaults(fn=tests)
-    p = subs.add_parser('run-test', help='Execute explicitly authorized local unittest and record evidence')
+    p = subs.add_parser('run-test', help='Execute explicitly authorized local test and record evidence')
+    p.add_argument('--adapter', choices=security_test_runner.ADAPTERS, default=security_test_runner.ADAPTERS[0])
     p.add_argument('--root', default='.')
     p.add_argument('--run', required=True)
     p.add_argument('--finding-id', required=True)
