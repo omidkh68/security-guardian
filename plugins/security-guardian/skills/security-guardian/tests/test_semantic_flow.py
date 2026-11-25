@@ -59,7 +59,7 @@ class SemanticFlowTests(unittest.TestCase):
                 self.assertFalse(self.hits(self.run_scan(body)))
 
     def test_unknown_and_shadowed_are_not_certified(self):
-        r = self.run_scan('    term = request.args.get("q")\n    if term:\n        cur.execute(term)\n')
+        r = self.run_scan('    term = request.args.get("q")\n    while term:\n        cur.execute(term)\n')
         self.assertFalse(self.hits(r))
         self.assertGreater(r['summary']['python_sql_flow']['unsupported_functions'],0)
         r = self.run_scan('    cur.execute(request.args["q"])\n',
@@ -96,6 +96,53 @@ class SemanticFlowTests(unittest.TestCase):
         begin=json.loads(cp.stdout)
         self.assertEqual(begin['python_sql_flow']['status'],'PARTIAL')
         self.assertIn('Python SQL AST flow: PARTIAL',(Path(begin['location'])/'RUN.md').read_text())
+
+    def test_branch_paths_and_sink_deduplication(self):
+        r = self.run_scan('    term = request.args["q"]\n'
+                          '    if term:\n'
+                          '        cur.execute(term)\n'
+                          '    else:\n'
+                          '        cur.execute("SELECT 1")\n'
+                          '    cur.execute(term)\n')
+        self.assertEqual([(h['line'],h['source_lines']) for h in self.hits(r)],[(8,[6]),(11,[6])])
+        self.assertEqual(r['summary']['python_sql_flow']['matches'],2)
+        self.assertEqual(r['summary']['python_sql_flow']['unsupported_functions'],0)
+
+    def test_branches_keep_receiver_and_value_correlated(self):
+        r = self.run_scan('    if flag:\n'
+                          '        target = cur\n'
+                          '        query = "SELECT 1"\n'
+                          '    else:\n'
+                          '        target = unknown\n'
+                          '        query = request.args["q"]\n'
+                          '    target.execute(query)\n')
+        self.assertFalse(self.hits(r))
+        self.assertEqual(r['summary']['python_sql_flow']['status'],'PARTIAL')
+
+    def test_early_return_and_literal_boolean_pruning(self):
+        r = self.run_scan('    term = request.args["q"]\n'
+                          '    if flag:\n'
+                          '        return\n'
+                          '    else:\n'
+                          '        term = "constant"\n'
+                          '    if False:\n'
+                          '        cur.execute(request.args["q"])\n'
+                          '    cur.execute(term)\n'
+                          '    return\n'
+                          '    cur.execute(request.args["q"])\n')
+        self.assertFalse(self.hits(r))
+        self.assertEqual(r['summary']['python_sql_flow']['unsupported_functions'],0)
+
+    def test_unsupported_condition_and_path_budget(self):
+        r = self.run_scan('    if mutate():\n'
+                          '        cur.execute(request.args["q"])\n')
+        self.assertFalse(self.hits(r))
+        self.assertEqual(r['summary']['python_sql_flow']['status'],'PARTIAL')
+        body = ''.join('    if flag' + str(i) + ':\n        pass\n' for i in range(12))
+        r = self.run_scan(body+'    cur.execute(request.args["q"])\n')
+        self.assertEqual(r['summary']['python_sql_flow']['path_limited_functions'],1)
+        self.assertEqual(r['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertLessEqual(len(self.hits(r)),1)
 
     def test_unknown_receiver_not_inferred(self):
         r = self.run_scan('    other.execute(request.args["q"])\n')

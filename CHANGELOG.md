@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Extend Flask/SQLite AST review with bounded path-local if/else flow, early return and explicit path-budget coverage (#82).
 - Add bounded offline Flask/SQLite AST request-to-query candidates with explicit partial coverage (#80).
 - Add explicit framework discovery preview and conservative natural-language Skill intent routing (#76).
 - Add scoped Express/Fastify v1 indicators for broad proxy trust and validation handler review (#74).
