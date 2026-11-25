@@ -73,7 +73,7 @@ def framework_row(name):
              'Nuxt':'Explicit H3 HTML endpoint, not Vue template/hydration',
              'SvelteKit':'Explicit +server HTML endpoint, not page load/template'}[name])
     if name=='Flask':
-        ast(scan.PY_SQL_PACK,5,[(scan.PY_SQL_RULE,'API-07')],'security_scan.py',
+        ast(scan.PY_SQL_PACK,6,[(scan.PY_SQL_RULE,'API-07')],'security_scan.py',
             'Flask request to SQLite SQL text; bounded route, loop, data-slot and source-only helper context',False)
     return {'framework':name,'role':role,'discovery':'MANIFEST_HINT',
             'heuristic_packs':h,'ast_packs':a,
