@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Prepare a manually dispatched stable-tag npm Trusted Publishing workflow and release guards; registry connection and publication remain pending (#64).
 - Add scoped web-core v1 metadata and three reusable browser indicators for selected JS/TS frontend components; preserve legacy control identities and unscoped behavior (#62).
 - Add a private dependency-free Node CLI preview, exact npm tarball checks and offline npx install-to-report smoke; registry publication remains pending (#46).
 - Bind explicitly authorized local unittest evidence to active scoped tracker runs and findings; distinguish manual reports and recheck selected-file freshness (#58, #60).
