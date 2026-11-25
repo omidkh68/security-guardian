@@ -434,3 +434,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 [بسته بازبینی Express/Fastify](docs/express-fastify-FA.md) ([English](docs/express-fastify.md)): نشانه‌های محدوده‌دار اعتماد Proxy و پردازش خطای اعتبارسنجی؛ نیازمند بازبینی محیط و Handler.
 
 [هدایت درخواست](docs/intent-routing-FA.md) ([English](docs/intent-routing.md)): انتخاب فریم‌ورک صریح با پیش‌نمایش فقط خواندنی پیش از ممیزی؛ ابهام نیازمند انتخاب است.
+
+[بازبینی محدود SQL با AST پایتون](docs/python-sql-flow-FA.md) ([English](docs/python-sql-flow.md)): نشانه جریان ورودی تا Query در Flask/SQLite منتخب؛ نه اثبات بهره‌برداری.

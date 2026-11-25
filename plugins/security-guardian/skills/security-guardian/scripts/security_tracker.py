@@ -302,6 +302,13 @@ def make_run_report(run, ledger, scan):
     for reason, count in sorted(scan_coverage.get('skipped', {}).items()):
         if count:
             coverage_lines.append(f'- {reason}: {count}')
+    flow = scan['summary'].get('python_sql_flow', {})
+    if flow and flow['status'] != 'NOT_SELECTED':
+        coverage_lines.extend([
+            f"- Python SQL AST flow: {flow['status']}; parsed/eligible files: {flow['parsed_files']}/{flow['eligible_files']}; candidates: {flow['matches']}",
+            f"- Unmodeled functions/import files/module statements: {flow['unsupported_functions']}/{flow['unmodeled_import_files']}/{flow['unmodeled_module_statements']}; parse errors: {flow['parse_errors']}",
+            f"- AST size/complexity-limited files: {flow['size_limited_files']}/{flow['complexity_limited_files']}",
+        ])
     coverage_lines.extend(['- Workflow completion does not establish complete scanner coverage or verified safety.',''])
     marker=lines.index('## Status snapshot (entire project, not just this run)')
     lines[marker:marker]=coverage_lines
@@ -425,6 +432,7 @@ def begin(args):
                'scope_resolution': scan['summary'].get('scope_resolution'),
                'scan_coverage': scan['summary'].get('scan_coverage', {}),
                'signal_coverage': scan['summary'].get('signal_coverage', {}),
+               'python_sql_flow': scan['summary'].get('python_sql_flow'),
                'next': f'python3 <skill-dir>/scripts/security_tracker.py record --root <repo-root> --run {run_id} --file <reviewed-findings.json>'}).strip())
 
 
