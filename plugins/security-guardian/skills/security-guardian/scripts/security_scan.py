@@ -743,6 +743,7 @@ def python_sql_flow(content):
         if bound & watched or (isinstance(n, ast.ImportFrom) and any(a.name == '*' for a in n.names)):
             stats['unmodeled_import_files'] += 1
             return hits, stats
+    stats['unmodeled_module_statements'] += sum(not isinstance(n, (ast.Import, ast.ImportFrom, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and not (isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant)) for n in tree.body)
     # Nested functions/classes and async functions are outside the model.
     functions = [n for n in tree.body if isinstance(n, ast.FunctionDef)]
     stats['unsupported_functions'] += sum(isinstance(n, (ast.AsyncFunctionDef, ast.ClassDef)) for n in tree.body)
@@ -1117,7 +1118,7 @@ def process(root:Path, profile=None, components=()):
             'limitations': ['Text indicators only; no deployed proxy trust, route schema, handler or authorization proof.',
                             'Literal options and app/server receivers only; computed options and aliases need review.'],
         }
-        partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unsupported_functions','complexity_limited_functions')
+        partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions')
         summary['python_sql_flow'] = {
             'pack_id': PY_SQL_PACK, 'pack_version':1, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
             'selected_roots':sorted(python_sql_roots),
@@ -1190,7 +1191,7 @@ def markdown(result):
         lines += [f"- Python SQL AST flow v1: {flow['status']}",
                   f"- Eligible/parsed Python files: {flow['eligible_files']}/{flow['parsed_files']}; candidates: {flow['matches']}",
                   f"- Unsupported functions: {flow['unsupported_functions']}; unmodeled imports: {flow['unmodeled_import_files']}; parse errors: {flow['parse_errors']}",
-                  f"- Size/complexity-limited files: {flow['size_limited_files']}/{flow['complexity_limited_files']}",
+                  f"- Unmodeled module statements: {flow['unmodeled_module_statements']}; size/complexity-limited files: {flow['size_limited_files']}/{flow['complexity_limited_files']}",
                   '- AST source-to-sink candidates require manual confirmation; missing candidates are not safety.', '']
     for status,qty in sorted(s['applicability'].items()):lines.append(f'- {status}: {qty}')
     lines+=['', '## Scan coverage and limitations', '']

@@ -3,6 +3,8 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import subprocess
+import sys
 import unittest
 
 spec = importlib.util.spec_from_file_location('semantic_scan', Path(__file__).resolve().parents[1]/'scripts/security_scan.py')
@@ -77,6 +79,23 @@ class SemanticFlowTests(unittest.TestCase):
         self.assertEqual(r['summary']['python_sql_flow']['status'],'PARTIAL')
         self.assertFalse(self.hits(scan.process(self.root)))
         self.assertNotIn('python_sql_flow',scan.process(self.root)['summary'])
+
+    def test_size_complexity_and_tracker_coverage(self):
+        self.write('api/large.py', '#'+('x'*scan.PY_SQL_MAX_BYTES))
+        self.write('api/complex.py', 'x = 0\n'*3000)
+        r = self.run_scan('    if True:\n        cur.execute(request.args["q"])\n')
+        flow = r['summary']['python_sql_flow']
+        self.assertEqual(flow['size_limited_files'],1)
+        self.assertEqual(flow['complexity_limited_files'],1)
+        self.assertEqual(flow['status'],'PARTIAL')
+        tracker=Path(scan.__file__).with_name('security_tracker.py')
+        cp=subprocess.run([sys.executable,str(tracker),'begin','--root',str(self.root),
+                           '--mode','audit','--profile','custom','--component','api'],
+                          capture_output=True,text=True,timeout=30)
+        self.assertEqual(cp.returncode,0,cp.stderr)
+        begin=json.loads(cp.stdout)
+        self.assertEqual(begin['python_sql_flow']['status'],'PARTIAL')
+        self.assertIn('Python SQL AST flow: PARTIAL',(Path(begin['location'])/'RUN.md').read_text())
 
     def test_unknown_receiver_not_inferred(self):
         r = self.run_scan('    other.execute(request.args["q"])\n')
