@@ -116,15 +116,81 @@ def matched_pair_replay():
                 'baseline':previous,'current':current,
                 'limitations':['Previously exposed two-case cohort; regression only, not a new holdout.']}
 
+
+LAB_REPO='BackdoorAli/sql-injection-demo'
+LAB_REV='21129e0dfd73c627bd861e33447f7e92caaaac4d'
+LAB_FILES={'README.md':'f1578f8f7899728c0d278f1db999e332545bdc20',
+           'app/insecure_app.py':'3fca0e1e9f20bbf6770b48f37fc82d86c4ffe58d',
+           'app/secure_app.py':'f0191318bb1abcc40e1286c985d59422278db29e',
+           'app/database.py':'44f5a9420e1024da7831de00db8a68264a532f92'}
+LAB_BASELINE='5bb9b49f126ea6feb1885a40fd7d94b6fd1c73dc'
+LAB_FROZEN='7ab0629f17d4e4777635b44bf054b769487e7beb'
+
+def external_lab():
+    import importlib.util
+    files={}
+    for path,expected in LAB_FILES.items():
+        url=f'https://raw.githubusercontent.com/{LAB_REPO}/{LAB_REV}/{path}'
+        with urllib.request.urlopen(url,timeout=20) as response:
+            raw=response.read(128001)
+        if len(raw)>128000 or git_hash(raw)!=expected:
+            raise ValueError('Lab artifact identity mismatch')
+        files[path]=raw
+    readme=files.pop('README.md').decode('utf-8')
+    if 'insecure_app.py' not in readme or 'secure_app.py' not in readme:
+        raise ValueError('Author label provenance unavailable')
+    # Source-only labels: all seven route execute calls in the author's
+    # deliberately insecure/safe app versions. Exclude DB initialization
+    # (not an HTTP route) and do not execute author tests or import app code.
+    labels={'app/insecure_app.py':[(20,True),(41,True)],
+            'app/secure_app.py':[(19,False),(39,False),(53,False),(69,False),(87,False)]}
+    for path,cases in labels.items():
+        lines=files[path].decode('utf-8').splitlines()
+        actual=[i for i,l in enumerate(lines,1) if 'c.execute(' in l]
+        if actual!=[line for line,_ in cases]:
+            raise ValueError('Route label anchor mismatch')
+    def evaluate(engine):
+        hits,flow,elapsed=scan_files(files,engine)
+        rows=[]
+        for path,cases in labels.items():
+            for line,expected in cases:
+                observed=any(x['path']=='app/'+path and x['line']==line for x in hits)
+                rows.append({'path':path,'line':line,'expected':expected,'observed':observed,
+                             'classification':classify(expected,observed)})
+        known={('app/'+path,line) for path,cases in labels.items() for line,_ in cases}
+        return {'cases':rows,'metrics':score(Counter(x['classification'] for x in rows)),
+                'coverage_status':flow['status'],'eligible_files':flow['eligible_files'],
+                'parsed_files':flow['parsed_files'],'elapsed_seconds':elapsed,
+                'unlabeled_candidate_count':sum((x['path'],x['line']) not in known for x in hits)}
+    def frozen(commit):
+        rel='plugins/security-guardian/skills/security-guardian/scripts/security_scan.py'
+        with tempfile.TemporaryDirectory(prefix='sg-frozen-lab-') as tmp:
+            skill=Path(tmp)
+            for file in (rel,rel.replace('scripts/security_scan.py','references/controls.json')):
+                out=skill/Path(file).parent.name/Path(file).name
+                out.parent.mkdir(parents=True,exist_ok=True)
+                out.write_bytes(subprocess.check_output(['git','-C',str(ROOT),'show',commit+':'+file]))
+            spec=importlib.util.spec_from_file_location('_sg_lab_engine',skill/'scripts/security_scan.py')
+            engine=importlib.util.module_from_spec(spec);spec.loader.exec_module(engine)
+            return evaluate(engine)
+    return {'kind':'FROZEN_EXTERNAL_FLASK_SQLITE_LAB','upstream':LAB_REPO,'revision':LAB_REV,
+            'source_git_blobs':LAB_FILES,'baseline_commit':LAB_BASELINE,'frozen_current_commit':LAB_FROZEN,
+            'baseline':frozen(LAB_BASELINE),'frozen_current':frozen(LAB_FROZEN),'current':evaluate(scan),
+            'selection':'All seven route SQL execute sites in author-described insecure/safe versions. Public source fetched transiently; no source redistribution or author test execution.',
+            'limitations':['Author labels are version-level, route sink labels derived from unchanged source. Only 2 positive and 5 negative cases; not a statistically adequate general benchmark.',
+                           'Partial misses retained; no tuning of frozen engines to this cohort.']}
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--external-git',type=Path)
     p.add_argument('--fresh-flask',action='store_true')
+    p.add_argument('--external-lab',action='store_true')
     a=p.parse_args()
-    if not a.external_git and not a.fresh_flask:p.error('Choose a corpus')
+    if not a.external_git and not a.fresh_flask and not a.external_lab:p.error('Choose a corpus')
     reports=[]
     if a.external_git:reports.append(contextual(a.external_git))
     if a.fresh_flask:reports.append(matched_pair_replay())
+    if a.external_lab:reports.append(external_lab())
     print(json.dumps({'schema_version':1,'kind':'SEMANTIC_CONTEXT_EVALUATION',
         'commit':subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip(),
         'engine_sha256':digest(SKILL/'scripts/security_scan.py'),'reports':reports,
