@@ -56,3 +56,14 @@ flowchart TD
 ```
 
 The fixture suite checks consent, stale tokens, byte preservation, scope drift, conflict candidates and partial write failure. Native loader acceptance must use the actual authenticated client in a disposable project; versions or static file creation are not sufficient. No agent settings or credentials are added by this PR.
+
+
+## Native loader acceptance protocol
+
+Run only in a disposable owned repository with installed CLI and authorized account. Do not change real project files or global settings.
+
+1. Record CLI version and authorized session locally. Create a disposable repository with frontend/backend manifests and an AGENTS.md containing a unique synthetic marker; hash the bytes outside the managed block.
+2. Review a backend-scope preview for the chosen agent; apply the same token with explicit consent. Check READY and instruction_sync MATCHED. Repeat and verify UNCHANGED and the outside-block hash.
+3. Start Codex in the repository and ask it to report only the loaded marker and selected scope, without opening files or running tools. For Claude inspect /memory, and for Gemini inspect /memory show in a new session or after reload; verify the instruction/marker and scope. If the client does not expose adequate loading evidence, record NOT_VERIFIED.
+4. Introduce an AGENTS.override.md or existing native-context conflict in the disposable fixture only; do not infer authorization or widen scope. Check that each client respects backend scope and refuses unrelated operations.
+5. Record separate PASS/FAIL/NOT_VERIFIED for each agent with version, loader configuration, UTC date, commit and redacted evidence. Never publish credentials, personal paths or real project content. File creation, CLI version or a guessed model response is not a pass. Remove the disposable fixture after testing.
