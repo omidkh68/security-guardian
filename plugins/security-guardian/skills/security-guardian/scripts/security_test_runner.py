@@ -58,14 +58,26 @@ sys.exit(0 if result.wasSuccessful() else 1)
 NODE_WORKER = r"""
 import {run} from 'node:test';
 const summaries=[];
+let realTests=0, filePasses=0;
 try {
   for await(const event of run({files:[process.argv[2]],concurrency:1})) {
     if(event.type==='test:summary' && !event.data.file) summaries.push(event.data);
+    if(event.type==='test:pass'||event.type==='test:fail') {
+      const d=event.data;
+      if(d.details?.type==='test') {
+        if(d.name===process.argv[2]&&d.nesting===0) { if(event.type==='test:pass')filePasses++; }
+        else realTests++;
+      }
+    }
   }
   if(summaries.length!==1)throw Error('summary');
   const {counts:c,success}=summaries[0];
   if(typeof success!=='boolean'||!c||!['tests','failed','passed','cancelled','skipped','todo'].every(k=>Number.isSafeInteger(c[k])&&c[k]>=0)
        ||c.tests!==c.failed+c.passed+c.cancelled+c.skipped+c.todo)throw Error('counts');
+  // A file that registers no tests is reported as one successful file wrapper.
+  // Never turn that synthetic wrapper into passing assertion evidence.
+  if(success&&realTests===0&&filePasses===1&&c.tests===1&&c.passed===1) c.tests=c.passed=0;
+  else if(success&&(filePasses!==0||realTests!==c.tests)) throw Error('test accounting');
   const payload={tests_run:c.tests,failures:c.failed,errors:c.cancelled,skipped:c.skipped,
       expected_failures:c.todo,unexpected_successes:0};
   console.log(JSON.stringify(payload));
