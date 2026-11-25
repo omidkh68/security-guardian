@@ -3,22 +3,16 @@
   "issue": 54,
   "missing_persian": [
     "docs/multi-agent.md",
-    "docs/provenance.md",
-    "docs/scope-resolution.md",
     "docs/tracking.md",
-    "docs/troubleshooting.md",
     "docs/use-cases.md",
     "docs/verification-matrix.md",
     "docs/wiki-publishing.md",
     "docs/wiki/SG-Architecture.md",
     "docs/wiki/SG-Baseline-v1.2.1.md",
     "docs/wiki/SG-Evidence-and-Reporting.md",
-    "docs/wiki/SG-Home.md",
     "docs/wiki/SG-Roadmap-and-RFCs.md",
     "docs/wiki/SG-Stack-Profiles.md",
     "docs/wiki/SG-Standards-and-Coverage.md",
-    "docs/wiki/SG-Vision.md",
-    "examples/angular-ssr-jsonld-remediation.md",
-    "examples/illustrative-run.md"
+    "docs/wiki/SG-Vision.md"
   ]
 }
