@@ -439,3 +439,5 @@ For contributors: [private npm/npx distribution preview](docs/npm-distribution.m
 [Intent routing](docs/intent-routing.md) ([فارسی](docs/intent-routing-FA.md)): select an explicitly named framework with a read-only preview before auditing; ambiguity requires selection.
 
 [Bounded Python SQL AST review](docs/python-sql-flow.md) ([فارسی](docs/python-sql-flow-FA.md)): selected Flask/SQLite source-to-query candidates with bounded if/else paths, direct aliases and local helper summaries, not exploit proof.
+
+[Optional JS/TS AST DOM flow](docs/js-dom-flow.md) ([فارسی](docs/js-dom-flow-FA.md)): explicitly authorized external parser; scoped location-to-innerHTML candidates, not exploit proof.

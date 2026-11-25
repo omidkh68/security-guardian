@@ -71,7 +71,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - name: Test local CLI safety and upgrades
-        run: npm test
+      - name: Install pinned optional AST parser in isolated runner directory
+        run: npm install --prefix "$RUNNER_TEMP/sg-typescript" --no-save --ignore-scripts --no-audit --no-fund typescript@5.9.3
+      - name: Test local CLI safety, upgrades and optional AST review
+        run: |
+          SG_TEST_TYPESCRIPT="$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js" npm test
       - name: Verify exact tarball manifest and offline npx install-to-report
         run: node scripts/verify-npm-package.mjs

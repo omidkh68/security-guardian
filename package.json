@@ -31,7 +31,8 @@
     "plugins/security-guardian/skills/security-guardian/references/**/*.yaml",
     "plugins/security-guardian/skills/security-guardian/scripts/*.py",
     "docs/npm-distribution.md",
-    "docs/npm-distribution-FA.md"
+    "docs/npm-distribution-FA.md",
+    "plugins/security-guardian/skills/security-guardian/scripts/js_dom_flow.mjs"
   ],
   "scripts": {
     "test": "node --test tests/npm-cli.test.mjs tests/npm-release.test.mjs tests/js-flow.test.mjs"

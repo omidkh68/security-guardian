@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Add opt-in scoped JS/TS DOM AST review via explicitly trusted external TypeScript parser (#86).
 - Extend Flask/SQLite AST review with direct import alias resolution and bounded local helper summaries (#84).
 - Extend Flask/SQLite AST review with bounded path-local if/else flow, early return and explicit path-budget coverage (#82).
 - Add bounded offline Flask/SQLite AST request-to-query candidates with explicit partial coverage (#80).
