@@ -41,3 +41,5 @@ Security Guardian is for defensive auditing and remediation of software **you ow
 ## Optional local test adapter
 
 The [local verification runner](verification-runner.md) is a separate, explicitly authorized Python unittest adapter. It launches trusted local tests, captures bounded receipt metadata and checks selected-input fingerprints before/after. Test code can have side effects, and the runner is not a sandbox or independent finding verifier. Use isolated owned fixtures without production credentials; never automatically execute untrusted repository tests.
+
+The explicit tracker `run-test` command delegates to the trusted local adapter; test code may have side effects. Manual records are not independent execution, and local receipts are not attestation. See [tracker evidence](tracker-execution-evidence.md).

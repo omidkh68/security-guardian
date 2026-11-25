@@ -50,3 +50,5 @@ The agent reads relevant sources, traces authorization and state changes, tests 
 ## Optional verification adapter
 
 The [local verification runner](verification-runner.md) is a separate opt-in component alongside the original three elements. It runs a selected trusted Python unittest module, records actual execution counts, bounded receipt metadata and selected-file fingerprints before/after. The Tracker remains separate; receipts do not establish VERIFIED_FIXED until a later integration validates scope, freshness and finding relevance.
+
+The tracker now also offers an explicitly authorized `run-test` command, which delegates to the local adapter and records evidence quality. Default commands remain non-executing. See [tracker-bound execution evidence](tracker-execution-evidence.md).
