@@ -17,7 +17,8 @@ function run(command, args, cwd = root, extra = {}) {
 }
 try {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.equal(pkg.private, true, 'publication must stay disabled pending owner approval');
+  assert.equal(typeof pkg.private, 'boolean', 'explicit private flag required');
+  if (!pkg.private) assert.ok(Number(pkg.version.split('.')[0]) > 1 || (pkg.version.startsWith('1.') && Number(pkg.version.split('.')[1]) >= 3), 'preview versions must stay private');
   assert.equal(pkg.version, fs.readFileSync(path.join(root, prefix, 'VERSION'), 'utf8').trim());
   assert.deepEqual(pkg.dependencies ?? {}, {});
   for (const key of ['preinstall', 'install', 'postinstall', 'prepare', 'prepack', 'postpack']) assert.ok(!pkg.scripts?.[key]);

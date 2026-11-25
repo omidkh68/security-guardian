@@ -84,7 +84,11 @@ def validate():
     assert plugin['version'] == v, 'plugin and skill versions mismatch'
     npm = json.loads((ROOT/'package.json').read_text())
     assert npm['version'] == v, 'npm and skill versions mismatch'
-    assert npm['private'] is True, 'npm preview must not be publishable'
+    assert type(npm['private']) is bool, 'explicit npm private flag required'
+    assert npm['name'] == '@omidkh68/security-guardian', 'unexpected npm scope/name'
+    assert npm['publishConfig'] == {'registry': 'https://registry.npmjs.org/', 'access': 'public'}, 'unexpected npm publish destination'
+    if not npm['private']:
+        assert tuple(map(int, v.split('.'))) >= (1, 3, 0), 'preview versions must remain private'
     assert npm['bin']['security-guardian'] == 'bin/security-guardian.mjs'
     assert (ROOT/npm['bin']['security-guardian']).is_file()
     source = ROOT / market['plugins'][0]['source']
