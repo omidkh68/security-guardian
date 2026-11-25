@@ -455,3 +455,5 @@ JS/TS DOM AST v2 adds bounded branches and same-file helper summaries (#88).
 Python SQL AST v4 adds direct SQLite context-manager normal-path review (#90), with transaction/exception semantics marked partial.
 
 [Framework coverage and pack contributor contract](docs/framework-coverage.md) ([فارسی](docs/framework-coverage-FA.md)): versioned read-only inventory of discovery, heuristic/AST eligibility and runtime NOT_RUN; contributor mapping and migration policy.
+
+[Independent detection benchmark](docs/independent-benchmark.md) ([فارسی](docs/independent-benchmark-FA.md)): external labeled CWE-89 slice, separate post-freeze synthetic corpus and transparent denominators.
