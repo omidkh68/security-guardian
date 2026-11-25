@@ -12,6 +12,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 - Add an opt-in POSIX Python unittest adapter with execution receipts, consent, limits and before/after selected-input fingerprints (#53, #56). Tracker verification remains unchanged.
 
 ### Fixed
+- Restrict bilingual documentation to human-facing guides; retain one canonical copy of agent instructions and operational references (#54).
 - Standardize canonical English and Persian documentation filenames and track legacy translation debt (#54).
 - Preserve multiple rules per line, detect selected adjacent-line indicators and expose incomplete scan/evidence coverage (#45, #48, #50).
 

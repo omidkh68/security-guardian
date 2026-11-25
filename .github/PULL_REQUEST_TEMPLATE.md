@@ -27,8 +27,9 @@ Control IDs (if applicable):
 - [ ] No real credentials, user data, private findings or exploit details included
 - [ ] Scanner stays offline/read-only; tracker does not fabricate verification
 - [ ] Skill still gates production, network, auth, payment and PKI changes
-- [ ] Canonical English documentation and complete matching `-FA.md` translation updated together; no `-EN.md` or `.fa.md` suffix
+- [ ] Relevant human-facing English documentation and complete matching `-FA.md` translation updated together; no `-EN.md` or `.fa.md` suffix
 - [ ] Relevant README/changelog pairs updated; translation backlog only shrinks
+- [ ] Agent instructions, Skill references and GitHub templates retain one canonical English copy
 
 ## Tests
 
