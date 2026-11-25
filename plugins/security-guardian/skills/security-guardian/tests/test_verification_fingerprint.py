@@ -33,7 +33,7 @@ class FingerprintTests(unittest.TestCase):
         self.assertEqual(before['file_count'], 2)
         self.assertEqual(before['scope'], 'SELECTED_FILES_ONLY')
         self.assertRegex(before['digest'], r'^[0-9a-f]{64}$')
-        (self.root / 'app.py').write_bytes(b'private-fixture-xxxxxx')
+        (self.root / 'app.py').write_bytes(b'private-fixture-other')
         after = self.run_digest('app.py', 'config.json')
         self.assertNotEqual(before['digest'], after['digest'])
         self.assertNotEqual(after['digest'], self.run_digest('app.py')['digest'])
@@ -50,6 +50,7 @@ class FingerprintTests(unittest.TestCase):
             with self.subTest(paths=paths):
                 result = self.run_digest(*paths, expected=2)
                 self.assertEqual(result.stdout, '')
+                self.assertIn('Fingerprint unavailable', result.stderr)
 
     def test_rejects_file_beyond_budget(self):
         (self.root / 'large.py').write_bytes(b'x' * (4 * 1024 * 1024 + 1))
