@@ -389,7 +389,7 @@ GitHub Actions مجموعه تست آفلاین را روی سه نسخه Python
 | [پیگیری](docs/tracking.md) | معنای وضعیت‌ها، نسخه‌بندی، دلایل، اصلاح ناموفق و شناسه‌های رگرسیون |
 | [مدل امنیتی](docs/security-model.md) | اجرای امن، فایل‌های حساس و محدودیت‌ها |
 | اثرانگشت راستی‌آزمایی ([EN](docs/verification-fingerprint.md)، [FA](docs/verification-fingerprint-FA.md)) | اتصال شواهد به فایل‌های انتخاب‌شده؛ نه اجرای مستقل تست |
-| اجراکننده راستی‌آزمایی محلی ([EN](docs/verification-runner.md)، [FA](docs/verification-runner-FA.md)) | اجرای Python unittest با مجوز صریح؛ رسید به معنی اصلاح تأییدشده نیست |
+| اجراکننده راستی‌آزمایی محلی ([EN](docs/verification-runner.md)، [FA](docs/verification-runner-FA.md)) | اجرای Python unittest و Node.js 22/24 node:test با مجوز صریح؛ رسید به معنی اصلاح تأییدشده نیست |
 | [رفع اشکال](docs/troubleshooting.md) | مشکلات رایج نصب یا پیگیری |
 | [مشارکت در Playbookها](docs/contributing-playbook.md) | افزودن یا بهبود امن کنترل‌ها |
 | [منشأ و منابع](docs/provenance.md) | استانداردها، خط مبنا و تفسیر امتیازهای دشواری |
@@ -463,3 +463,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 توسعه #107: برای مدل‌های جاری و محدودیت‌ها و ارزیابی جداگانه، [توسعه پوشش معنایی](docs/semantic-expansion-FA.md) ([English](docs/semantic-expansion.md)) را ببینید. توضیحات نسخه‌های قبلی خط مبنای تاریخی هستند.
 
 فهرست معماری قابلیت‌ها: [فارسی](docs/architecture-index-FA.md) · [English](docs/architecture-index.md).
+
+[تحلیل SQL برنامه واقعی](docs/real-app-sql-FA.md) ([English](docs/real-app-sql.md)): AST پایتون نسخه ۶، Factory با مسیر نام‌دار، مسیر عادی try و زنجیره execute/fetch؛ محدودیت ارزیابی خارجی صریح است.

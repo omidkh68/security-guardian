@@ -13,3 +13,7 @@
 8. **Record**: mapped control(s), finding evidence, issue severity, changed files, residual risk and next manual tests.
 
 Security scan signatures are **candidate findings only**. False positives must be documented as such; missing signatures do not establish a passing security posture.
+
+## Dirty worktree and rollback boundary
+
+Before editing, inspect Git status and existing staged/unstaged diffs without altering the index. Record the exact approved paths and the pre-edit state of each touched file in private review evidence. If an existing user edit overlaps the proposed change, stop and ask for a targeted decision; never reset, stash, checkout, clean or overwrite unrelated work. Review the final diff against the approved paths. If a change must be reverted, reverse only the specific changes made for this remediation after rechecking current content; do not restore a whole file over intervening user changes. If safe reversal is uncertain, report BLOCKED and preserve both versions for review. A passing test is not authorization to commit, deploy or perform a broad rollback.

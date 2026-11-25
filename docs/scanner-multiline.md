@@ -18,7 +18,7 @@ Regression fixtures exercise each selected rule, correct first-line attribution,
 ## Limitations and rollback
 This is a heuristic, not a parser or confirmed finding. Three-or-more-line forms, unselected rules, oversized windows, and complex comments or string literals may not be handled; absence of a candidate is never evidence of safety. Existing output caps and incomplete-read accounting are separate P0 work. Revert the scanner change and its tests if needed; no migration or historical ledger rewrite is required.
 
-## Architecture and testing value (#48)
+## Architecture and testing value (#47)
 
 ```mermaid
 flowchart LR

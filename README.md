@@ -384,7 +384,7 @@ GitHub Actions runs the offline test suite on three Python versions, checks the 
 | [Tracking](docs/tracking.md) | Status meanings, versioning, reasons, failed fixes and regression IDs |
 | [Security model](docs/security-model.md) | Safe operation, sensitive artifacts and limits |
 | Verification fingerprints ([EN](docs/verification-fingerprint.md), [FA](docs/verification-fingerprint-FA.md)) | Selected-file evidence binding; not an independent runner |
-| Local verification runner ([EN](docs/verification-runner.md), [FA](docs/verification-runner-FA.md)) | Explicitly authorized Python unittest execution; receipts are not verified fixes |
+| Local verification runner ([EN](docs/verification-runner.md), [FA](docs/verification-runner-FA.md)) | Explicitly authorized Python unittest and Node.js 22/24 node:test execution; receipts are not verified fixes |
 | [Troubleshooting](docs/troubleshooting.md) | Common installation or tracking problems |
 | [Playbook contribution](docs/contributing-playbook.md) | Add or improve controls safely |
 | [Source and provenance](docs/provenance.md) | Standards, baseline and interpretation of difficulty scores |
@@ -466,3 +466,5 @@ Python SQL AST v4 adds direct SQLite context-manager normal-path review (#90), w
 Expansion #107: see [semantic coverage expansion](docs/semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.
 
 Capability architecture index: [English](docs/architecture-index.md) · [فارسی](docs/architecture-index-FA.md).
+
+[Real application SQL analysis](docs/real-app-sql.md) ([فارسی](docs/real-app-sql-FA.md)): Python AST v6, bounded named-path factories, normal try paths and execute/fetch chains; external benchmark limitations remain explicit.
