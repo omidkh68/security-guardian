@@ -74,6 +74,30 @@ PATTERNS = [(cid, label, re.compile(expr, re.I if cid not in {'ANG-01'} else 0),
     for cid,label,expr,extensions,confidence,severity in PATTERNS]
 
 
+# Only these existing whitespace-tolerant indicators are approved for
+# adjacent-line matching. Never run arbitrary regex against a whole file.
+MULTILINE_LABELS = {
+    'Direct assignment to innerHTML',
+    'Potentially loose ValidationPipe whitelist',
+    'Potentially loose non-whitelisted input policy',
+    'Potential unsafe Prisma raw SQL',
+}
+MAX_MULTILINE_CHARS = 4096
+
+
+def _multiline_window(line, following):
+    """Return a bounded two-line window, or None at an obvious barrier."""
+    if len(line) + len(following) + 1 > MAX_MULTILINE_CHARS:
+        return None
+    for part in (line, following):
+        if not part.strip() or part.lstrip().startswith(('*', '//', '#', '<!--', '/*')):
+            return None
+    # Conservatively avoid obvious inline comments; this is not a parser.
+    if any(marker in line or marker in following for marker in ('//', '/*', '*/', '<!--')):
+        return None
+    return line + '\n' + following
+
+
 def project_files(root:Path, stats=None):
     """Yield bounded source files while making all coverage gaps observable."""
     stats = stats if stats is not None else {}
@@ -443,12 +467,21 @@ def process(root:Path, profile=None, components=()):
         is_test=_test_file(fn)
         allowed_domains=_domains(selected_by_root[_owner(fn,scope['components'])]) if scope else None
         if not is_test:
-            for lineno,line in enumerate(content.splitlines(),1):
+            source_lines = content.splitlines()
+            for lineno,line in enumerate(source_lines,1):
                 if not line.strip() or line.lstrip().startswith(('*','//','#','<!--')):continue
+                window = (_multiline_window(line, source_lines[lineno])
+                          if lineno < len(source_lines) else None)
                 for cid,label,regex,extensions,confidence,severity in PATTERNS:
                     if allowed_domains is not None and cid.split('-')[0] not in allowed_domains:continue
                     if p.suffix not in extensions and p.name not in extensions:continue
-                    if regex.search(line):
+                    matched = bool(regex.search(line))
+                    if not matched and window is not None and label in MULTILINE_LABELS:
+                        # Only count matches starting on this line and crossing
+                        # the boundary; next-line-only matches are handled later.
+                        matched = any(m.start() < len(line) < m.end()
+                                      for m in regex.finditer(window))
+                    if matched:
                         evidence.append({'control_id':cid,'signal':label,'path':fn,'line':lineno,
                             'confidence':confidence,'suggested_severity':severity,
                             'status':'HEURISTIC_REVIEW_ONLY'})
