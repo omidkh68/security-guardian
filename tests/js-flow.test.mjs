@@ -117,3 +117,19 @@ test('explicit sanitizer binding preserves review and tracks observed call evide
     if(['fake','shadow','options'].includes(label))assert.equal(r.status,'PARTIAL',label);
   }
 });
+
+test('URI transformations preserve candidate flow and reject shadowing',{skip:!parser},t=>{
+  const cases=[
+    [source+'const x=encodeURI(window.location.search); el.innerHTML=decodeURI(x);'+close,1],
+    [source+'el.textContent=decodeURIComponent(window.location.hash);'+close,0],
+    [source+'const decodeURI=other; el.innerHTML=decodeURI(window.location.hash);'+close,0],
+    ['function decodeURI(x){return "fixed";}\n'+source+'el.innerHTML=decodeURI(window.location.hash);'+close,0],
+    [source+'el.innerHTML=decodeURI("constant");'+close,0],
+    ['import clean from "dompurify";\n'+source+'el.innerHTML=decodeURI(clean.sanitize(window.location.hash));'+close,1]
+  ];
+  for(const [code,count] of cases){
+    const r=run(fixture(t,code));
+    assert.equal(r.signals.length,count,code);
+    if(count){assert.equal(r.status,'PARTIAL');assert.equal(r.signals[0].sanitizer_evidence,'NONE_OBSERVED');}
+  }
+});

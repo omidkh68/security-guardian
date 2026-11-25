@@ -236,5 +236,44 @@ class SemanticFlowTests(unittest.TestCase):
         self.assertFalse(self.hits(r))
         self.assertGreater(r['summary']['python_sql_flow']['unsupported_functions'],0)
 
+    def test_receiver_factories_and_nested_routes(self):
+        header=HEADER+'def connection():\n    return sqlite3.connect("fixture.db")\n'
+        prefix='def register(app):\n    @app.route("/items", methods=["GET"])\n    def handle():\n'
+        body='        db=connection()\n        db.execute("SELECT "+request.args["name"])\n'
+        result=self.run_scan(body,header,prefix)
+        self.assertEqual(len(self.hits(result)),1)
+        self.assertEqual(result['summary']['python_sql_flow']['nested_route_functions'],1)
+        self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertFalse(self.hits(self.run_scan(body.replace('db.execute("SELECT "+request.args["name"])','db.execute("SELECT ?",(request.args["name"],))'),header,prefix)))
+        self.assertFalse(self.hits(self.run_scan(body,header,prefix.replace('def register(app):','def register(app, request):'))))
+
+    def test_literal_loop_order_and_bounds(self):
+        result=self.run_scan('    for item in ["constant", request.args["name"]]:\n        cur.execute("SELECT "+item)\n')
+        self.assertEqual(len(self.hits(result)),1)
+        self.assertEqual(result['summary']['python_sql_flow']['literal_loop_paths'],1)
+        self.assertFalse(self.hits(self.run_scan('    for item in []:\n        cur.execute(request.args["name"])\n')))
+        self.assertFalse(self.hits(self.run_scan('    for item in [request.args["name"]]:\n        cur.execute("SELECT ?",(item,))\n')))
+        for body in ('    for item in range(2):\n        cur.execute(request.args["name"])\n',
+                     '    for item in [request.args["name"]]:\n        break\n        cur.execute(item)\n',
+                     '    for item in [1,2,3,4,5,6,7,8,9]:\n        cur.execute(request.args["name"])\n'):
+            result=self.run_scan(body)
+            self.assertFalse(self.hits(result))
+            self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+
+    def test_sibling_binding_scope_and_shadowing(self):
+        self.write('api/connection.py','import sqlite3 as db\ndef open_local():\n    return db.connect("fixture.db")\n')
+        self.write('excluded/requirements.txt','Flask\n')
+        self.write('excluded/routes.py',HEADER+PREFIX+'    cur.execute(request.args["q"])\n')
+        header='from flask import request as req\nfrom .connection import open_local as connect\n'
+        prefix='def view():\n    db=connect()\n'
+        result=self.run_scan('    db.execute("SELECT "+req.args["name"])\n',header,prefix)
+        self.assertEqual([x['path'] for x in self.hits(result)],['api/routes.py'])
+        self.assertEqual(result['summary']['python_sql_flow']['cross_file_receiver_bindings'],1)
+        self.assertFalse(self.hits(self.run_scan('    db.execute("SELECT ?",(req.args["name"],))\n',header,prefix)))
+        self.assertFalse(self.hits(self.run_scan('    db.execute(req.args["name"])\n',header,prefix.replace('view()','view(connect)'))))
+        self.assertFalse(self.hits(self.run_scan('    db.execute(req.args["name"])\n',header.replace('.connection','..excluded.connection'),prefix)))
+        self.write('api/connection.py','import sqlite3 as db\ndb=unknown\ndef open_local():\n    return db.connect("fixture.db")\n')
+        self.assertFalse(self.hits(self.run_scan('    db.execute(req.args["name"])\n',header,prefix)))
+
 if __name__=='__main__':
     unittest.main()
