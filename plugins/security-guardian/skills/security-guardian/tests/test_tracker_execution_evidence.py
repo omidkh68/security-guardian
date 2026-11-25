@@ -165,5 +165,106 @@ class TrackerExecutionTests(unittest.TestCase):
         result=self.call(*cmd)
         self.verified(result['test_id'],review='Reviewed selected owner and nonowner assertions')
 
+
+    def test_before_after_tenant_state_and_race_evidence(self):
+        # Disposable, deterministic business fixture only. No production
+        # data, financial/signature transactions, or external endpoints.
+        source = '''
+import sqlite3
+AUTH_SAFE = False
+ATOMIC_SAFE = False
+
+def permitted(actor, resource, method):
+    if method not in ('GET', 'PATCH', 'DELETE'):
+        return False
+    return actor[0] == resource[0] if not AUTH_SAFE else actor == resource
+
+def transition(path, gate):
+    db = sqlite3.connect(path, timeout=3)
+    try:
+        if not ATOMIC_SAFE:
+            if db.execute("SELECT status FROM jobs WHERE id=1").fetchone()[0] != "pending":
+                return False
+        gate.wait(timeout=3)
+        sql = "UPDATE jobs SET status='done' WHERE id=1"
+        if ATOMIC_SAFE:
+            sql += " AND status='pending'"
+        changed = db.execute(sql).rowcount
+        db.commit()
+        return changed == 1
+    finally:
+        db.close()
+'''
+        test = '''
+import tempfile, sqlite3, threading, unittest
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+from app import permitted, transition
+
+class SecurityTests(unittest.TestCase):
+    def test_tenant_owner_matrix(self):
+        for method in ('GET', 'PATCH', 'DELETE'):
+            for actor, resource, expected in (
+                (('a','alice'), ('a','alice'), True),
+                (('b','bob'), ('b','bob'), True),
+                (('a','alice'), ('a','other'), False),
+                (('a','alice'), ('b','bob'), False),
+                (('b','bob'), ('a','alice'), False)):
+                self.assertEqual(permitted(actor, resource, method), expected)
+        self.assertFalse(permitted(('a','alice'), ('a','alice'), 'UNKNOWN'))
+
+    def test_two_concurrent_state_transitions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = str(Path(tmp)/'fixture.sqlite')
+            with sqlite3.connect(path) as db:
+                db.execute("CREATE TABLE jobs(id INTEGER PRIMARY KEY, status TEXT)")
+                db.execute("INSERT INTO jobs VALUES(1,'pending')")
+            gate = threading.Barrier(2)
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                a = pool.submit(transition,path,gate)
+                b = pool.submit(transition,path,gate)
+                outcomes = [a.result(timeout=5),b.result(timeout=5)]
+            self.assertEqual(sorted(outcomes), [False,True])
+            with sqlite3.connect(path) as db:
+                self.assertEqual(db.execute("SELECT status FROM jobs WHERE id=1").fetchone()[0], 'done')
+'''
+        src = self.api/'app.py'
+        fixture = self.api/'test_security.py'
+        src.write_text(source)
+        fixture.write_text(test)
+        before_fixture = fixture.read_bytes()
+        finding = {**self.finding, 'control_id':'BIZ-01',
+                   'finding_key':'tenant-state-race-fixture',
+                   'title':'Synthetic tenant and state transition regression'}
+        ident = self.call('record','--run',self.run_id,payload=finding)['finding_ids'][0]
+        before = self.execute(finding=ident)
+        self.assertEqual(before['result'],'FAIL')
+        first = self.run_data()['tests'][-1]['execution_receipt']
+        self.assertEqual(first['counts']['tests_run'],2)
+        self.assertEqual(first['counts']['failures'],2)
+        src.write_text(source.replace('AUTH_SAFE = False','AUTH_SAFE = True')
+                             .replace('ATOMIC_SAFE = False','ATOMIC_SAFE = True'))
+        after = self.execute(finding=ident)
+        self.assertEqual(after['result'],'PASS')
+        second = self.run_data()['tests'][-1]['execution_receipt']
+        self.assertEqual(second['counts']['tests_run'],2)
+        self.assertEqual(second['counts']['failures'],0)
+        self.assertEqual(fixture.read_bytes(),before_fixture)
+        self.assertNotEqual(first['fingerprint_before']['digest'],
+                            second['fingerprint_before']['digest'])
+        self.assertEqual(second['fingerprint_before'],second['fingerprint_after'])
+        payload={**finding,'id':ident,'status':'VERIFIED_FIXED',
+                 'verification':{'executed':True,'result':'PASS','test_id':after['test_id'],
+                  'evidence':['synthetic authorization regression'],
+                  'security_assertion_review':'Reviewed two-tenant owner matrix across GET/PATCH/DELETE operations.'}}
+        self.call('record','--run',self.run_id,payload=payload)
+        # The race assertion is separate fixture evidence, not a blanket
+        # authorization to mark another control verified by this receipt.
+        race={**finding,'control_id':'BIZ-05','finding_key':'atomic-transition-fixture','title':'Synthetic race review'}
+        race_id=self.call('record','--run',self.run_id,payload=race)['finding_ids'][0]
+        self.call('record','--run',self.run_id,payload={**race,'id':race_id,
+                  'status':'VERIFIED_FIXED','verification':payload['verification']},expected=2)
+        self.assertEqual((self.other/'other.py').read_text(),'pass\n')
+
 if __name__ == '__main__':
     unittest.main()
