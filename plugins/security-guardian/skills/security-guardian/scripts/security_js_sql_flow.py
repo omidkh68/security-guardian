@@ -35,7 +35,7 @@ def review(root, profile, components, parser):
               'rule_id':RULE, 'legacy_control_id':'API-07', 'status':'NOT_AVAILABLE',
               'selected_roots':sorted(roots), 'signals':[],
               'limitations':['Optional syntactic AST flow, not exploit proof or full taint analysis.',
-                             'Direct Express/Fastify registrations and pg Pool/Client only; NestJS, branch, helper, ORM and cross-module flows remain unsupported.',
+                             'Direct Express/Fastify registrations or NestJS route/parameter decorators and module-local pg Pool/Client only; branch, helper, DI, ORM and cross-module flows remain unsupported.',
                              'Trusted parser execution is not an OS sandbox; no project code or config loaded.',
                              'No ledger update; review and record candidates manually.']}
     def finish(status):
