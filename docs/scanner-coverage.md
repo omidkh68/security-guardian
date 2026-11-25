@@ -23,7 +23,7 @@ python3 -m unittest discover -s plugins/security-guardian/skills/security-guardi
 
 This is still static heuristic triage, not a vulnerability confirmation engine. Encoding errors and resource limits can hide real indicators. A zero candidate count is never a clean bill of health. Revert the code and tests if compatibility issues arise; no ledger migration or historical snapshot rewrite is required.
 
-## Architecture and testing value (#50)
+## Architecture and testing value (#49)
 
 ```mermaid
 flowchart LR
