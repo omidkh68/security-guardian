@@ -389,6 +389,7 @@ GitHub Actions مجموعه تست آفلاین را روی سه نسخه Python
 | [پیگیری](docs/tracking.md) | معنای وضعیت‌ها، نسخه‌بندی، دلایل، اصلاح ناموفق و شناسه‌های رگرسیون |
 | [مدل امنیتی](docs/security-model.md) | اجرای امن، فایل‌های حساس و محدودیت‌ها |
 | اثرانگشت راستی‌آزمایی ([EN](docs/verification-fingerprint.md)، [FA](docs/verification-fingerprint-FA.md)) | اتصال شواهد به فایل‌های انتخاب‌شده؛ نه اجرای مستقل تست |
+| اجراکننده راستی‌آزمایی محلی ([EN](docs/verification-runner.md)، [FA](docs/verification-runner-FA.md)) | اجرای Python unittest با مجوز صریح؛ رسید به معنی اصلاح تأییدشده نیست |
 | [رفع اشکال](docs/troubleshooting.md) | مشکلات رایج نصب یا پیگیری |
 | [مشارکت در Playbookها](docs/contributing-playbook.md) | افزودن یا بهبود امن کنترل‌ها |
 | [منشأ و منابع](docs/provenance.md) | استانداردها، خط مبنا و تفسیر امتیازهای دشواری |

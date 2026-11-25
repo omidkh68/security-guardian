@@ -9,6 +9,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 - New framework names are discovery hints only, not expanded vulnerability detection coverage.
 
 - Add read-only, bounded selected-file SHA-256 fingerprints as a prerequisite for stale-evidence detection (#51, #52). No automatic verification or test execution.
+- Add an opt-in POSIX Python unittest adapter with execution receipts, consent, limits and before/after selected-input fingerprints (#53, #56). Tracker verification remains unchanged.
 
 ### Fixed
 - Standardize canonical English and Persian documentation filenames and track legacy translation debt (#54).
