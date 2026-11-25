@@ -439,6 +439,8 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 
 [تحلیل اختیاری AST جریان DOM در JS/TS](docs/js-dom-flow-FA.md) ([English](docs/js-dom-flow.md)): Parser خارجی با مجوز صریح؛ Candidate محدود جریان Location تا innerHTML، نه اثبات بهره‌برداری.
 
+[بازبینی اختیاری جریان ورودی API تا SQL](docs/js-sql-flow-FA.md) ([English](docs/js-sql-flow.md)): تحلیل محدود Express/Fastify/NestJS تا متن Query در pg.
+
 نسخه ۲ تحلیل AST جریان DOM در JS/TS مسیرهای شرطی و خلاصه تابع کمکی همان فایل را اضافه می‌کند (#88).
 
 نسخه ۴ تحلیل AST جریان SQL پایتون، مسیر عادی Context Manager مستقیم SQLite را اضافه می‌کند (#90) و معنای تراکنش/استثنا را ناقص گزارش می‌دهد.
