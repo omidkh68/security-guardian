@@ -609,6 +609,8 @@ PY_SQL_RULE = 'PY.FLASK.SQL.REQUEST_FLOW'
 PY_SQL_PACK = 'python-sql-flow'
 PY_SQL_MAX_BYTES = 128_000
 PY_SQL_MAX_NODES = 10_000
+PY_SQL_MAX_PATHS = 64
+PY_SQL_MAX_STEPS = 4096
 
 
 def _binding_names(node):
@@ -705,6 +707,87 @@ def _sql_receiver(node, receivers):
     return None
 
 
+def _sql_condition(node):
+    """Syntactic condition subset; no user code or truth-value evaluation."""
+    if isinstance(node, ast.Name):
+        return True
+    if isinstance(node, ast.Constant):
+        return type(node.value) in (bool, int, str, type(None))
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+        return _sql_condition(node.operand)
+    if isinstance(node, ast.BoolOp) and isinstance(node.op, (ast.And, ast.Or)):
+        return all(_sql_condition(v) for v in node.values)
+    if isinstance(node, ast.Compare) and all(isinstance(op, (ast.Eq, ast.NotEq, ast.Is, ast.IsNot, ast.Lt, ast.LtE, ast.Gt, ast.GtE)) for op in node.ops):
+        return all(_sql_condition(v) for v in [node.left, *node.comparators])
+    return False
+
+
+def _sql_function_paths(fn, stats):
+    # Each pending path owns its bindings. Never join taint from one branch
+    # with a receiver from another. Unmodeled paths terminate, visibly partial.
+    pending = [(tuple(fn.body), {}, {})]
+    sources_by_sink = defaultdict(set)
+    partial = False
+    paths, steps = 1, 0
+    while pending:
+        statements, values, receivers = pending.pop()
+        for index, stmt in enumerate(statements):
+            steps += 1
+            if steps > PY_SQL_MAX_STEPS:
+                stats['path_limited_functions'] += 1
+                return sources_by_sink, True
+            if isinstance(stmt, ast.If):
+                if not _sql_condition(stmt.test):
+                    partial = True
+                    break
+                tail = statements[index + 1:]
+                if isinstance(stmt.test, ast.Constant) and type(stmt.test.value) is bool:
+                    branches = [stmt.body if stmt.test.value else stmt.orelse]
+                else:
+                    branches = [stmt.body, stmt.orelse]
+                if paths + len(branches) - 1 > PY_SQL_MAX_PATHS:
+                    stats['path_limited_functions'] += 1
+                    return sources_by_sink, True
+                paths += len(branches) - 1
+                for body in reversed(branches):
+                    pending.append((tuple(body) + tail, values.copy(), receivers.copy()))
+                break
+            if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name):
+                target, value = stmt.targets[0].id, stmt.value
+            elif isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name) and stmt.value is not None:
+                target, value = stmt.target.id, stmt.value
+            else:
+                target, value = None, None
+            if target is not None:
+                if not _known_value(value, values, receivers):
+                    partial = True
+                    break
+                values[target] = _sql_source_lines(value, values)
+                receivers[target] = _sql_receiver(value, receivers)
+                continue
+            if isinstance(stmt, ast.Pass) or (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant)):
+                continue
+            if isinstance(stmt, (ast.Expr, ast.Return)) and isinstance(stmt.value, ast.Call):
+                call = stmt.value
+                if (_attr(call.func, 'execute') and isinstance(call.func.value, ast.Name)
+                        and receivers.get(call.func.value.id) in {'connection', 'cursor'}
+                        and call.args and not isinstance(call.args[0], ast.Starred)):
+                    sources = _sql_source_lines(call.args[0], values)
+                    if sources:
+                        sources_by_sink[call.lineno].update(sources)
+                    if not _known_value(call.args[0], values, receivers):
+                        partial = True
+                        break
+                    if isinstance(stmt, ast.Return):
+                        break
+                    continue
+            if isinstance(stmt, ast.Return) and (stmt.value is None or _known_value(stmt.value, values, receivers)):
+                break
+            partial = True
+            break
+    return sources_by_sink, partial
+
+
 def python_sql_flow(content):
     """Bounded intra-function AST review, not a whole-program taint engine."""
     stats = Counter()
@@ -751,46 +834,13 @@ def python_sql_flow(content):
         if _binding_names(fn) & watched:
             stats['unsupported_functions'] += 1
             continue
-        values, receivers = {}, {}
-        partial = False
         stats['analyzed_functions'] += 1
         try:
-            for stmt in fn.body:
-                if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name):
-                    target, value = stmt.targets[0].id, stmt.value
-                elif isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name) and stmt.value is not None:
-                    target, value = stmt.target.id, stmt.value
-                else:
-                    target, value = None, None
-                if target is not None:
-                    taint = _sql_source_lines(value, values)
-                    receiver = _sql_receiver(value, receivers)
-                    if not _known_value(value, values, receivers):
-                        partial = True
-                    values[target] = taint
-                    receivers[target] = receiver
-                    continue
-                if isinstance(stmt, ast.Pass) or (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant)):
-                    continue
-                if isinstance(stmt, (ast.Expr, ast.Return)) and isinstance(stmt.value, ast.Call):
-                    call = stmt.value
-                    if (_attr(call.func, 'execute') and isinstance(call.func.value, ast.Name)
-                            and receivers.get(call.func.value.id) in {'connection','cursor'}
-                            and call.args and not isinstance(call.args[0], ast.Starred)):
-                        sources = sorted(_sql_source_lines(call.args[0], values))
-                        if sources:
-                            hits.append({'line':call.lineno,'source_lines':sources[:16],
-                                         'source_lines_truncated':len(sources)>16})
-                        elif not _known_value(call.args[0], values, receivers):
-                            partial = True
-                        if isinstance(stmt, ast.Return):
-                            break
-                        continue
-                if isinstance(stmt, ast.Return) and (stmt.value is None or _known_value(stmt.value, values, receivers)):
-                    break
-                # Do not carry taint through an unmodeled branch, mutation or call.
-                partial = True
-                break
+            sources_by_sink, partial = _sql_function_paths(fn, stats)
+            for line, source_set in sorted(sources_by_sink.items()):
+                sources = sorted(source_set)
+                hits.append({'line':line,'source_lines':sources[:16],
+                             'source_lines_truncated':len(sources)>16})
         except (RecursionError, MemoryError):
             partial = True
             stats['complexity_limited_functions'] += 1
@@ -921,7 +971,7 @@ def process(root:Path, profile=None, components=()):
                     entry = {'control_id':cid, 'signal':'Flask request value reaches SQLite SQL argument',
                              'path':fn, 'confidence':'medium', 'suggested_severity':'high',
                              'status':'HEURISTIC_REVIEW_ONLY', 'technique':'BOUNDED_AST_FLOW',
-                             'pack_id':PY_SQL_PACK, 'pack_version':1, 'rule_id':PY_SQL_RULE,
+                             'pack_id':PY_SQL_PACK, 'pack_version':2, 'rule_id':PY_SQL_RULE,
                              'control_mapping':'LEGACY_COMPATIBILITY', **hit}
                     if len(evidence) < MAX_SIGNALS:
                         evidence.append(entry)
@@ -1118,13 +1168,13 @@ def process(root:Path, profile=None, components=()):
             'limitations': ['Text indicators only; no deployed proxy trust, route schema, handler or authorization proof.',
                             'Literal options and app/server receivers only; computed options and aliases need review.'],
         }
-        partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions')
+        partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions','path_limited_functions')
         summary['python_sql_flow'] = {
-            'pack_id': PY_SQL_PACK, 'pack_version':1, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
+            'pack_id': PY_SQL_PACK, 'pack_version':2, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
             'selected_roots':sorted(python_sql_roots),
             'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
             **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches',*partial_keys)},
-            'limitations':['Bounded straight-line Python AST only; no branch, interprocedural, alias import, ORM or exploit analysis.',
+            'limitations':['Bounded local Python AST and if/else paths only; no loop, exception, interprocedural, alias import, ORM or exploit analysis.',
                            'Unmodeled statements and imports are not proof of safety; no target code is executed.'],
         }
     return {'summary':summary,'signals':evidence,'controls':result,
@@ -1188,10 +1238,11 @@ def markdown(result):
                   '- Proxy trust and validation indicators require manual deployment/handler review.', '']
     if s.get('python_sql_flow'):
         flow = s['python_sql_flow']
-        lines += [f"- Python SQL AST flow v1: {flow['status']}",
+        lines += [f"- Python SQL AST flow v2: {flow['status']}",
                   f"- Eligible/parsed Python files: {flow['eligible_files']}/{flow['parsed_files']}; candidates: {flow['matches']}",
                   f"- Unsupported functions: {flow['unsupported_functions']}; unmodeled imports: {flow['unmodeled_import_files']}; parse errors: {flow['parse_errors']}",
                   f"- Unmodeled module statements: {flow['unmodeled_module_statements']}; size/complexity-limited files: {flow['size_limited_files']}/{flow['complexity_limited_files']}",
+                  f"- Path-budget-limited functions: {flow['path_limited_functions']}",
                   '- AST source-to-sink candidates require manual confirmation; missing candidates are not safety.', '']
     for status,qty in sorted(s['applicability'].items()):lines.append(f'- {status}: {qty}')
     lines+=['', '## Scan coverage and limitations', '']

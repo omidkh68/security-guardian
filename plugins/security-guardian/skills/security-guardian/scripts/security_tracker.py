@@ -307,7 +307,7 @@ def make_run_report(run, ledger, scan):
         coverage_lines.extend([
             f"- Python SQL AST flow: {flow['status']}; parsed/eligible files: {flow['parsed_files']}/{flow['eligible_files']}; candidates: {flow['matches']}",
             f"- Unmodeled functions/import files/module statements: {flow['unsupported_functions']}/{flow['unmodeled_import_files']}/{flow['unmodeled_module_statements']}; parse errors: {flow['parse_errors']}",
-            f"- AST size/complexity-limited files: {flow['size_limited_files']}/{flow['complexity_limited_files']}",
+            f"- AST size/complexity-limited files: {flow['size_limited_files']}/{flow['complexity_limited_files']}; path-budget-limited functions: {flow.get('path_limited_functions', 0)}",
         ])
     coverage_lines.extend(['- Workflow completion does not establish complete scanner coverage or verified safety.',''])
     marker=lines.index('## Status snapshot (entire project, not just this run)')
