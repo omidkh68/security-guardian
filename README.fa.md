@@ -391,7 +391,7 @@ GitHub Actions مجموعه تست آفلاین را روی سه نسخه Python
 | [رفع اشکال](docs/troubleshooting.md) | مشکلات رایج نصب یا پیگیری |
 | [مشارکت در Playbookها](docs/contributing-playbook.md) | افزودن یا بهبود امن کنترل‌ها |
 | [منشأ و منابع](docs/provenance.md) | استانداردها، خط مبنا و تفسیر امتیازهای دشواری |
-| [فارسی](README.fa.md) | راهنمای فارسی شروع سریع و استفاده |
+| [فارسی](README.fa.md) | ترجمه کامل همین README به فارسی |
 
 ## 🤝 مشارکت
 
