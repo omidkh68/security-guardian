@@ -456,3 +456,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 [ارزیابی مستقل تشخیص](docs/independent-benchmark-FA.md) ([English](docs/independent-benchmark.md)): مجموعه خارجی CWE-89، مجموعه مصنوعی جدا و مخرج شفاف معیارها.
 
 [نگاشت استانداردها](docs/standards-crosswalk-FA.md) ([English](docs/standards-crosswalk.md)): روابط نسخه‌دار و تفکیک کاربرد و تأیید.
+
+[گزارش‌دهی حرفه‌ای](docs/pdf-reporting-FA.md) ([English](docs/pdf-reporting.md)): گزارش مدیریتی و فنی PDF، JSON و Markdown، ریسک باقی‌مانده و خروجی نسخه نهایی.
