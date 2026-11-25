@@ -17,10 +17,12 @@ function analyze(ts,file){
   const recv=n=>n&&(ts.isPropertyAccessExpression(n)||ts.isElementAccessExpression(n))?n.expression:null;
   const lit=n=>n&&(str(n)||ts.isNumericLiteral(n)||ts.isNoSubstitutionTemplateLiteral(n)||[ts.SyntaxKind.TrueKeyword,ts.SyntaxKind.FalseKeyword,ts.SyntaxKind.NullKeyword].includes(n.kind));
   const decorators=n=>ts.canHaveDecorators(n)?ts.getDecorators(n)||[]:[];
-  const names=new Set(),imports=new Map(),apps=new Map(),clients=new Set(),routes=[];
+  const names=new Set(),imports=new Map(),typeImports=new Map(),apps=new Map(),clients=new Set(),sources=new Set(),repositories=new Set(),routes=[];
   const bind=n=>{if(!n||names.has(n))return false;names.add(n);return true;};
   const methods=new Set(['get','post','put','patch','delete','head','options']);
   const ops=new Set(['findUnique','findUniqueOrThrow','findFirst','findFirstOrThrow','findMany','count','update','updateMany','delete','deleteMany','upsert']);
+  const repoOps=new Set(['find','findOne','findOneBy','findBy','count','countBy','exists','existsBy','update','delete','softDelete','restore']);
+  const byOps=new Set(['findOneBy','findBy','countBy','existsBy','delete','softDelete','restore','update']);
   const tenantKeys=new Set(['tenantId','organizationId','companyId','schoolId']);
   const ownerKeys=new Set(['ownerId','userId','customerId']);
   function fields(n){
@@ -52,6 +54,12 @@ function analyze(ts,file){
     }
     return evidence;
   }
+  function simpleConfig(n,depth=0){
+    if(!n||depth>32)return false;
+    if(lit(n)||imports.has(id(n)))return true;
+    if(ts.isArrayLiteralExpression(n))return n.elements.every(x=>simpleConfig(x,depth+1));
+    const a=fields(n);return !!a&&[...a.values()].every(x=>simpleConfig(x,depth+1));
+  }
   for(const s of sf.statements){
     if(ts.isImportDeclaration(s)&&str(s.moduleSpecifier)&&s.importClause){
       const c=s.importClause,mod=s.moduleSpecifier.text;
@@ -60,6 +68,7 @@ function analyze(ts,file){
         if(!ts.isNamedImports(c.namedBindings))return fail();
         for(const e of c.namedBindings.elements){
           const n=id(e.name);if(!bind(n))return fail();
+          typeImports.set(n,[mod,(e.propertyName||e.name).text]);
           if(!c.isTypeOnly&&!e.isTypeOnly)imports.set(n,[mod,(e.propertyName||e.name).text]);
         }
       }
@@ -69,11 +78,14 @@ function analyze(ts,file){
     if(ts.isVariableStatement(s)&&(s.declarationList.flags&ts.NodeFlags.Const)&&!s.modifiers?.length){
       for(const d of s.declarationList.declarations){
         const n=id(d.name),v=d.initializer;
-        if(!bind(n)||!v||!(ts.isCallExpression(v)||ts.isNewExpression(v))||v.questionDotToken||v.arguments?.length)return fail();
-        const a=imports.get(id(v.expression));if(!a)return fail();
-        if(ts.isCallExpression(v)&&a[1]==='default'&&a[0]==='express'&&file.frameworks.includes('Express'))apps.set(n,'Express');
-        else if(ts.isCallExpression(v)&&a[1]==='default'&&a[0]==='fastify'&&file.frameworks.includes('Fastify'))apps.set(n,'Fastify');
-        else if(ts.isNewExpression(v)&&a[0]==='@prisma/client'&&a[1]==='PrismaClient')clients.add(n);
+        if(!bind(n)||!v||!(ts.isCallExpression(v)||ts.isNewExpression(v))||v.questionDotToken)return fail();
+        const a=imports.get(id(v.expression));
+        if(ts.isCallExpression(v)&&a?.[1]==='default'&&a[0]==='express'&&!v.arguments.length&&file.frameworks.includes('Express'))apps.set(n,'Express');
+        else if(ts.isCallExpression(v)&&a?.[1]==='default'&&a[0]==='fastify'&&!v.arguments.length&&file.frameworks.includes('Fastify'))apps.set(n,'Fastify');
+        else if(ts.isNewExpression(v)&&a?.[0]==='@prisma/client'&&a[1]==='PrismaClient'&&!v.arguments?.length)clients.add(n);
+        else if(ts.isNewExpression(v)&&a?.[0]==='typeorm'&&a[1]==='DataSource'&&v.arguments?.length===1&&
+          (imports.has(id(v.arguments[0]))||simpleConfig(v.arguments[0])))sources.add(n);
+        else if(ts.isCallExpression(v)&&prop(v.expression)==='getRepository'&&sources.has(id(v.expression.expression))&&v.arguments.length===1&&imports.has(id(v.arguments[0])))repositories.add(n);
         else return fail();
       }
       continue;
@@ -81,10 +93,27 @@ function analyze(ts,file){
     if(ts.isClassDeclaration(s)&&file.frameworks.includes('NestJS')){
       const ds=decorators(s),ctrl=ds.map(nd).filter(a=>a?.name==='Controller');
       if(!bind(id(s.name))||s.heritageClauses?.length||ctrl.length!==1||ctrl[0].args.length>1||ctrl[0].args.some(x=>!str(x)))return fail();
+      const injectedRepos=new Set();
+      const ctors=s.members.filter(ts.isConstructorDeclaration);
+      if(ctors.length>1)return fail();
+      if(ctors.length){
+        const ctor=ctors[0];
+        if(!ctor.body||ctor.body.statements.length)return fail();
+        for(const p of ctor.parameters){
+          const name=id(p.name),ds=decorators(p),e=ds[0]?.expression;
+          const type=p.type,member=type&&ts.isTypeReferenceNode(type)?typeImports.get(id(type.typeName)):null;
+          if(!name||injectedRepos.has(name)||p.initializer||p.dotDotDotToken||!p.modifiers?.some(m=>[ts.SyntaxKind.PrivateKeyword,ts.SyntaxKind.PublicKeyword,ts.SyntaxKind.ProtectedKeyword,ts.SyntaxKind.ReadonlyKeyword].includes(m.kind))||
+             ds.length!==1||!importedCall(e,'@nestjs/typeorm','InjectRepository')||e.arguments.length!==1||!imports.has(id(e.arguments[0]))||
+             member?.[0]!=='typeorm'||member[1]!=='Repository'||type.typeArguments?.length!==1||!ts.isTypeReferenceNode(type.typeArguments[0])||id(type.typeArguments[0].typeName)!==id(e.arguments[0]))return fail();
+          injectedRepos.add(name);
+        }
+      }
+      if(s.members.some(m=>!ts.isConstructorDeclaration(m)&&injectedRepos.has(id(m.name))))return fail();
       for(const m of s.members){
+        if(ts.isConstructorDeclaration(m))continue;
         const md=decorators(m),http=md.map(nd).filter(a=>a&&['Get','Post','Put','Patch','Delete','Head','Options'].includes(a.name));
         if(!ts.isMethodDeclaration(m)||!m.body||m.asteriskToken||!id(m.name)||http.length!==1||http[0].args.length>1||http[0].args.some(x=>!str(x))||m.modifiers?.some(x=>x.kind===ts.SyntaxKind.StaticKeyword)){r.partial=true;continue;}
-        routes.push({fn:m,framework:'NestJS',method:http[0].name.toUpperCase(),route:line(m),evidence:[...decorEvidence(ds),...decorEvidence(md)]});
+        routes.push({fn:m,framework:'NestJS',method:http[0].name.toUpperCase(),route:line(m),evidence:[...decorEvidence(ds),...decorEvidence(md)],injectedRepos});
       }
       continue;
     }
@@ -108,8 +137,8 @@ function analyze(ts,file){
     }
     return fail();
   }
-  if(!routes.length||!clients.size)return fail();
-  for(const {fn,framework,method,route,evidence} of routes){
+  if(!routes.length)return fail();
+  for(const {fn,framework,method,route,evidence,injectedRepos=new Set()} of routes){
     const locals=new Set(),env=new Map(),objects=new Set(),requests=new Set();
     let valid=fn.parameters.length>=1&&fn.parameters.length<=(framework==='NestJS'?16:3);
     for(let i=0;i<fn.parameters.length;i++){
@@ -148,9 +177,27 @@ function analyze(ts,file){
     }
     function operation(n){
       if(n&&ts.isAwaitExpression(n))n=n.expression;
-      if(!n||!ts.isCallExpression(n)||n.questionDotToken||!ops.has(prop(n.expression))||!prop(n.expression.expression)||!clients.has(id(n.expression.expression.expression))||n.arguments.length!==1)return false;
-      const options=fields(n.arguments[0]);if(!options||!options.has('where'))return false;
-      const where=fields(options.get('where'));if(!where)return false;
+      if(!n||!ts.isCallExpression(n)||n.questionDotToken||!prop(n.expression))return false;
+      const op=prop(n.expression),receiver=n.expression.expression;
+      const prisma=ops.has(op)&&prop(receiver)&&clients.has(id(receiver.expression));
+      const typeorm=repoOps.has(op)&&(repositories.has(id(receiver))||(prop(receiver)&&receiver.expression.kind===ts.SyntaxKind.ThisKeyword&&injectedRepos.has(prop(receiver))));
+      if(!prisma&&!typeorm)return false;
+      let options=new Map(),where=new Map();
+      if(prisma){
+        if(n.arguments.length>1||(!n.arguments.length&&!['findMany','count','findFirst','findFirstOrThrow'].includes(op)))return false;
+        if(n.arguments.length){options=fields(n.arguments[0]);if(!options)return false;}
+        if(options.has('where')){where=fields(options.get('where'));if(!where)return false;}
+        else if(!['findMany','count','findFirst','findFirstOrThrow'].includes(op))return false;
+      }else if(byOps.has(op)){
+        if(n.arguments.length!==(op==='update'?2:1))return false;
+        where=fields(n.arguments[0]);if(!where)return false;
+        if(op==='update')options.set('data',n.arguments[1]);
+      }else{
+        if(n.arguments.length>1||(!n.arguments.length&&op==='findOne'))return false;
+        if(n.arguments.length){options=fields(n.arguments[0]);if(!options)return false;}
+        if(options.has('where')){where=fields(options.get('where'));if(!where)return false;}
+        else if(op==='findOne')return false;
+      }
       // Do not silently interpret OR, nested selectors, undefined, dynamic data or unknown filters as constraints.
       const selectors=[];
       for(const [k,v] of where){
@@ -175,7 +222,7 @@ function analyze(ts,file){
       const callerScope=selectors.some(x=>x.role!=='OBJECT'&&x.origin==='REQUEST');
       const status=callerScope?'CALLER_SCOPE_REVIEW':obj&&!tenant&&!owner?'MISSING_LOCAL_SCOPE_REVIEW':tenant||owner?'PRINCIPAL_SCOPE_EVIDENCE':'UNKNOWN_RESOURCE_SCOPE';
       // Even apparent principal predicates need provenance, policy and database verification.
-      r.hits.push({line:line(n),source_lines:[...new Set(user.flatMap(x=>x.lines))].sort((a,b)=>a-b).slice(0,16),framework,method,route_line:route,operation:prop(n.expression),scope_status:status,object_request:obj,tenant_context:tenant,owner_context:owner,caller_scope:callerScope,selectors,evidence});
+      r.hits.push({line:line(n),source_lines:[...new Set(user.flatMap(x=>x.lines))].sort((a,b)=>a-b).slice(0,16),framework,method,route_line:route,operation:op,adapter:prisma?'PRISMA':'TYPEORM',scope_status:status,object_request:obj,tenant_context:tenant,owner_context:owner,caller_scope:callerScope,selectors,evidence});
       return true;
     }
     for(const s of fn.body.statements){

@@ -36,7 +36,7 @@ Run `python3 <skill-dir>/scripts/security_js_authz_flow.py --root . --profile ba
 | PRINCIPAL_SCOPE_EVIDENCE | Matching principal-context-shaped predicate present; verify identity provenance, business policy and query semantics. |
 | UNKNOWN_RESOURCE_SCOPE | Constant or empty selectors or no recognized local resource binding; manually review. |
 
-Express direct literal routes and imported middleware references (including explicit Passport authenticate declaration), Fastify direct literal routes and simple imported hook references, and NestJS explicit Controller/HTTP/Param/Body/Query/Req decorators plus imported UseGuards and literal roles/permissions SetMetadata are supported. Guard/hook bodies and authentication success are not inferred. Prisma reads/counts, updates/deletes and upsert with simple where fields id, tenantId/organizationId/companyId/schoolId and ownerId/userId/customerId are modeled; local const aliases and request properties are tracked. Principal shape is req.user with recognized field names; field matching is syntactic only. OR/AND, nested relation filters, dynamic where, custom IDs, repositories/DI, helpers, arbitrary middleware, branches, raw SQL and cross-module policy are unsupported. No complete SAST or proof of BOLA/IDOR. A row with principal evidence still requires review; absence of a row is not safety.
+Express direct literal routes and imported middleware references (including explicit Passport authenticate declaration), Fastify direct literal routes and simple imported hook references, and NestJS explicit Controller/HTTP/Param/Body/Query/Req decorators plus imported UseGuards and literal roles/permissions SetMetadata are supported. Guard/hook bodies and authentication success are not inferred. Prisma reads/counts, updates/deletes and upsert with simple where fields id, tenantId/organizationId/companyId/schoolId and ownerId/userId/customerId are modeled; local const aliases and request properties are tracked. Principal shape is req.user with recognized field names; field matching is syntactic only. OR/AND, nested relation filters, dynamic where, custom IDs, other repositories/DI, helpers, arbitrary middleware, branches, raw SQL and cross-module policy are unsupported. No complete SAST or proof of BOLA/IDOR. A row with principal evidence still requires review; absence of a row is not safety.
 
 ## Testing value and acceptance
 
@@ -59,4 +59,20 @@ Runtime test matrix (not executed by this adapter):
 | Role without permission | Otherwise accessible object | Deny mutation |
 | Revoked role/session | Previously accessible object | Deny after policy-defined invalidation |
 
-Cover GET/PUT/PATCH/DELETE (and other applicable operations), verify response and persistent state, compare list/count/export leakage and record independent execution receipts. An HTTP error alone is insufficient if state changes. RLS and tenancy policy must be checked separately. Synthetic matrix contains 15 classified fixtures and seven unsupported/parse fixtures; the expected counts are assertions until CI executes. It measures classification agreement, not vulnerability precision/recall. Revert PR for rollback; no migration.
+Cover GET/PUT/PATCH/DELETE (and other applicable operations), verify response and persistent state, compare list/count/export leakage and record independent execution receipts. An HTTP error alone is insufficient if state changes. RLS and tenancy policy must be checked separately. The initial Prisma matrix contains 15 classified fixtures and seven unsupported/parse fixtures; the expected counts are assertions until CI executes. It measures classification agreement, not vulnerability precision/recall. Revert PR for rollback; no migration.
+
+## TypeORM and unfiltered collection extension
+
+```mermaid
+flowchart TD
+  A["Explicit TypeORM DataSource or Nest InjectRepository"] --> B["Recognized repository receiver"]
+  C["Explicit PrismaClient"] --> D["Recognized model receiver"]
+  B --> E["Find / count / update / delete selector"]
+  D --> E
+  E --> F["Object / owner / tenant evidence"]
+  E --> G["Unfiltered collection: unknown scope"]
+  F --> H["UNVERIFIED review matrix"]
+  G --> H
+```
+
+Direct TypeORM DataSource construction with imported or simple literal configuration and getRepository of an imported entity, and Nest constructor parameter-property injection with explicit InjectRepository(Entity) and matching Repository<Entity> type, establish syntactic receiver evidence. Supports find/findOne/count/exists options, findBy/findOneBy/countBy/existsBy, update/delete/softDelete/restore selectors. A missing filter on supported collection operations is UNKNOWN_RESOURCE_SCOPE, not a clean result. The actual connection, initialized repository, registered DI provider, policy and SQL are not verified. Nested/OR conditions and unknown receiver/type remain PARTIAL. The extension adds eight classified and four unsupported fixtures, including tenant, owner, caller, injected repository and unfiltered lists; all matrix rows remain UNVERIFIED.

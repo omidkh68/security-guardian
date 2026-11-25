@@ -69,3 +69,34 @@ test('unsupported branches, dynamic selectors, fake receivers, shadowing and par
     'function broken( {'
   ]){const r=run(fixture(t,code));assert.equal(r.status,'PARTIAL');assert.deepEqual(r.authorization_matrix,[]);assert.deepEqual(r.signals,[]);}
 });
+
+const orm='import {DataSource as DS} from "typeorm";\nimport {Item} from "./entity";\nconst ds=new DS({type:"postgres",entities:[Item]});\nconst repo=ds.getRepository(Item);\n';
+const ormRoute=(fw,body)=>'import factory from "'+fw+'";\n'+orm+'const app=factory();\napp.get("/item",async (req,res)=>{\n'+body+'\n});';
+const ormNest=body=>'import {Controller,Get,Param,Req} from "@nestjs/common";\nimport {InjectRepository as InjectRepo} from "@nestjs/typeorm";\nimport type {Repository as Repo} from "typeorm";\nimport {Item} from "./entity";\n@Controller("items")\nexport class API {\nconstructor(@InjectRepo(Item) private readonly items: Repo<Item>) {}\n@Get(":id")\nasync read(@Param("id") id: string,@Req() req: any){\n'+body+'\n}\n}';
+test('TypeORM direct and injected repository resource scope, and unfiltered collections',{skip:!parser},t=>{
+  const missing='MISSING_LOCAL_SCOPE_REVIEW',scope='PRINCIPAL_SCOPE_EVIDENCE',caller='CALLER_SCOPE_REVIEW',unknown='UNKNOWN_RESOURCE_SCOPE';
+  for(const [label,dep,code,status,adapter] of [
+    ['direct-id','express',ormRoute('express','return repo.findOneBy({id:req.params.id});'),missing,'TYPEORM'],
+    ['direct-tenant','fastify',ormRoute('fastify','return repo.findOne({where:{id:req.params.id,tenantId:req.user.tenantId}});'),scope,'TYPEORM'],
+    ['direct-owner','express',ormRoute('express','return repo.update({id:req.params.id,ownerId:req.user.id},{title:req.body.title});'),scope,'TYPEORM'],
+    ['caller','fastify',ormRoute('fastify','return repo.delete({id:req.params.id,tenantId:req.query.tenantId});'),caller,'TYPEORM'],
+    ['nest-injected','@nestjs/core',ormNest('return this.items.findOneBy({id,tenantId:req.user.tenantId});'),scope,'TYPEORM'],
+    ['nest-unscoped','@nestjs/core',ormNest('return this.items.delete({id});'),missing,'TYPEORM'],
+    ['unfiltered-typeorm','express',ormRoute('express','return repo.find();'),unknown,'TYPEORM'],
+    ['unfiltered-prisma','express',route('express','return db.item.findMany();'),unknown,'PRISMA']
+  ]){
+    const r=run(fixture(t,code,dep));assert.deepEqual(r.selected_roots,['api'],label);
+    assert.equal(r.authorization_matrix.length,1,label);
+    const row=r.authorization_matrix[0];assert.equal(row.adapter,adapter,label);assert.equal(row.scope_status,status,label);assert.equal(row.verification,'UNVERIFIED',label);
+    assert.equal(r.signals.length,status===scope?0:1,label);
+  }
+  for(const code of [
+    ormRoute('express','return repo.find({where:[{id:req.params.id},{tenantId:req.user.tenantId}]});'),
+    ormNest('return this.other.findOneBy({id});'),
+    ormNest('return this.items.findOneBy({id});').replace('Repo<Item>','Repo<Other>'),
+    ormRoute('express','return repo.findOneBy({id:undefined});')
+  ]){
+    const r=run(fixture(t,code,code.includes('class API')?'@nestjs/core':'express'));assert.equal(r.status,'PARTIAL');assert.deepEqual(r.authorization_matrix,[]);
+  }
+  console.log(JSON.stringify({kind:'SYNTHETIC_AUTHORIZATION_TYPEORM_MATRIX',classified:8,unsupported:4,matched:12}));
+});

@@ -446,7 +446,7 @@ For contributors: [private npm/npx distribution preview](docs/npm-distribution.m
 
 [Optional SSR AST review](docs/js-ssr-flow.md) ([فارسی](docs/js-ssr-flow-FA.md)): bounded Next.js Pages/App Router, Angular server/credential transfer, Nuxt H3 and SvelteKit HTML endpoint flows; other SSR paths require review.
 
-[Optional authorization evidence review](docs/js-authz-flow.md) ([فارسی](docs/js-authz-flow-FA.md)): Express, Fastify and NestJS resource-scope matrix with explicit Prisma selectors; all rows unverified.
+[Optional authorization evidence review](docs/js-authz-flow.md) ([فارسی](docs/js-authz-flow-FA.md)): Express, Fastify and NestJS resource-scope matrix with explicit Prisma and TypeORM selectors; all rows unverified.
 
 JS/TS DOM AST v2 adds bounded branches and same-file helper summaries (#88).
 

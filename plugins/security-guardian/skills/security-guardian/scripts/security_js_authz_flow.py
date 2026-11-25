@@ -35,7 +35,7 @@ def review(root, profile, components, parser):
               'rule_id':RULE, 'legacy_control_id':'BIZ-01', 'status':'NOT_AVAILABLE',
               'selected_roots':sorted(roots), 'signals':[], 'authorization_matrix':[],
               'limitations':['Syntactic evidence only; no route is certified authorized or unauthorized.',
-                             'Explicit Express/Fastify and NestJS routes with local PrismaClient selectors. Middleware, guards, principal provenance, database policy, branches, DI and cross-module calls require manual evidence.',
+                             'Explicit Express/Fastify and NestJS routes with local PrismaClient and TypeORM repository selectors, including direct Nest repository injection. Middleware, guards, principal provenance, database policy, branches and cross-module calls require manual evidence.',
                              'Trusted parser execution is not an OS sandbox; no project code or config loaded.',
                              'No ledger update; review and record candidates manually.']}
     def finish(status):
@@ -112,7 +112,7 @@ def review(root, profile, components, parser):
                 status = hit['scope_status']
                 if status not in {'CALLER_SCOPE_REVIEW','MISSING_LOCAL_SCOPE_REVIEW','PRINCIPAL_SCOPE_EVIDENCE','UNKNOWN_RESOURCE_SCOPE'}:
                     raise ValueError('Invalid scope status')
-                if hit['framework'] not in {'Express','Fastify','NestJS'} or hit['method'] not in {'GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'} or hit['operation'] not in {'findUnique','findUniqueOrThrow','findFirst','findFirstOrThrow','findMany','count','update','updateMany','delete','deleteMany','upsert'}:
+                if hit['framework'] not in {'Express','Fastify','NestJS'} or hit['method'] not in {'GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS'} or hit['operation'] not in {'findUnique','findUniqueOrThrow','findFirst','findFirstOrThrow','findMany','count','update','updateMany','delete','deleteMany','upsert','find','findOne','findOneBy','findBy','countBy','exists','existsBy','softDelete','restore'} or hit['adapter'] not in {'PRISMA','TYPEORM'}:
                     raise ValueError('Invalid route evidence')
                 for selector in hit['selectors']:
                     if selector['role'] not in {'OBJECT','TENANT','OWNER'} or selector['origin'] not in {'REQUEST','CONSTANT','PRINCIPAL_CONTEXT'} or type(selector['principal_match']) is not bool or any(not valid_line(n) for n in selector['lines']):
@@ -126,7 +126,7 @@ def review(root, profile, components, parser):
                 if len(result['authorization_matrix'])>=MAX_HITS:
                     stats['omitted_matches'] += 1
                     continue
-                row = {k:hit[k] for k in ('framework','method','route_line','operation','scope_status','object_request','tenant_context','owner_context','caller_scope','selectors','evidence')}
+                row = {k:hit[k] for k in ('framework','method','route_line','operation','adapter','scope_status','object_request','tenant_context','owner_context','caller_scope','selectors','evidence')}
                 row.update({'path':rel,'line':line,'source_lines':source,'verification':'UNVERIFIED','control_ids':['IAM-01','BIZ-01','DATA-02']})
                 result['authorization_matrix'].append(row)
                 if status != 'PRINCIPAL_SCOPE_EVIDENCE':
