@@ -182,8 +182,36 @@ def _vue_nuxt_rules(p, nuxt_component):
         yield cid, label, regex, confidence, severity, VUE_NUXT_PACK, rule_id
 
 
+SVELTE_KIT_PACK = 'svelte-kit'
+SVELTE_KIT_VERSION = 1
+SVELTE_KIT_RULES = (
+    ('SVELTE.DOM.RAW_HTML', 'ANG-01', 'Svelte raw HTML rendering requires trusted-input review',
+     re.compile(r'\{@html\s+'), 'medium', 'high'),
+    ('KIT.ENV.PUBLIC_SECRET_NAME', 'ANG-12', 'SvelteKit public environment import with secret-like name',
+     re.compile(r'\bimport\s*\{[^}\n]{0,256}\b[A-Z0-9_]*(?:SECRET|PRIVATE_KEY|PASSWORD|ACCESS_TOKEN|REFRESH_TOKEN|API_KEY)[A-Z0-9_]*\b[^}\n]{0,256}\}\s*from\s*[\'"](?:\$env/static/public|\$app/env/public)[\'"]'), 'medium', 'high'),
+)
+SVELTE_KIT_SUFFIXES = WEB_CORE_SUFFIXES | {'.svelte'}
+
+
+def _svelte_kit(component):
+    return ('frontend' in component['roles']
+            and bool({'Svelte', 'SvelteKit'}.intersection(component['frameworks'])))
+
+
+def _svelte_kit_rules(p, kit_component):
+    if p.suffix not in SVELTE_KIT_SUFFIXES:
+        return
+    for rule_id, cid, label, regex, confidence, severity in SVELTE_KIT_RULES:
+        if rule_id.startswith('KIT.') and not kit_component:
+            continue
+        if rule_id == 'SVELTE.DOM.RAW_HTML' and p.suffix != '.svelte':
+            continue
+        yield cid, label, regex, confidence, severity, SVELTE_KIT_PACK, rule_id
+
+
 def _rules_for_file(p, allowed_domains, web_core, backend_core=False, nest=False,
-                    react_next=False, next_component=False, vue_nuxt=False, nuxt_component=False):
+                    react_next=False, next_component=False, vue_nuxt=False, nuxt_component=False,
+                    svelte_kit=False, kit_component=False):
     """Select scoped pack rules once per file; retain unscoped legacy matching."""
     for cid, label, regex, extensions, confidence, severity in PATTERNS:
         if allowed_domains is not None and not nest and label in NEST_ONLY_LABELS:
@@ -212,6 +240,8 @@ def _rules_for_file(p, allowed_domains, web_core, backend_core=False, nest=False
         yield from _react_next_rules(p, next_component)
     if vue_nuxt:
         yield from _vue_nuxt_rules(p, nuxt_component)
+    if svelte_kit:
+        yield from _svelte_kit_rules(p, kit_component)
 
 
 def _multiline_window(line, following):
@@ -556,6 +586,10 @@ def process(root:Path, profile=None, components=()):
     nuxt_roots = {r for r in vue_roots if 'Nuxt' in selected_by_root[r]['frameworks']}
     vue_files = 0
     vue_counts = Counter()
+    svelte_roots = {r for r, c in selected_by_root.items() if _svelte_kit(c)}
+    kit_roots = {r for r in svelte_roots if 'SvelteKit' in selected_by_root[r]['frameworks']}
+    svelte_files = 0
+    svelte_counts = Counter()
     rels={p.relative_to(root).as_posix():p for p in files}
     names=set(rels)
     evidence=[]
@@ -624,7 +658,10 @@ def process(root:Path, profile=None, components=()):
             coverage['inspected_files'] += 1
             rules = tuple(_rules_for_file(p, allowed_domains, web_core, backend_core, nest,
                                          owner in react_roots, owner in next_roots,
-                                         owner in vue_roots, owner in nuxt_roots))
+                                         owner in vue_roots, owner in nuxt_roots,
+                                         owner in svelte_roots, owner in kit_roots))
+            if owner in svelte_roots and (p.suffix == '.svelte' or (owner in kit_roots and p.suffix in WEB_CORE_SUFFIXES)):
+                svelte_files += 1
             if owner in vue_roots and (p.suffix == '.vue' or (owner in nuxt_roots and p.suffix in WEB_CORE_SUFFIXES)):
                 vue_files += 1
             if owner in react_roots and p.suffix in WEB_CORE_SUFFIXES:
@@ -657,12 +694,14 @@ def process(root:Path, profile=None, components=()):
                             react_counts[pack_rule] += 1
                         elif pack_id == VUE_NUXT_PACK:
                             vue_counts[pack_rule] += 1
+                        elif pack_id == SVELTE_KIT_PACK:
+                            svelte_counts[pack_rule] += 1
                         if len(evidence) < MAX_SIGNALS or len(control_evidence[cid]) < MAX_CONTROL_SIGNALS:
                             entry={'control_id':cid,'signal':label,'path':fn,'line':lineno,
                                 'confidence':confidence,'suggested_severity':severity,
                                 'status':'HEURISTIC_REVIEW_ONLY'}
                             if pack_rule:
-                                entry.update({'pack_id': pack_id, 'pack_version': {WEB_CORE_PACK: WEB_CORE_VERSION, BACKEND_CORE_PACK: BACKEND_CORE_VERSION, REACT_NEXT_PACK: REACT_NEXT_VERSION, VUE_NUXT_PACK: VUE_NUXT_VERSION}[pack_id],
+                                entry.update({'pack_id': pack_id, 'pack_version': {WEB_CORE_PACK: WEB_CORE_VERSION, BACKEND_CORE_PACK: BACKEND_CORE_VERSION, REACT_NEXT_PACK: REACT_NEXT_VERSION, VUE_NUXT_PACK: VUE_NUXT_VERSION, SVELTE_KIT_PACK: SVELTE_KIT_VERSION}[pack_id],
                                               'rule_id': pack_rule, 'control_mapping': 'LEGACY_COMPATIBILITY'})
                             if len(evidence) < MAX_SIGNALS:
                                 evidence.append(entry)
@@ -700,6 +739,8 @@ def process(root:Path, profile=None, components=()):
                         reason='React/Next review indicator maps to this legacy control; assess actual render/build boundaries.'
                     if vue_roots and id in {r[1] for r in VUE_NUXT_RULES}:
                         reason='Vue/Nuxt review indicator maps to this legacy control; assess actual render and runtime config boundaries.'
+                    if svelte_roots and id in {r[1] for r in SVELTE_KIT_RULES}:
+                        reason='Svelte/Kit review indicator maps to this legacy control; assess actual render and public environment boundaries.'
                 elif d in {'API','BIZ'} and 'NestJS' not in stack:
                     status,reason='NEEDS_DISCOVERY','Non-Nest backend: verify applicable controls in actual framework; no dedicated framework pack in this revision.'
                     if backend_roots and id in {key[0] for key in BACKEND_CORE_RULES}:
@@ -729,7 +770,7 @@ def process(root:Path, profile=None, components=()):
       'discovered_stack':sorted(stack),'feature_hints':sorted(features),
       'applicability':dict(Counter(c['applicability'] for c in result)),
       'heuristic_signals':total_signals,'scan_coverage':coverage,'signal_coverage':signal_coverage,
-      'indicator_rules':len(PATTERNS),'scoped_additional_indicator_rules': ((3 if next_roots else 1 if react_roots else 0) + (2 if nuxt_roots else 1 if vue_roots else 0)),'status':'NO_CONTROLS_CERTIFIED_BY_THIS_SCANNER',
+      'indicator_rules':len(PATTERNS),'scoped_additional_indicator_rules': ((3 if next_roots else 1 if react_roots else 0) + (2 if nuxt_roots else 1 if vue_roots else 0) + (2 if kit_roots else 1 if svelte_roots else 0)),'status':'NO_CONTROLS_CERTIFIED_BY_THIS_SCANNER',
       'timestamp_utc':datetime.now(timezone.utc).isoformat()}
     if scope:
         summary['scope_resolution']=scope
@@ -774,6 +815,17 @@ def process(root:Path, profile=None, components=()):
                       for rid, cid, *_ in VUE_NUXT_RULES],
             'limitations': ['Text indicators only; no template parser, data-flow, SSR or server authorization proof.',
                             'Direct public config access only; aliases, computed properties and nested config require manual review.'],
+        }
+        summary['svelte_kit'] = {
+            'pack_id': SVELTE_KIT_PACK, 'pack_version': SVELTE_KIT_VERSION,
+            'selected_roots': sorted(svelte_roots), 'kit_roots': sorted(kit_roots),
+            'status': 'HEURISTIC_REVIEW_ONLY' if svelte_roots else 'NOT_SELECTED',
+            'inspected_eligible_files': svelte_files,
+            'rules': [{'rule_id': rid, 'legacy_control_id': cid, 'matches': svelte_counts[rid],
+                       'enabled': bool(kit_roots if rid.startswith('KIT.') else svelte_roots)}
+                      for rid, cid, *_ in SVELTE_KIT_RULES],
+            'limitations': ['Text indicators only; no Svelte parser, data-flow, SSR or server authorization proof.',
+                            'Bounded single-line named imports only; dynamic/namespace/multiline imports and declarations need review.'],
         }
     return {'summary':summary,'signals':evidence,'controls':result,
       'limitations':['Regex signatures are not vulnerability proof.',
@@ -822,6 +874,12 @@ def markdown(result):
                   f"- Vue/Nuxt component roots: {', '.join(pack['selected_roots']) or 'None'}",
                   f"- Vue/Nuxt eligible files inspected: {pack['inspected_eligible_files']}",
                   '- Vue/Nuxt indicators require manual render, config and server authorization review.', '']
+    if s.get('svelte_kit'):
+        pack = s['svelte_kit']
+        lines += [f"- Svelte/Kit core v{pack['pack_version']}: {pack['status']}",
+                  f"- Svelte/Kit component roots: {', '.join(pack['selected_roots']) or 'None'}",
+                  f"- Svelte/Kit eligible files inspected: {pack['inspected_eligible_files']}",
+                  '- Svelte/Kit indicators require manual render, public environment and server authorization review.', '']
     for status,qty in sorted(s['applicability'].items()):lines.append(f'- {status}: {qty}')
     lines+=['', '## Scan coverage and limitations', '']
     lines += [f'- {key}: {value}' for key,value in sorted(s['scan_coverage']['skipped'].items())]
