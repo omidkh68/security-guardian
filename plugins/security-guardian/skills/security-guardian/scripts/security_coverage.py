@@ -45,7 +45,7 @@ def framework_row(name):
                   [(r,c) for (c,_),r in scan.WEB_CORE_RULES.items()],
                   'JS/TS browser DOM, storage and navigation indicators')
         ast('js-dom-flow',4,[(dom.RULE,'ANG-01')],'security_js_flow.py',
-            'Browser location to recognized DOM innerHTML; local paths/helpers and observed sanitizer calls')
+            'Browser location to recognized DOM innerHTML; local paths/helpers, URI transformations and observed sanitizer calls')
     if name in NODE:
         heuristic(scan.BACKEND_CORE_PACK,scan.BACKEND_CORE_VERSION,
                   [(r,c) for (c,_),r in scan.BACKEND_CORE_RULES.items()],
@@ -63,7 +63,7 @@ def framework_row(name):
             heuristic(pid,version,[(r,c) for r,c,*_ in rules if r.startswith(prefixes[name])],subset)
     if name in NODE_AST:
         ast('js-sql-flow',2,[(sql.RULE,'API-07')],'security_js_sql_flow.py',
-            'Explicit routes and module-local pg query text')
+            'Explicit routes, module-local pg query text and bounded pure helpers')
         ast('js-authz-flow',1,[(authz.RULE,'BIZ-01')],'security_js_authz_flow.py',
             'Explicit routes and bounded Prisma/TypeORM resource selectors; UNVERIFIED evidence')
     if name in SSR_RULES:
@@ -74,7 +74,7 @@ def framework_row(name):
              'SvelteKit':'Explicit +server HTML endpoint, not page load/template'}[name])
     if name=='Flask':
         ast(scan.PY_SQL_PACK,5,[(scan.PY_SQL_RULE,'API-07')],'security_scan.py',
-            'Flask request to local SQLite execute SQL text',False)
+            'Flask request to SQLite SQL text; bounded route, loop, data-slot and source-only helper context',False)
     return {'framework':name,'role':role,'discovery':'MANIFEST_HINT',
             'heuristic_packs':h,'ast_packs':a,
             'legacy_indicators':'APPLICABILITY_FILTERED_REVIEW_ONLY',

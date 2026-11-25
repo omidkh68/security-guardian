@@ -275,5 +275,36 @@ class SemanticFlowTests(unittest.TestCase):
         self.write('api/connection.py','import sqlite3 as db\ndb=unknown\ndef open_local():\n    return db.connect("fixture.db")\n')
         self.assertFalse(self.hits(self.run_scan('    db.execute(req.args["name"])\n',header,prefix)))
 
+    def test_qualified_context_and_data_slots(self):
+        self.write('api/support/connect.py','import sqlite3 as db\nPATH="fixture.db"\ndef session():\n    return db.connect(PATH)\n')
+        self.write('api/support/input.py','class Reader:\n    def __init__(self, arg):\n        self.source=arg\n    def take(self, key):\n        return self.source.headers.get(key)\n    def fixed(self, key):\n        return "constant"\n')
+        header='from flask import request as req\n'
+        prefix='def register(app):\n    @app.route("/catalog")\n    def route():\n'
+        before='        import support.connect as storage\n        import support.input as inputs\n        wrapped=inputs.Reader(req)\n        item=wrapped.take("PRIVATE_CONTEXT_KEY")\n        parts={}\n        parts["name"]=item\n        db=storage.session()\n'
+        for expr,expected in [('parts["name"]',1),('"SELECT ?" , (parts["name"],)',0)]:
+            result=self.run_scan(before+'        db.execute('+expr+')\n',header,prefix)
+            self.assertEqual(len(self.hits(result)),expected)
+            self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+            self.assertGreater(result['summary']['python_sql_flow']['cross_file_receiver_bindings'],0)
+            self.assertGreater(result['summary']['python_sql_flow']['cross_file_request_wrappers'],0)
+            self.assertNotIn('PRIVATE_CONTEXT_KEY',json.dumps(result))
+        result=self.run_scan(before+'        parts["name"]="fixed"\n        db.execute(parts["name"])\n',header,prefix)
+        self.assertFalse(self.hits(result))
+        result=self.run_scan(before.replace('wrapped.take','wrapped.fixed')+'        db.execute(parts["name"])\n',header,prefix)
+        self.assertFalse(self.hits(result))
+        result=self.run_scan(before+'        storage=unknown\n        db=storage.session()\n        db.execute(item)\n',header,prefix)
+        self.assertFalse(self.hits(result))
+        self.write('api/support/connect.py','import sqlite3 as db\ndb.connect=unknown\ndef session():\n    return db.connect("fixture.db")\n')
+        self.assertFalse(self.hits(self.run_scan(before+'        db.execute(item)\n',header,prefix)))
+
+    def test_config_and_encoding_dataflow(self):
+        before='    import configparser as cp\n    import base64 as codec\n    v=request.cookies.get("term")\n    v=codec.b64decode(codec.b64encode(v.encode("utf-8"))).decode("utf-8")\n    config=cp.ConfigParser()\n    config.add_section("sample")\n    config.set("sample","selected",v)\n    config.set("sample","fixed","constant")\n'
+        for key,expected in [('selected',1),('fixed',0)]:
+            result=self.run_scan(before+'    cur.execute("SELECT "+config.get("sample","'+key+'"))\n')
+            self.assertEqual(len(self.hits(result)),expected)
+            self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertFalse(self.hits(self.run_scan(before+'    config.set("sample","selected","constant")\n    cur.execute(config.get("sample","selected"))\n')))
+        self.assertFalse(self.hits(self.run_scan(before+'    cp=unknown\n    config=cp.ConfigParser()\n    cur.execute(config.get("sample","selected"))\n')))
+
 if __name__=='__main__':
     unittest.main()
