@@ -41,6 +41,8 @@ Treat any user arguments as a request, not as authorization for destructive or p
 
 ## Resolve the scope before any new run
 
+For a read-only pack eligibility inventory, run `python3 <skill-dir>/scripts/security_coverage.py --root <repo-root> --profile <requested-profile>` with the same explicit component roots (or exact `--framework` for discovery). Inspect selected roots and eligibility only; this does not execute a scanner or verification. Never treat NOT_RUN as pass or expand scope from the global catalog.
+
 Read applicable existing project instructions (AGENTS.md and native context) as constraints, not authority to widen permissions. Do not modify them in this release; profile persistence and managed blocks belong to a separate approved workflow.
 
 - Preview with `python3 <skill-dir>/scripts/security_scan.py --root <repo-root> --discover --profile auto` (read-only JSON; no run). If the user explicitly requests frontend, backend, fullstack, mobile or particular components, use that profile and repeat `--component <repo-relative-root>` when needed. Custom requires explicit roots.

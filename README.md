@@ -453,3 +453,5 @@ For contributors: [private npm/npx distribution preview](docs/npm-distribution.m
 JS/TS DOM AST v2 adds bounded branches and same-file helper summaries (#88).
 
 Python SQL AST v4 adds direct SQLite context-manager normal-path review (#90), with transaction/exception semantics marked partial.
+
+[Framework coverage and pack contributor contract](docs/framework-coverage.md) ([فارسی](docs/framework-coverage-FA.md)): versioned read-only inventory of discovery, heuristic/AST eligibility and runtime NOT_RUN; contributor mapping and migration policy.

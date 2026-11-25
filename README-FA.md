@@ -450,3 +450,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 نسخه ۲ تحلیل AST جریان DOM در JS/TS مسیرهای شرطی و خلاصه تابع کمکی همان فایل را اضافه می‌کند (#88).
 
 نسخه ۴ تحلیل AST جریان SQL پایتون، مسیر عادی Context Manager مستقیم SQLite را اضافه می‌کند (#90) و معنای تراکنش/استثنا را ناقص گزارش می‌دهد.
+
+[ماتریس پوشش فناوری و قرارداد توسعه Pack](docs/framework-coverage-FA.md) ([English](docs/framework-coverage.md)): موجودی نسخه‌دار Discovery، واجد شرایط بودن Heuristic/AST و وضعیت Runtime NOT_RUN؛ سیاست نگاشت و مهاجرت.
