@@ -644,67 +644,93 @@ def _name(node, name):
     return isinstance(node, ast.Name) and node.id == name
 
 
-def _request_collection(node):
-    return isinstance(node, ast.Attribute) and node.attr in {'args', 'form'} and _name(node.value, 'request')
+def _request_collection(node, request_names):
+    return (isinstance(node, ast.Attribute) and node.attr in {'args', 'form'}
+            and isinstance(node.value, ast.Name) and node.value.id in request_names)
 
 
-def _sql_source_lines(node, values):
-    """Recognize only explicit source and supported string operations."""
+def _sql_receiver(node, receivers, db_names):
     if isinstance(node, ast.Name):
-        return values.get(node.id, frozenset())
-    if isinstance(node, ast.Subscript) and _request_collection(node.value):
-        return frozenset({node.lineno})
+        return receivers.get(node.id)
+    if isinstance(node, ast.Call):
+        if (_attr(node.func, 'connect') and isinstance(node.func.value, ast.Name)
+                and node.func.value.id in db_names):
+            return 'connection'
+        if _attr(node.func, 'cursor') and isinstance(node.func.value, ast.Name) and receivers.get(node.func.value.id) == 'connection':
+            return 'cursor'
+    return None
+
+
+def _sql_value(node, values, receivers, request_names, db_names, helpers):
+    """Return (known syntax, source lines); never evaluate project code."""
+    empty = frozenset()
+    if isinstance(node, ast.Constant):
+        return True, empty
+    if isinstance(node, ast.Name):
+        return True, values.get(node.id, empty)
+    if isinstance(node, ast.Subscript) and _request_collection(node.value, request_names):
+        return isinstance(node.slice, ast.Constant), frozenset({node.lineno})
     if (isinstance(node, ast.Call) and _attr(node.func, 'get')
-            and _request_collection(node.func.value) and not node.keywords
+            and _request_collection(node.func.value, request_names) and not node.keywords
             and 1 <= len(node.args) <= 2 and isinstance(node.args[0], ast.Constant)):
-        return frozenset({node.lineno})
-    children = []
+        return len(node.args) == 1 or isinstance(node.args[1], ast.Constant), frozenset({node.lineno})
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in helpers:
+        arity, used = helpers[node.func.id]
+        if node.keywords or len(node.args) != arity or any(isinstance(a, ast.Starred) for a in node.args):
+            return False, empty
+        # No nested helper calls: a summary is a one-hop, nonrecursive substitution.
+        args = [_sql_value(a, values, receivers, request_names, db_names, {}) for a in node.args]
+        return all(ok for ok, _ in args), empty.union(*(args[i][1] for i in used))
+    if isinstance(node, ast.Call) and _sql_receiver(node, receivers, db_names):
+        return True, empty
     if isinstance(node, ast.JoinedStr):
         children = node.values
-    elif isinstance(node, ast.FormattedValue):
+    elif isinstance(node, ast.FormattedValue) and node.format_spec is None:
         children = [node.value]
     elif isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Mod)):
         children = [node.left, node.right]
     elif isinstance(node, ast.Tuple):
         children = node.elts
     elif (isinstance(node, ast.Call) and _attr(node.func, 'format')
-          and isinstance(node.func.value, ast.Constant) and isinstance(node.func.value.value, str)):
+          and isinstance(node.func.value, ast.Constant) and isinstance(node.func.value.value, str)
+          and all(k.arg is not None for k in node.keywords)):
         children = [*node.args, *(k.value for k in node.keywords)]
-    return frozenset().union(*(_sql_source_lines(child, values) for child in children))
+    else:
+        return False, empty
+    parts = [_sql_value(c, values, receivers, request_names, db_names, helpers) for c in children]
+    return all(ok for ok, _ in parts), empty.union(*(lines for _, lines in parts))
 
 
-def _known_value(node, values, receivers):
-    # Model only simple values; unknown expressions mark coverage partial.
-    if isinstance(node, (ast.Constant, ast.Name)):
-        return True
-    if isinstance(node, ast.Subscript) and _request_collection(node.value):
-        return True
-    if isinstance(node, (ast.JoinedStr, ast.FormattedValue, ast.Tuple)):
-        children = node.values if isinstance(node, ast.JoinedStr) else ([node.value] if isinstance(node, ast.FormattedValue) else node.elts)
-        return all(_known_value(n, values, receivers) for n in children)
-    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Mod)):
-        return _known_value(node.left, values, receivers) and _known_value(node.right, values, receivers)
-    if isinstance(node, ast.Call):
-        if _sql_source_lines(node, values):
-            return True
-        if _attr(node.func, 'connect') and _name(node.func.value, 'sqlite3'):
-            return True
-        if _attr(node.func, 'cursor') and isinstance(node.func.value, ast.Name) and receivers.get(node.func.value.id) == 'connection':
-            return True
-        if _attr(node.func, 'format') and isinstance(node.func.value, ast.Constant) and isinstance(node.func.value.value, str):
-            return all(_known_value(n, values, receivers) for n in [*node.args, *(k.value for k in node.keywords)])
-    return False
+def _module_bindings(node):
+    if isinstance(node, (ast.Import, ast.ImportFrom)):
+        return [a.asname or a.name.split('.')[0] for a in node.names]
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        return [node.name]
+    return list(_binding_names(node))
 
 
-def _sql_receiver(node, receivers):
-    if isinstance(node, ast.Name):
-        return receivers.get(node.id)
-    if isinstance(node, ast.Call):
-        if _attr(node.func, 'connect') and _name(node.func.value, 'sqlite3'):
-            return 'connection'
-        if _attr(node.func, 'cursor') and isinstance(node.func.value, ast.Name) and receivers.get(node.func.value.id) == 'connection':
-            return 'cursor'
-    return None
+def _helper_summary(fn):
+    """Summarize only a closed, single-return expression over positional parameters."""
+    args = fn.args
+    if (fn.decorator_list or args.defaults or args.kwonlyargs or args.vararg or args.kwarg
+            or getattr(fn, 'type_params', ())):
+        return None
+    params = [a.arg for a in [*args.posonlyargs, *args.args]]
+    if len(params) > 16 or len(fn.body) != 1 or not isinstance(fn.body[0], ast.Return):
+        return None
+    expr = fn.body[0].value
+    if expr is None:
+        return None
+    nodes = list(ast.walk(expr))
+    if len(nodes) > 128 or any(isinstance(n, ast.Name) and n.id not in params for n in nodes):
+        return None
+    # Calls are limited to the existing literal-format expression subset.
+    if any(isinstance(n, ast.Call) and not (_attr(n.func, 'format')
+           and isinstance(n.func.value, ast.Constant) and isinstance(n.func.value.value, str))
+           for n in nodes):
+        return None
+    ok, used = _sql_value(expr, {p: frozenset({i}) for i,p in enumerate(params)}, {}, (), (), {})
+    return (len(params), tuple(sorted(used))) if ok else None
 
 
 def _sql_condition(node):
@@ -722,7 +748,7 @@ def _sql_condition(node):
     return False
 
 
-def _sql_function_paths(fn, stats):
+def _sql_function_paths(fn, stats, request_names, db_names, helpers):
     # Each pending path owns its bindings. Never join taint from one branch
     # with a receiver from another. Unmodeled paths terminate, visibly partial.
     pending = [(tuple(fn.body), {}, {})]
@@ -759,11 +785,12 @@ def _sql_function_paths(fn, stats):
             else:
                 target, value = None, None
             if target is not None:
-                if not _known_value(value, values, receivers):
+                known, lines = _sql_value(value, values, receivers, request_names, db_names, helpers)
+                if not known:
                     partial = True
                     break
-                values[target] = _sql_source_lines(value, values)
-                receivers[target] = _sql_receiver(value, receivers)
+                values[target] = lines
+                receivers[target] = _sql_receiver(value, receivers, db_names)
                 continue
             if isinstance(stmt, ast.Pass) or (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant)):
                 continue
@@ -772,16 +799,16 @@ def _sql_function_paths(fn, stats):
                 if (_attr(call.func, 'execute') and isinstance(call.func.value, ast.Name)
                         and receivers.get(call.func.value.id) in {'connection', 'cursor'}
                         and call.args and not isinstance(call.args[0], ast.Starred)):
-                    sources = _sql_source_lines(call.args[0], values)
-                    if sources:
+                    known, sources = _sql_value(call.args[0], values, receivers, request_names, db_names, helpers)
+                    if known and sources:
                         sources_by_sink[call.lineno].update(sources)
-                    if not _known_value(call.args[0], values, receivers):
+                    if not known:
                         partial = True
                         break
                     if isinstance(stmt, ast.Return):
                         break
                     continue
-            if isinstance(stmt, ast.Return) and (stmt.value is None or _known_value(stmt.value, values, receivers)):
+            if isinstance(stmt, ast.Return) and (stmt.value is None or _sql_value(stmt.value, values, receivers, request_names, db_names, helpers)[0]):
                 break
             partial = True
             break
@@ -789,7 +816,7 @@ def _sql_function_paths(fn, stats):
 
 
 def python_sql_flow(content):
-    """Bounded intra-function AST review, not a whole-program taint engine."""
+    """Bounded local AST and one-hop helper summaries, not a whole-program taint engine."""
     stats = Counter()
     hits = []
     if len(content.encode('utf-8')) > PY_SQL_MAX_BYTES:
@@ -807,25 +834,26 @@ def python_sql_flow(content):
         stats['complexity_limited_files'] += 1
         return hits, stats
     stats['parsed_files'] += 1
-    request_imports = [n for n in tree.body if isinstance(n, ast.ImportFrom)
-                       and n.level == 0 and n.module == 'flask'
-                       and any(a.name == 'request' and not a.asname for a in n.names)]
-    db_imports = [n for n in tree.body if isinstance(n, ast.Import)
-                  and any(a.name == 'sqlite3' and not a.asname for a in n.names)]
-    if not request_imports or not db_imports:
+    request_names = {a.asname or a.name for n in tree.body if isinstance(n, ast.ImportFrom)
+                     and n.level == 0 and n.module == 'flask'
+                     for a in n.names if a.name == 'request'}
+    db_names = {a.asname or a.name for n in tree.body if isinstance(n, ast.Import)
+                for a in n.names if a.name == 'sqlite3'}
+    bindings = Counter(name for n in tree.body for name in _module_bindings(n))
+    watched = request_names | db_names
+    if (not request_names or not db_names or request_names & db_names
+            or any(bindings[name] != 1 for name in watched)
+            or any(isinstance(n, ast.ImportFrom) and any(a.name == '*' for a in n.names) for n in tree.body)):
         stats['unmodeled_import_files'] += 1
         return hits, stats
-    watched = {'request', 'sqlite3'}
+    stats['resolved_import_aliases'] += len(request_names - {'request'}) + len(db_names - {'sqlite3'})
+    helpers = {}
     for n in tree.body:
-        if n in request_imports or n in db_imports:
-            continue
-        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            bound = {n.name}
-        else:
-            bound = _binding_names(n)
-        if bound & watched or (isinstance(n, ast.ImportFrom) and any(a.name == '*' for a in n.names)):
-            stats['unmodeled_import_files'] += 1
-            return hits, stats
+        if isinstance(n, ast.FunctionDef) and bindings[n.name] == 1:
+            summary = _helper_summary(n)
+            if summary is not None:
+                helpers[n.name] = summary
+    stats['recognized_helpers'] += len(helpers)
     stats['unmodeled_module_statements'] += sum(not isinstance(n, (ast.Import, ast.ImportFrom, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and not (isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant)) for n in tree.body)
     # Nested functions/classes and async functions are outside the model.
     functions = [n for n in tree.body if isinstance(n, ast.FunctionDef)]
@@ -836,7 +864,8 @@ def python_sql_flow(content):
             continue
         stats['analyzed_functions'] += 1
         try:
-            sources_by_sink, partial = _sql_function_paths(fn, stats)
+            local_helpers = {name: summary for name, summary in helpers.items() if name not in _binding_names(fn)}
+            sources_by_sink, partial = _sql_function_paths(fn, stats, request_names, db_names, local_helpers)
             for line, source_set in sorted(sources_by_sink.items()):
                 sources = sorted(source_set)
                 hits.append({'line':line,'source_lines':sources[:16],
@@ -971,7 +1000,7 @@ def process(root:Path, profile=None, components=()):
                     entry = {'control_id':cid, 'signal':'Flask request value reaches SQLite SQL argument',
                              'path':fn, 'confidence':'medium', 'suggested_severity':'high',
                              'status':'HEURISTIC_REVIEW_ONLY', 'technique':'BOUNDED_AST_FLOW',
-                             'pack_id':PY_SQL_PACK, 'pack_version':2, 'rule_id':PY_SQL_RULE,
+                             'pack_id':PY_SQL_PACK, 'pack_version':3, 'rule_id':PY_SQL_RULE,
                              'control_mapping':'LEGACY_COMPATIBILITY', **hit}
                     if len(evidence) < MAX_SIGNALS:
                         evidence.append(entry)
@@ -1170,11 +1199,11 @@ def process(root:Path, profile=None, components=()):
         }
         partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions','path_limited_functions')
         summary['python_sql_flow'] = {
-            'pack_id': PY_SQL_PACK, 'pack_version':2, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
+            'pack_id': PY_SQL_PACK, 'pack_version':3, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
             'selected_roots':sorted(python_sql_roots),
             'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
-            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches',*partial_keys)},
-            'limitations':['Bounded local Python AST and if/else paths only; no loop, exception, interprocedural, alias import, ORM or exploit analysis.',
+            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases',*partial_keys)},
+            'limitations':['Bounded local AST, if/else and one-hop helper summaries; no loops, exceptions, context managers, helper chains, cross-module or exploit analysis.',
                            'Unmodeled statements and imports are not proof of safety; no target code is executed.'],
         }
     return {'summary':summary,'signals':evidence,'controls':result,
@@ -1238,11 +1267,12 @@ def markdown(result):
                   '- Proxy trust and validation indicators require manual deployment/handler review.', '']
     if s.get('python_sql_flow'):
         flow = s['python_sql_flow']
-        lines += [f"- Python SQL AST flow v2: {flow['status']}",
+        lines += [f"- Python SQL AST flow v3: {flow['status']}",
                   f"- Eligible/parsed Python files: {flow['eligible_files']}/{flow['parsed_files']}; candidates: {flow['matches']}",
                   f"- Unsupported functions: {flow['unsupported_functions']}; unmodeled imports: {flow['unmodeled_import_files']}; parse errors: {flow['parse_errors']}",
                   f"- Unmodeled module statements: {flow['unmodeled_module_statements']}; size/complexity-limited files: {flow['size_limited_files']}/{flow['complexity_limited_files']}",
                   f"- Path-budget-limited functions: {flow['path_limited_functions']}",
+                  f"- Recognized helper definitions: {flow['recognized_helpers']}; resolved direct import aliases: {flow['resolved_import_aliases']}",
                   '- AST source-to-sink candidates require manual confirmation; missing candidates are not safety.', '']
     for status,qty in sorted(s['applicability'].items()):lines.append(f'- {status}: {qty}')
     lines+=['', '## Scan coverage and limitations', '']
