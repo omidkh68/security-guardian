@@ -35,7 +35,7 @@ def resolve_paths(root: Path, run_id=None):
     store = root.resolve() / '.security-guardian'
     if store.is_symlink():
         raise ValueError('Refusing symlinked report directory')
-    index = load_json(store / 'index.json')
+    index = read_evidence(store / 'index.json')
     runs = index.get('runs', [])
     if not runs:
         raise ValueError('No runs to export')
@@ -196,7 +196,7 @@ def build_export(run,ledger,scan,*,view='management',cumulative=False,private_de
        'counts':{'findings':len(rows),'residual_findings':sum(severity.values()),'status':dict(sorted(statuses.items())),
                  'residual_severity':dict(sorted(severity.items())),'test_records':len(test_rows),'test_results':dict(sorted(results.items())),
                  'test_evidence_quality':dict(sorted(qualities.items()))},
-       'delta':{k:count(run.get('delta',{}).get(k)) for k in DELTA_FIELDS},
+       'delta':{k:count(obj(run.get('delta')).get(k)) for k in DELTA_FIELDS},
        'standards':{'crosswalk_version':crosswalk['crosswalk_version'],'assessment':'NOT_ASSESSED','verification':'NOT_VERIFIED','references':ref_data},
        'findings':rows,'tests':test_rows,
        'limitations':['No compliance or penetration test certification.','Counts are finding/test records, not passed controls or individual test cases.',
@@ -348,9 +348,10 @@ def main(argv=None):
     args=parser.parse_args(argv)
     try:
         store,rdir,run=resolve_paths(Path(args.root),args.run)
-        if args.cumulative and not args.output:
-            latest=load_json(store/'index.json')['runs'][-1]
-            if run['id']!=latest['id']:raise ValueError('Historical cumulative export requires an explicit output outside tracking storage')
+        if args.cumulative:
+            latest=read_evidence(store/'index.json')['runs'][-1]
+            if run['id']!=latest['id'] and (not args.output or Path(args.output).expanduser().resolve().is_relative_to(store.resolve())):
+                raise ValueError('Historical cumulative export requires an explicit output outside tracking storage')
         path=export_report(store,rdir,run,cumulative=args.cumulative,output=args.output,font=args.font,view=args.view,format=args.format,private_details=args.private_details)
     except (ValueError,OSError,KeyError,TypeError,RuntimeError) as exc:
         print('Security Guardian export error: '+str(exc),file=sys.stderr);return 2

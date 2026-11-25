@@ -3,7 +3,6 @@
   "issue": 54,
   "missing_persian": [
     "docs/multi-agent.md",
-    "docs/pdf-reporting.md",
     "docs/provenance.md",
     "docs/scope-resolution.md",
     "docs/tracking.md",
