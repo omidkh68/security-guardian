@@ -166,3 +166,6 @@ Optional authorization evidence review: with the same explicit trusted parser au
 
 
 Optional AST adapters share a versioned evidence contract. Treat sanitizer call evidence as review context only (no suppression); inspect NOT_AVAILABLE/PARTIAL and authorization matrix. Never infer cross-module coverage or verified safety from absent signals.
+
+
+For advisory standards relationships, run `python3 <skill-dir>/scripts/security_standards.py --control <control-id>` (repeat for selected IDs). Never treat a partial mapping as compliance or verification; unmapped is not safe or out of scope.
