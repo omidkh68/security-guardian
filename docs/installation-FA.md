@@ -111,3 +111,12 @@ claude plugin validate .
 ## پیش‌نمایش محلی npm (منتشرنشده)
 
 برای پیش‌نمایش tarball خصوصی، مجوز صریح، ارتقای ایمن و تست npx آفلاین [توزیع npm](npm-distribution-FA.md) را ببینید. نصب رجیستری هنوز در دسترس نیست و ادعای انتشار نمی‌شود.
+
+## معماری و ارزش تست (Installer)
+
+```mermaid
+flowchart LR
+ A["Explicit destination and consent"] --> B["Canonical Skill copy / backup"] --> C["Local installation smoke tests check destinations and copy integrity, not authenticated agent loading."]
+```
+
+undefined

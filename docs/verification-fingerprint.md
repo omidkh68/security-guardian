@@ -29,3 +29,12 @@ python3 -m unittest discover -s plugins/security-guardian/skills/security-guardi
 ```
 
 The existing tracker and VERIFIED_FIXED rules are unchanged. A future runner must collect before/after fingerprints, verify scope adequacy and reject stale evidence before integration. Reverting the isolated script and tests requires no ledger migration.
+
+## Architecture and testing value (#51)
+
+```mermaid
+flowchart LR
+ A["Explicit selected file paths"] --> B["Validate path / hash bytes"] --> C["Canonical SHA-256 digest"]
+```
+
+Fixtures check order invariance, byte changes, symlinks and invalid paths; selected files are not a complete dependency inventory.

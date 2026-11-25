@@ -43,3 +43,12 @@ The pack smoke checks the exact tracked runtime manifest, file bytes, local tarb
 The maintainer reports creating npm account `omidkh68` and enabling 2FA. Confirm locally with `npm login --registry=https://registry.npmjs.org/` and `npm whoami --registry=https://registry.npmjs.org/`. Never share recovery codes, OTPs or passwords. First publication requires an approved release (1.3.0 or later), matching package/Skill/plugin versions and `private: false` in a reviewed release commit. Do not change the current private preview manually. After testing the approved exact tag, the owner can bootstrap the first public package with `npm publish --access public --ignore-scripts` from that checkout. Check the package owner and version on npm. No first publish is claimed here.
 
 For later versions, configure the package Trusted Publisher on npm: GitHub Actions; owner `omidkh68`; repository `security-guardian`; filename `npm-publish.yml`; environment `npm-release`. Configure the identically named GitHub environment with deployment restrictions and required reviewer approval where available. Do not store an NPM_TOKEN. The manually dispatched tagged workflow validates ancestry and versions, tests and packs, then publishes the checked artifact in a separate OIDC job and checks the exact registry version. Configure trust near the next approved release: npm documents a two-day initial validation window. No release/tag is created by this setup. Successful OIDC publishing and provenance remain unverified until an authorized release. See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/). If registry smoke fails after publication, investigate the already-published version rather than retrying the publish blindly. Preserve the existing MIT contributor copyright notice.
+
+## Architecture and testing value (#46)
+
+```mermaid
+flowchart LR
+ A["Canonical runtime assets"] --> B["Strict tarball / local CLI"] --> C["Offline install-to-report smoke"]
+```
+
+Node 22/24 packaging tests exercise exact runtime assets, install and partial report; registry publication is a separate gate.

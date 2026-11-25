@@ -29,3 +29,12 @@ python3 -m unittest discover -s plugins/security-guardian/skills/security-guardi
 ```
 
 Tracker و قواعد VERIFIED_FIXED فعلی تغییر نکرده‌اند. Runner آینده باید اثرانگشت قبل و بعد را ثبت، کفایت محدوده را بررسی و شواهد قدیمی را رد کند. بازگردانی این اسکریپت مستقل و تست‌ها نیاز به مهاجرت Ledger ندارد.
+
+## معماری و ارزش تست (#51)
+
+```mermaid
+flowchart LR
+ A["Explicit selected file paths"] --> B["Validate path / hash bytes"] --> C["Canonical SHA-256 digest"]
+```
+
+نمونه‌ها استقلال ترتیب، تغییر بایت، Symlink و مسیر نامعتبر را می‌سنجند؛ فایل منتخب موجودی کامل وابستگی نیست.

@@ -464,3 +464,5 @@ Python SQL AST v4 adds direct SQLite context-manager normal-path review (#90), w
 
 
 Expansion #107: see [semantic coverage expansion](docs/semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.
+
+Capability architecture index: [English](docs/architecture-index.md) · [فارسی](docs/architecture-index-FA.md).

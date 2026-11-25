@@ -12,3 +12,13 @@ Benchmark مصنوعی در tests/js-sql-flow.test.mjs شامل ۱۲ سناری�
 
 
 توسعه #107: برای مدل‌های جاری و محدودیت‌ها و ارزیابی جداگانه، [توسعه پوشش معنایی](semantic-expansion-FA.md) را ببینید. توضیحات نسخه‌های قبلی خط مبنای تاریخی هستند.
+
+## معماری و ارزش تست (#91 / #107)
+
+```mermaid
+flowchart LR
+ A["Selected backend and trusted parser"] --> B["HTTP source / local pg SQL text"] --> C["Source and sink lines / PARTIAL"]
+ C --> D["Evidence review"]
+```
+
+نمونه‌ها متن SQL و پارامتر Bindشده، Helper محلی و Receiver ناشناخته را جدا می‌کنند؛ SQL اجرا نمی‌شود.

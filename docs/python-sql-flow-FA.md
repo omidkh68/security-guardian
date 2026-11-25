@@ -28,3 +28,13 @@
 
 
 توسعه #107: برای مدل‌های جاری و محدودیت‌ها و ارزیابی جداگانه، [توسعه پوشش معنایی](semantic-expansion-FA.md) را ببینید. توضیحات نسخه‌های قبلی خط مبنای تاریخی هستند.
+
+## معماری و ارزش تست (#80 / #82 / #84 / #90 / #107)
+
+```mermaid
+flowchart LR
+ A["Selected Flask source"] --> B["Python AST / bounded path and SQLite receiver"] --> C["Source and sink lines / PARTIAL"]
+ C --> D["Evidence review"]
+```
+
+نمونه‌ها Bind پارامتر، انتساب مجدد، شاخه، Alias، Context Manager و سقف‌ها را بررسی می‌کنند؛ اندازه‌گیری تاریخی و توسعه جاری جدا هستند.

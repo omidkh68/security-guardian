@@ -29,3 +29,13 @@ python3 -m unittest discover -s plugins/security-guardian/skills/security-guardi
 
 ## بازگردانی تغییر
 در صورت اثبات ناسازگاری مصرف‌کنندگان گزارش، تغییر حلقه اسکن و تست‌های همراه آن بازگردانده شوند و تاریخچه Ledger حفظ شود. پروژه‌های هدف به مهاجرت داده نیاز ندارند.
+
+## معماری و ارزش تست (#45)
+
+```mermaid
+flowchart LR
+ A["Eligible source line"] --> B["Independent rule matches"] --> C["Distinct candidate records"]
+ C --> D["Evidence review"]
+```
+
+نمونه‌ها تطابق متعدد و پایداری هویت در یک خط را می‌سنجند؛ آسیب‌پذیری تأیید نمی‌شود.

@@ -28,3 +28,13 @@ A single `with sqlite3.connect(<literal string>) as name:` (including the suppor
 
 
 Expansion #107: see [semantic coverage expansion](semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.
+
+## Architecture and testing value (#80 / #82 / #84 / #90 / #107)
+
+```mermaid
+flowchart LR
+ A["Selected Flask source"] --> B["Python AST / bounded path and SQLite receiver"] --> C["Source and sink lines / PARTIAL"]
+ C --> D["Evidence review"]
+```
+
+Fixtures cover parameter binding, reassignment, branches, aliases, context managers and limits; historical measurements and expansions are separate.

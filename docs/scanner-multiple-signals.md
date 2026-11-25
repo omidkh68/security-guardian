@@ -29,3 +29,13 @@ The CI matrix must pass on the repository-supported Python versions before merge
 
 ## Rollback
 Revert the scanner loop change and its tests if unexpected downstream reporting incompatibility is demonstrated; preserve prior ledger snapshots. This does not require application migrations.
+
+## Architecture and testing value (#45)
+
+```mermaid
+flowchart LR
+ A["Eligible source line"] --> B["Independent rule matches"] --> C["Distinct candidate records"]
+ C --> D["Evidence review"]
+```
+
+Fixtures exercise multiple matches and identity stability on one line; no vulnerability confirmation.

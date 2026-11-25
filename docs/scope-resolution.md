@@ -44,3 +44,12 @@ python3 -m unittest discover -s plugins/security-guardian/skills/security-guardi
 
 Synthetic fixtures check discovery, selected source isolation, multi-component ambiguity, generic fallback, scope flags, malformed manifests, path containment, and no ledger creation for an unresolved scope. These tests are not a vulnerability-recall benchmark.
 
+## Architecture and testing value (#31)
+
+```mermaid
+flowchart LR
+ A["Manifest inventory and user selection"] --> B["Resolve component ownership"] --> C["Selected roots / unresolved scope"]
+ C --> D["Evidence review"]
+```
+
+Scope fixtures check selected and excluded roots; unresolved scope must not widen silently.

@@ -22,3 +22,13 @@ python3 -m unittest discover -s plugins/security-guardian/skills/security-guardi
 ```
 
 این قابلیت بررسی اکتشافی ایستا است، نه موتور تأیید آسیب‌پذیری. محدودیت منابع یا خطای Encoding ممکن است سیگنال واقعی را پنهان کند. تعداد صفر Candidate به معنی امنیت نیست. در صورت ناسازگاری، تغییرات کد و تست‌ها بازگردانده شوند؛ مهاجرت Ledger یا بازنویسی تاریخچه لازم نیست.
+
+## معماری و ارزش تست (#50)
+
+```mermaid
+flowchart LR
+ A["Scoped file inventory"] --> B["Bounded read and match"] --> C["Coverage counters / truncation"]
+ C --> D["Evidence review"]
+```
+
+تست پوشش فایل ردشده، خطا و سقف سیگنال را تفکیک می‌کند؛ اسکن ناقص شواهد امنیت نیست.

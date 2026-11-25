@@ -29,3 +29,13 @@ python3 <skill-dir>/scripts/security_scan.py --root . --profile backend --format
 اعتبارسنجی بسته، تست رگرسیون و بررسی بسته‌بندی npm را اجرا کنید. Fixtureهای مصنوعی نشانه‌های مثبت/منفی، تفکیک فریم‌ورک، محدوده، سازگاری قدیمی و عدم افشای سورس را پوشش می‌دهند. برای بازگردانی PR را Revert کنید؛ مهاجرت Ledger لازم نیست.
 
 مراجع: [Express پشت Proxy](https://expressjs.com/en/guide/behind-proxies/)، [Fastify Server](https://fastify.dev/docs/latest/Reference/Server/)، [اعتبارسنجی Fastify](https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/).
+
+## معماری و ارزش تست (#74)
+
+```mermaid
+flowchart LR
+ A["Express / Fastify roots"] --> B["Literal proxy / validation options"] --> C["Candidate plus coverage"]
+ C --> D["Manual evidence review"]
+```
+
+نمونه‌ها جداسازی فریم‌ورک، گزینه امن و محدوده را می‌سنجند؛ اعتماد Proxy واقعی تست مجاز می‌خواهد.

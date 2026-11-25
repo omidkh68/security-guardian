@@ -28,3 +28,13 @@ python3 <skill-dir>/scripts/security_scan.py --root . --profile frontend --forma
 Parser Vue، تحلیل Alias، ویژگی تو‌در‌تو یا محاسبه‌شده، جریان Taint، بررسی Build یا تأیید نسخه فریم‌ورک نداریم. اسکنر فایل‌های .env حذف‌شده را نمی‌خواند و کد هدف را اجرا نمی‌کند. نبود نشانه هرگز امنیت را اثبات نمی‌کند. اعتبارسنجی بسته، مجموعه رگرسیون Python و بررسی tarball npm را اجرا کنید. Fixtureهای مصنوعی حالت مثبت/منفی، محدوده، فیلتر اختصاصی Nuxt، حالت قدیمی و عدم افشای سورس را پوشش می‌دهند. برای بازگردانی این تغییر مستقل را Revert کنید.
 
 مراجع: [امنیت Vue](https://vuejs.org/guide/best-practices/security.html)، [Runtime Config در Nuxt](https://nuxt.com/docs/4.x/guide/going-further/runtime-config).
+
+## معماری و ارزش تست (#70)
+
+```mermaid
+flowchart LR
+ A["Vue / Nuxt manifest roots"] --> B["v-html / Nuxt public config"] --> C["Legacy mapping and coverage"]
+ C --> D["Manual evidence review"]
+```
+
+نمونه‌ها انتخاب فریم‌ورک، نام امن، حذف داده و محدوده را می‌سنجند؛ جداسازی SSR تست جدا می‌خواهد.

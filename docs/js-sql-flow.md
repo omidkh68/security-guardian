@@ -12,3 +12,13 @@ The synthetic benchmark in tests/js-sql-flow.test.mjs includes 12 labeled scenar
 
 
 Expansion #107: see [semantic coverage expansion](semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.
+
+## Architecture and testing value (#91 / #107)
+
+```mermaid
+flowchart LR
+ A["Selected backend and trusted parser"] --> B["HTTP source / local pg SQL text"] --> C["Source and sink lines / PARTIAL"]
+ C --> D["Evidence review"]
+```
+
+Fixtures distinguish SQL text, bound parameters, local helpers and unsupported receivers; no SQL execution.
