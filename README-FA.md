@@ -461,3 +461,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 
 
 توسعه #107: برای مدل‌های جاری و محدودیت‌ها و ارزیابی جداگانه، [توسعه پوشش معنایی](docs/semantic-expansion-FA.md) ([English](docs/semantic-expansion.md)) را ببینید. توضیحات نسخه‌های قبلی خط مبنای تاریخی هستند.
+
+فهرست معماری قابلیت‌ها: [فارسی](docs/architecture-index-FA.md) · [English](docs/architecture-index.md).
