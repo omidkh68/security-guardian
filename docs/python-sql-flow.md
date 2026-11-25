@@ -1,0 +1,11 @@
+# Bounded Python AST request-to-SQL review
+
+P0 · #80 · [فارسی](python-sql-flow-FA.md)
+
+In explicitly selected Flask backend components the scanner now parses Python syntax offline with the standard library. `PY.FLASK.SQL.REQUEST_FLOW` maps to historical API-07 and reports only a review candidate when a recognized Flask request.args/form value reaches the first SQL argument of a locally recognized sqlite3 connection/cursor execute call. Source and sink line numbers, rule identity and bounded evidence are retained; no query, variable name or request value is emitted. Existing global/per-control caps and legacy unscoped behavior are preserved.
+
+The initial model requires unaliased module imports of Flask request and sqlite3, a top-level synchronous function, simple local assignments, direct request indexing/get, and selected string construction (f-strings, concatenation, percent formatting, literal format). A constant query with a separate parameters tuple does not match merely because parameters are tainted. Reassignment clears prior tracked values. Unknown receivers, shadowing, unsupported branches/calls, nested/async functions, aliased imports and ORM paths are not inferred. This is neither complete Python semantics nor a guarantee of SQL injection or safe parameterization.
+
+Use `python3 <skill-dir>/scripts/security_scan.py --root . --profile backend --format json`. Inspect python_sql_flow summary, parsed/eligible counts, unsupported functions, unmodeled imports, parse and size/complexity limits. AST input is limited to 128,000 UTF-8 bytes and 10,000 nodes per file. Partial coverage or no candidate never means verified safety. Code is never executed and no database/network connection is made.
+
+Review actual query construction, parameter binding, validation, route reachability and database permissions before accepting a finding. Run only authorized local negative tests and record verification separately. Synthetic tests check source/sink locations, parameterization, reassignment, shadowing, parse failures, scope and redaction. Revert this PR to roll back; no ledger migration. JavaScript/TypeScript semantic analysis, interprocedural flows and independent realistic benchmarks remain follow-up work.

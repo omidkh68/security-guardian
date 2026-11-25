@@ -7,6 +7,7 @@ only source/configuration signals that need human/agent confirmation.
 """
 from __future__ import annotations
 import argparse
+import ast
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 import json
@@ -604,6 +605,199 @@ def preview_framework(root, framework):
             'reasons': ['Framework match is missing, multiple, mixed, incomplete or changed; choose explicit verified roots.']}
 
 
+PY_SQL_RULE = 'PY.FLASK.SQL.REQUEST_FLOW'
+PY_SQL_PACK = 'python-sql-flow'
+PY_SQL_MAX_BYTES = 128_000
+PY_SQL_MAX_NODES = 10_000
+
+
+def _binding_names(node):
+    """Conservative name-binding check; unsupported scopes are not inferred."""
+    names = set()
+    for n in ast.walk(node):
+        if isinstance(n, ast.Name) and isinstance(n.ctx, (ast.Store, ast.Del)):
+            names.add(n.id)
+        elif isinstance(n, ast.arg):
+            names.add(n.arg)
+        elif isinstance(n, ast.alias):
+            names.add(n.asname or n.name.split('.')[0])
+        elif isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            names.add(n.name)
+        elif isinstance(n, (ast.Global, ast.Nonlocal)):
+            names.update(n.names)
+        elif isinstance(n, ast.ExceptHandler) and n.name:
+            names.add(n.name)
+        elif isinstance(n, (ast.MatchAs, ast.MatchStar)) and n.name:
+            names.add(n.name)
+        elif isinstance(n, ast.MatchMapping) and n.rest:
+            names.add(n.rest)
+    return names
+
+
+def _attr(node, name):
+    return isinstance(node, ast.Attribute) and node.attr == name
+
+
+def _name(node, name):
+    return isinstance(node, ast.Name) and node.id == name
+
+
+def _request_collection(node):
+    return isinstance(node, ast.Attribute) and node.attr in {'args', 'form'} and _name(node.value, 'request')
+
+
+def _sql_source_lines(node, values):
+    """Recognize only explicit source and supported string operations."""
+    if isinstance(node, ast.Name):
+        return values.get(node.id, frozenset())
+    if isinstance(node, ast.Subscript) and _request_collection(node.value):
+        return frozenset({node.lineno})
+    if (isinstance(node, ast.Call) and _attr(node.func, 'get')
+            and _request_collection(node.func.value) and not node.keywords
+            and 1 <= len(node.args) <= 2 and isinstance(node.args[0], ast.Constant)):
+        return frozenset({node.lineno})
+    children = []
+    if isinstance(node, ast.JoinedStr):
+        children = node.values
+    elif isinstance(node, ast.FormattedValue):
+        children = [node.value]
+    elif isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Mod)):
+        children = [node.left, node.right]
+    elif isinstance(node, ast.Tuple):
+        children = node.elts
+    elif (isinstance(node, ast.Call) and _attr(node.func, 'format')
+          and isinstance(node.func.value, ast.Constant) and isinstance(node.func.value.value, str)):
+        children = [*node.args, *(k.value for k in node.keywords)]
+    return frozenset().union(*(_sql_source_lines(child, values) for child in children))
+
+
+def _known_value(node, values, receivers):
+    # Model only simple values; unknown expressions mark coverage partial.
+    if isinstance(node, (ast.Constant, ast.Name)):
+        return True
+    if isinstance(node, ast.Subscript) and _request_collection(node.value):
+        return True
+    if isinstance(node, (ast.JoinedStr, ast.FormattedValue, ast.Tuple)):
+        children = node.values if isinstance(node, ast.JoinedStr) else ([node.value] if isinstance(node, ast.FormattedValue) else node.elts)
+        return all(_known_value(n, values, receivers) for n in children)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Mod)):
+        return _known_value(node.left, values, receivers) and _known_value(node.right, values, receivers)
+    if isinstance(node, ast.Call):
+        if _sql_source_lines(node, values):
+            return True
+        if _attr(node.func, 'connect') and _name(node.func.value, 'sqlite3'):
+            return True
+        if _attr(node.func, 'cursor') and isinstance(node.func.value, ast.Name) and receivers.get(node.func.value.id) == 'connection':
+            return True
+        if _attr(node.func, 'format') and isinstance(node.func.value, ast.Constant) and isinstance(node.func.value.value, str):
+            return all(_known_value(n, values, receivers) for n in [*node.args, *(k.value for k in node.keywords)])
+    return False
+
+
+def _sql_receiver(node, receivers):
+    if isinstance(node, ast.Name):
+        return receivers.get(node.id)
+    if isinstance(node, ast.Call):
+        if _attr(node.func, 'connect') and _name(node.func.value, 'sqlite3'):
+            return 'connection'
+        if _attr(node.func, 'cursor') and isinstance(node.func.value, ast.Name) and receivers.get(node.func.value.id) == 'connection':
+            return 'cursor'
+    return None
+
+
+def python_sql_flow(content):
+    """Bounded intra-function AST review, not a whole-program taint engine."""
+    stats = Counter()
+    hits = []
+    if len(content.encode('utf-8')) > PY_SQL_MAX_BYTES:
+        stats['size_limited_files'] += 1
+        return hits, stats
+    try:
+        tree = ast.parse(content)
+        if sum(1 for _ in ast.walk(tree)) > PY_SQL_MAX_NODES:
+            stats['complexity_limited_files'] += 1
+            return hits, stats
+    except SyntaxError:
+        stats['parse_errors'] += 1
+        return hits, stats
+    except (RecursionError, MemoryError, ValueError):
+        stats['complexity_limited_files'] += 1
+        return hits, stats
+    stats['parsed_files'] += 1
+    request_imports = [n for n in tree.body if isinstance(n, ast.ImportFrom)
+                       and n.level == 0 and n.module == 'flask'
+                       and any(a.name == 'request' and not a.asname for a in n.names)]
+    db_imports = [n for n in tree.body if isinstance(n, ast.Import)
+                  and any(a.name == 'sqlite3' and not a.asname for a in n.names)]
+    if not request_imports or not db_imports:
+        stats['unmodeled_import_files'] += 1
+        return hits, stats
+    watched = {'request', 'sqlite3'}
+    for n in tree.body:
+        if n in request_imports or n in db_imports:
+            continue
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            bound = {n.name}
+        else:
+            bound = _binding_names(n)
+        if bound & watched or (isinstance(n, ast.ImportFrom) and any(a.name == '*' for a in n.names)):
+            stats['unmodeled_import_files'] += 1
+            return hits, stats
+    # Nested functions/classes and async functions are outside the model.
+    functions = [n for n in tree.body if isinstance(n, ast.FunctionDef)]
+    stats['unsupported_functions'] += sum(isinstance(n, (ast.AsyncFunctionDef, ast.ClassDef)) for n in tree.body)
+    for fn in functions:
+        if _binding_names(fn) & watched:
+            stats['unsupported_functions'] += 1
+            continue
+        values, receivers = {}, {}
+        partial = False
+        stats['analyzed_functions'] += 1
+        try:
+            for stmt in fn.body:
+                if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name):
+                    target, value = stmt.targets[0].id, stmt.value
+                elif isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name) and stmt.value is not None:
+                    target, value = stmt.target.id, stmt.value
+                else:
+                    target, value = None, None
+                if target is not None:
+                    taint = _sql_source_lines(value, values)
+                    receiver = _sql_receiver(value, receivers)
+                    if not _known_value(value, values, receivers):
+                        partial = True
+                    values[target] = taint
+                    receivers[target] = receiver
+                    continue
+                if isinstance(stmt, ast.Pass) or (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant)):
+                    continue
+                if isinstance(stmt, (ast.Expr, ast.Return)) and isinstance(stmt.value, ast.Call):
+                    call = stmt.value
+                    if (_attr(call.func, 'execute') and isinstance(call.func.value, ast.Name)
+                            and receivers.get(call.func.value.id) in {'connection','cursor'}
+                            and call.args and not isinstance(call.args[0], ast.Starred)):
+                        sources = sorted(_sql_source_lines(call.args[0], values))
+                        if sources:
+                            hits.append({'line':call.lineno,'source_lines':sources[:16],
+                                         'source_lines_truncated':len(sources)>16})
+                        elif not _known_value(call.args[0], values, receivers):
+                            partial = True
+                        if isinstance(stmt, ast.Return):
+                            break
+                        continue
+                if isinstance(stmt, ast.Return) and (stmt.value is None or _known_value(stmt.value, values, receivers)):
+                    break
+                # Do not carry taint through an unmodeled branch, mutation or call.
+                partial = True
+                break
+        except (RecursionError, MemoryError):
+            partial = True
+            stats['complexity_limited_functions'] += 1
+        if partial:
+            stats['unsupported_functions'] += 1
+    return hits, stats
+
+
 def process(root:Path, profile=None, components=()):
     root=Path(root).resolve(strict=True)
     if components and profile is None:
@@ -647,6 +841,8 @@ def process(root:Path, profile=None, components=()):
     express_fastify_roots = express_roots | fastify_roots
     express_fastify_files = 0
     express_fastify_counts = Counter()
+    python_sql_roots = {r for r, c in selected_by_root.items() if 'backend' in c['roles'] and 'Flask' in c['frameworks']}
+    python_sql_stats = Counter()
     rels={p.relative_to(root).as_posix():p for p in files}
     names=set(rels)
     evidence=[]
@@ -713,6 +909,23 @@ def process(root:Path, profile=None, components=()):
             coverage['skipped']['test_fixture']=coverage['skipped'].get('test_fixture',0)+1
         else:
             coverage['inspected_files'] += 1
+            if owner in python_sql_roots and p.suffix == '.py':
+                python_sql_stats['eligible_files'] += 1
+                flow_hits, flow_stats = python_sql_flow(content)
+                python_sql_stats.update(flow_stats)
+                python_sql_stats['matches'] += len(flow_hits)
+                for hit in flow_hits:
+                    cid = 'API-07'
+                    signal_counts[cid] += 1
+                    entry = {'control_id':cid, 'signal':'Flask request value reaches SQLite SQL argument',
+                             'path':fn, 'confidence':'medium', 'suggested_severity':'high',
+                             'status':'HEURISTIC_REVIEW_ONLY', 'technique':'BOUNDED_AST_FLOW',
+                             'pack_id':PY_SQL_PACK, 'pack_version':1, 'rule_id':PY_SQL_RULE,
+                             'control_mapping':'LEGACY_COMPATIBILITY', **hit}
+                    if len(evidence) < MAX_SIGNALS:
+                        evidence.append(entry)
+                    if len(control_evidence[cid]) < MAX_CONTROL_SIGNALS:
+                        control_evidence[cid].append(entry)
             rules = tuple(_rules_for_file(p, allowed_domains, web_core, backend_core, nest,
                                          owner in react_roots, owner in next_roots,
                                          owner in vue_roots, owner in nuxt_roots,
@@ -809,6 +1022,8 @@ def process(root:Path, profile=None, components=()):
                         reason='Common backend-core indicator maps to this legacy control for triage; review actual framework and security semantics.'
                     if express_fastify_roots and id in {r[1] for r in EXPRESS_FASTIFY_RULES}:
                         reason='Express/Fastify review indicator maps to this legacy control; assess deployed proxy or validation handler behavior.'
+                    if python_sql_roots and id == 'API-07':
+                        reason='Bounded Flask/SQLite AST flow maps to this legacy control for review; no exploit or safety proof.'
                 elif d=='MOB' and 'Flutter' not in stack:
                     status,reason='NEEDS_DISCOVERY','Mobile framework requires manual capability review.'
                 else:
@@ -902,8 +1117,17 @@ def process(root:Path, profile=None, components=()):
             'limitations': ['Text indicators only; no deployed proxy trust, route schema, handler or authorization proof.',
                             'Literal options and app/server receivers only; computed options and aliases need review.'],
         }
+        partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unsupported_functions','complexity_limited_functions')
+        summary['python_sql_flow'] = {
+            'pack_id': PY_SQL_PACK, 'pack_version':1, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
+            'selected_roots':sorted(python_sql_roots),
+            'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
+            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches',*partial_keys)},
+            'limitations':['Bounded straight-line Python AST only; no branch, interprocedural, alias import, ORM or exploit analysis.',
+                           'Unmodeled statements and imports are not proof of safety; no target code is executed.'],
+        }
     return {'summary':summary,'signals':evidence,'controls':result,
-      'limitations':['Regex signatures are not vulnerability proof.',
+      'limitations':['Regex and bounded AST signals are not vulnerability proof.',
       'No network requests or dynamic tests were executed.',
       'Missing an indicator does not mean the application is secure.',
       'External deployment, GitLab permissions, cloud accounts and production controls require separate authorized review.',
@@ -961,6 +1185,13 @@ def markdown(result):
                   f"- Express/Fastify component roots: {', '.join(pack['selected_roots']) or 'None'}",
                   f"- Express/Fastify eligible files inspected: {pack['inspected_eligible_files']}",
                   '- Proxy trust and validation indicators require manual deployment/handler review.', '']
+    if s.get('python_sql_flow'):
+        flow = s['python_sql_flow']
+        lines += [f"- Python SQL AST flow v1: {flow['status']}",
+                  f"- Eligible/parsed Python files: {flow['eligible_files']}/{flow['parsed_files']}; candidates: {flow['matches']}",
+                  f"- Unsupported functions: {flow['unsupported_functions']}; unmodeled imports: {flow['unmodeled_import_files']}; parse errors: {flow['parse_errors']}",
+                  f"- Size/complexity-limited files: {flow['size_limited_files']}/{flow['complexity_limited_files']}",
+                  '- AST source-to-sink candidates require manual confirmation; missing candidates are not safety.', '']
     for status,qty in sorted(s['applicability'].items()):lines.append(f'- {status}: {qty}')
     lines+=['', '## Scan coverage and limitations', '']
     lines += [f'- {key}: {value}' for key,value in sorted(s['scan_coverage']['skipped'].items())]

@@ -437,3 +437,5 @@ For contributors: [private npm/npx distribution preview](docs/npm-distribution.m
 [Express/Fastify review pack](docs/express-fastify.md) ([فارسی](docs/express-fastify-FA.md)): scoped proxy trust and validation-handler candidates, requiring deployment and handler review.
 
 [Intent routing](docs/intent-routing.md) ([فارسی](docs/intent-routing-FA.md)): select an explicitly named framework with a read-only preview before auditing; ambiguity requires selection.
+
+[Bounded Python SQL AST review](docs/python-sql-flow.md) ([فارسی](docs/python-sql-flow-FA.md)): selected Flask/SQLite source-to-query candidates, not exploit proof.
