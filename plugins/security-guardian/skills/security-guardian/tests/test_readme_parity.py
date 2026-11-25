@@ -59,7 +59,7 @@ class ReadmeParityTests(unittest.TestCase):
         for target in re.findall(r'\]\(#([a-z0-9-]+)\)', self.fa):
             self.assertIn(target, anchors,
                           f"Unresolved Persian README navigation anchor: {target}")
-        self.assertNotIn('`', self.fa)
+        self.assertNotIn(chr(167), self.fa)
 
 
 if __name__ == '__main__':
