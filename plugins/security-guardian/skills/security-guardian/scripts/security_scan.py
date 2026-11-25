@@ -924,6 +924,13 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
             if steps > PY_SQL_MAX_STEPS:
                 stats['path_limited_functions'] += 1
                 return sources_by_sink, True
+            if isinstance(stmt, ast.Try):
+                # Only the normal path through try/else/finally is modeled.
+                # Never infer an exception handler path or skip control transfers.
+                partial=True
+                stats['try_normal_paths']+=1
+                pending.append((tuple(stmt.body+stmt.orelse+stmt.finalbody)+statements[index+1:], values.copy(), receivers.copy()))
+                break
             if isinstance(stmt,ast.Import):
                 # Explicit import at this point in the current path; never
                 # execute it. Absolute module resolution is component-root
@@ -1038,6 +1045,28 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
                 target, value = stmt.target.id, stmt.value
             else:
                 target, value = None, None
+            # Recognize execute(...).fetchall()/fetchone() as an explicit
+            # query sink, not taint propagation from database result rows.
+            expression=value if target is not None else stmt.value if isinstance(stmt,(ast.Expr,ast.Return)) else None
+            call=expression
+            if (isinstance(call,ast.Call) and isinstance(call.func,ast.Attribute)
+                    and call.func.attr in {'fetchall','fetchone'} and not call.args and not call.keywords):
+                call=call.func.value
+            if (isinstance(call,ast.Call) and _attr(call.func,'execute')
+                    and _sql_receiver(call.func.value,receivers,db_names,helpers) in {'connection','cursor'}
+                    and 1<=len(call.args)<=2 and not call.keywords and not any(isinstance(x,ast.Starred) for x in call.args)):
+                known,sources=_sql_value(call.args[0],values,receivers,request_names,db_names,helpers)
+                if known and sources:sources_by_sink[call.lineno].update(sources)
+                if not known:
+                    partial=True;break
+                if isinstance(stmt,ast.Return):break
+                if target is not None:
+                    # Query results and cursor aliases are not inferred from
+                    # an assigned execute/fetch expression.
+                    values[target]=frozenset()
+                    receivers[target]=None
+                    partial=True
+                continue
             if target is not None:
                 for k in list(receivers):
                     if isinstance(k,tuple) and k[0]=='import' and k[1].split('.')[0]==target:del receivers[k]
@@ -1073,20 +1102,6 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
                 continue
             if isinstance(stmt, ast.Pass) or (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant)):
                 continue
-            if isinstance(stmt, (ast.Expr, ast.Return)) and isinstance(stmt.value, ast.Call):
-                call = stmt.value
-                if (_attr(call.func, 'execute') and isinstance(call.func.value, ast.Name)
-                        and receivers.get(call.func.value.id) in {'connection', 'cursor'}
-                        and call.args and not isinstance(call.args[0], ast.Starred)):
-                    known, sources = _sql_value(call.args[0], values, receivers, request_names, db_names, helpers)
-                    if known and sources:
-                        sources_by_sink[call.lineno].update(sources)
-                    if not known:
-                        partial = True
-                        break
-                    if isinstance(stmt, ast.Return):
-                        break
-                    continue
             if isinstance(stmt, ast.Return) and (stmt.value is None or _sql_value(stmt.value, values, receivers, request_names, db_names, helpers)[0]):
                 break
             partial = True
@@ -1127,6 +1142,10 @@ def python_sql_flow(content, sibling_exports=None, qualified_exports=None):
                 alias=a.asname or a.name
                 if a.name in exports and bindings[alias]==1:imported_helpers[alias]=exports[a.name]
     watched = request_names | db_names
+    # Explicit writes to imported module members invalidate receiver provenance.
+    if any(isinstance(n,ast.Attribute) and isinstance(n.ctx,(ast.Store,ast.Del)) and _qualified_parts(n) and _qualified_parts(n)[0] in watched for n in ast.walk(tree)):
+        stats['unmodeled_import_files'] += 1
+        return hits, stats
     if (not request_names or (not db_names and not imported_helpers and not qualified_exports) or request_names & db_names
             or any(bindings[name] != 1 for name in watched)
             or any(isinstance(n, ast.ImportFrom) and any(a.name == '*' for a in n.names) for n in tree.body)):
@@ -1140,10 +1159,11 @@ def python_sql_flow(content, sibling_exports=None, qualified_exports=None):
     stats['cross_file_request_wrappers'] += sum(sum(v[0]=='request_wrapper' for v in x.values()) for x in (qualified_exports or {}).values())
     for n in tree.body:
         if isinstance(n, ast.FunctionDef) and bindings[n.name] == 1:
-            summary = _helper_summary(n) or _connection_factory(n,db_names)
+            summary = _helper_summary(n) or _connection_factory(n,db_names,True)
             if summary is not None:
                 helpers[n.name] = summary
     stats['recognized_helpers'] += len(helpers)
+    stats['named_path_factory_candidates'] += sum(isinstance(n,ast.FunctionDef) and n.name in helpers and helpers[n.name]==(0,(), 'connection') and _connection_factory(n,db_names) is None for n in tree.body)
     stats['unmodeled_module_statements'] += sum(not isinstance(n, (ast.Import, ast.ImportFrom, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and not (isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant)) for n in tree.body)
     # Nested functions/classes and async functions are outside the model.
     functions = [n for n in tree.body if isinstance(n, ast.FunctionDef)]
@@ -1335,7 +1355,7 @@ def process(root:Path, profile=None, components=()):
                     entry = {'control_id':cid, 'signal':'Flask request value reaches SQLite SQL argument',
                              'path':fn, 'confidence':'medium', 'suggested_severity':'high',
                              'status':'HEURISTIC_REVIEW_ONLY', 'technique':'BOUNDED_AST_FLOW',
-                             'pack_id':PY_SQL_PACK, 'pack_version':5, 'rule_id':PY_SQL_RULE,
+                             'pack_id':PY_SQL_PACK, 'pack_version':6, 'rule_id':PY_SQL_RULE,
                              'control_mapping':'LEGACY_COMPATIBILITY', **hit}
                     if len(evidence) < MAX_SIGNALS:
                         evidence.append(entry)
@@ -1534,11 +1554,11 @@ def process(root:Path, profile=None, components=()):
         }
         partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions','path_limited_functions')
         summary['python_sql_flow'] = {
-            'pack_id': PY_SQL_PACK, 'pack_version':5, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
+            'pack_id': PY_SQL_PACK, 'pack_version':6, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
             'selected_roots':sorted(python_sql_roots),
-            'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or python_sql_stats['cross_file_receiver_bindings'] or python_sql_stats['cross_file_request_wrappers'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
-            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings','cross_file_request_wrappers',*partial_keys)},
-            'limitations':['Bounded local paths, literal loops, dictionary/configuration slots, selected encoding transformations, simple request-holder class summaries, request headers/cookies, one-hop query helpers, sibling and component-root qualified connection factories, nested route bodies; no generic cross-module taint, dynamic import/dispatch, exception semantics or exploit analysis.',
+            'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or python_sql_stats['cross_file_receiver_bindings'] or python_sql_stats['cross_file_request_wrappers'] or python_sql_stats['named_path_factory_candidates'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
+            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings','cross_file_request_wrappers','try_normal_paths','named_path_factory_candidates',*partial_keys)},
+            'limitations':['Bounded local paths, literal loops, dictionary/configuration slots, selected encoding transformations, simple request-holder class summaries, request headers/cookies, one-hop query helpers, sibling and component-root qualified connection factories, nested route bodies, normal try paths and execute/fetch chains; no generic cross-module taint, dynamic import/dispatch, exception semantics or exploit analysis.',
                            'Unmodeled statements and imports are not proof of safety; no target code is executed.'],
         }
     return {'summary':summary,'signals':evidence,'controls':result,
