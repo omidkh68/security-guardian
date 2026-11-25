@@ -18,7 +18,7 @@ Include affected version, minimal offline reproduction, impact, and suggested re
 ## Operational boundaries
 
 - `security_scan.py` runs locally without network access, source writes, external dependencies or active attacks.
-- `security_tracker.py` writes `.security-guardian/` audit evidence; it does not execute tests or fixes.
+- `security_tracker.py` writes `.security-guardian/` audit evidence; default commands do not execute tests or fixes. The explicitly authorized `run-test` command invokes trusted local tests; it is not a sandbox.
 - Claude Code can inspect or modify code **with the user's permissions**; the Skill's instructions ask for explicit approval for high-risk changes and live operations.
 - An AI-generated report is **not** a security certification or a replacement for professional assessment.
 - Keep `.security-guardian/` reports private: file paths, security findings and architecture metadata can be sensitive.

@@ -416,3 +416,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 ## چشم‌انداز مهندسی و نقشه راه
 
 [سورس Wiki مهندسی](docs/wiki/SG-Home.md) شامل وضعیت مبنای نسخه ۱.۲.۱، استانداردهای ۲۰۲۶ و طراحی آینده آگاه از محدوده پروژه است. RFCها پیشنهادهایی در انتظار بررسی‌اند، نه قابلیت‌های منتشرشده. [GitHub Wiki](https://github.com/omidkh68/security-guardian/wiki) جداگانه نگه‌داری می‌شود؛ [دستورالعمل انتشار Wiki](docs/wiki-publishing.md) را ببینید.
+
+فرمان [شواهد اجرای متصل به Tracker](docs/tracker-execution-evidence-FA.md) اجرای مستقیم محلی را از شواهد دستی تفکیک می‌کند. [English](docs/tracker-execution-evidence.md).

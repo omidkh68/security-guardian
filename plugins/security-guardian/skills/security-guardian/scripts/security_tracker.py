@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Offline, project-local, versioned evidence ledger for Security Guardian.
 
-Only writes under <project>/.security-guardian; NEVER executes application code,
-modifies application source, scans hosts or executes tests. No extra deps.
+Default commands only write under <project>/.security-guardian. The explicit
+run-test command invokes trusted local tests; those tests may have side effects.
 """
 from __future__ import annotations
 import argparse
@@ -21,6 +21,8 @@ import tempfile
 
 import security_scan
 import control_mapping
+from security_fingerprint import fingerprint as source_fingerprint
+import security_test_runner
 
 VERSION = '1.1.0'
 TRACK_DIR = '.security-guardian'
@@ -230,7 +232,8 @@ def validate_test(obj):
     return {'name': str(obj['name']), 'result': result, 'reason': reason,
             'scope': str(obj.get('scope', '')), 'command_or_method': str(obj.get('command_or_method', '')),
             'evidence': evidence, 'finding_ids': list(dict.fromkeys(linked)),
-            'recorded_at': now(), 'executed': result in {'PASS', 'FAIL'}}
+            'recorded_at': now(), 'executed': result in {'PASS', 'FAIL'},
+            'evidence_quality': 'MANUAL_REPORTED'}
 
 
 def ensure_run(store, index, run_id):
@@ -323,12 +326,12 @@ def make_run_report(run, ledger, scan):
         lines.append(f"| `{f['id']}` | {f['status']} | {esc(f['fix'].get('summary', 'No code change'))} | "
                      f"{esc(f['reason'])} | {esc(evidence)} |")
     lines += ['', '## Test executions recorded for this run', '',
-              '| Test | Result | Method | Reason / limitation |', '|---|---|---|---|']
+              '| Test | Result | Evidence quality | Method | Reason / limitation |', '|---|---|---|---|---|']
     for t in run.get('tests', []):
         esc = lambda s: str(s).replace('|', '/').replace('\n', ' ')[:220]
-        lines.append(f"| {esc(t['name'])} | {t['result']} | {esc(t['command_or_method'])} | {esc(t['reason'])} |")
+        lines.append(f"| {esc(t['name'])} | {t['result']} | {t.get('evidence_quality', 'MANUAL_REPORTED')} | {esc(t['command_or_method'])} | {esc(t['reason'])} |")
     if not run.get('tests'):
-        lines.append('| — | NOT_RUN | No test execution documented | Not evidence of a pass |')
+        lines.append('| — | NOT_RUN | — | No test execution documented | Not evidence of a pass |')
     lines += ['', '## Changes relative to previous run', '']
     for key, value in sorted(run.get('delta', {}).items()):
         lines.append(f'- {key}: {value}')
@@ -344,7 +347,7 @@ def make_run_report(run, ledger, scan):
               '- `findings.json` is the cumulative ledger snapshot at last update; statuses require recorded human/agent evidence.',
               '- `events.jsonl` is the append-only per-run chronology; completed runs are never reopened.',
               '- No missing signal or missing repo configuration is automatically marked fixed or passed.',
-              '- App source code, secrets, production settings, and live systems are not altered by this tracker.', '']
+              '- Default tracker commands do not edit app source; explicitly authorized local test code may have side effects. Local receipts are not independent security attestation.', '']
     return '\n'.join(lines)
 
 
@@ -444,7 +447,9 @@ def record(args):
                     if field not in row and previous.get(field) is not None:
                         row[field] = previous[field]
             entries.append(validate_finding(row))
-        # Validate target ID matches existing and don't allow duplicate conflicting IDs in same batch.
+        # Disallow ambiguous finding transitions in the same batch.
+        if len({e['id'] for e in entries}) != len(entries):
+            raise ValueError('Duplicate finding IDs in record batch')
         for e in entries:
             if e['id'] in ledger['findings'] and ledger['findings'][e['id']]['status'] == 'SUPERSEDED':
                 raise ValueError(f"Finding ID {e['id']} was reclassified; use {ledger['findings'][e['id']].get('superseded_by')}")
@@ -468,6 +473,17 @@ def record(args):
                 if tested_sha and current_sha and tested_sha != current_sha:
                     raise ValueError('Git HEAD changed after linked PASS test; rerun verification')
                 verification['git_commit'] = tested_sha
+                quality = test.get('evidence_quality', 'MANUAL_REPORTED')
+                if quality == 'LOCAL_EXECUTION':
+                    review = verification.get('security_assertion_review')
+                    if not isinstance(review, str) or not 10 <= len(review.strip()) <= 2000:
+                        raise ValueError('Local execution requires explicit security assertion review')
+                    existing = ledger['findings'].get(e['id'])
+                    validate_execution_receipt(root, run, existing, test['execution_receipt'])
+                    if any(e[k] != existing[k] for k in ('location', 'title', 'fix')):
+                        raise ValueError('Finding title, location or fix changed after execution; rerun')
+                verification['evidence_quality'] = quality
+                verification['independently_verified_fix'] = False
         for e in entries:
             apply_event(ledger, e, run)
             append_event(rdir / 'events.jsonl', {'at': now(), 'type': 'FINDING_REVIEWED',
@@ -498,6 +514,121 @@ def tests(args):
         snapshot(store, rdir, run, ledger, read_json(rdir / 'scanner.json'))
     print(dump({'run_id': args.run, 'tests_recorded': len(entries),
                 'test_ids': [t['test_id'] for t in entries]}).strip())
+
+
+def _finding_stamp(finding):
+    return hashlib.sha256(dump(finding).encode('utf-8')).hexdigest()
+
+
+def _selected_inputs(root, run, finding, files, test_file):
+    if run['mode'] not in {'fix', 'verify'}:
+        raise ValueError('Local execution requires an active fix or verify run')
+    if not finding or finding['status'] not in {'CONFIRMED_OPEN', 'FIXED_UNVERIFIED'}:
+        raise ValueError('Local execution requires an existing confirmed or fixed-unverified finding')
+    scope = run.get('scope_resolution') or {}
+    if scope.get('status') != 'RESOLVED' or not scope.get('selected_roots'):
+        raise ValueError('Local execution requires an explicitly resolved run scope')
+    if not isinstance(test_file, str) or not Path(test_file).name.startswith('test_') or Path(test_file).suffix != '.py':
+        raise ValueError('An explicit test_*.py module is required')
+    location = re.sub(r':\d+(?::\d+)?$', '', finding['location'])
+    if location not in files or test_file not in files or location == test_file:
+        raise ValueError('Select the finding source file and a distinct test module')
+    fix_files = finding.get('fix', {}).get('files', [])
+    if not isinstance(fix_files, list) or any(not isinstance(p, str) or p not in files for p in fix_files):
+        raise ValueError('Select every recorded fix file')
+    selected = set(scope['selected_roots'])
+    if any(security_scan._owner(p, scope['components']) not in selected for p in files):
+        raise ValueError('Selected test input is outside the run component scope')
+    return source_fingerprint(root, files)
+
+
+def validate_execution_receipt(root, run, finding, receipt):
+    """Validate a directly collected receipt; not cryptographic attestation."""
+    if not isinstance(receipt, dict) or not finding:
+        raise ValueError('Missing local execution evidence')
+    if (receipt.get('schema_version') != 1 or receipt.get('adapter') != 'python-unittest-v1'
+            or receipt.get('run_id') != run['id'] or receipt.get('finding_id') != finding['id']
+            or receipt.get('finding_stamp') != _finding_stamp(finding)
+            or receipt.get('scope_stamp') != _finding_stamp(run.get('scope_resolution'))
+            or receipt.get('result') != 'PASS' or receipt.get('executed') is not True
+            or type(receipt.get('exit_code')) is not int or receipt['exit_code'] != 0
+            or receipt.get('independently_verified_fix') is not False):
+        raise ValueError('Ineligible or unrelated local execution receipt')
+    counts = receipt.get('counts')
+    keys = {'tests_run', 'failures', 'errors', 'skipped', 'expected_failures', 'unexpected_successes'}
+    if (not isinstance(counts, dict) or set(counts) != keys
+            or any(type(v) is not int for v in counts.values())
+            or counts['tests_run'] <= 0 or any(counts[k] != 0 for k in keys - {'tests_run'})):
+        raise ValueError('Local receipt lacks passing assertion execution')
+    try:
+        start, end, run_start = [datetime.fromisoformat(value.replace('Z', '+00:00'))
+                                for value in (receipt['started_at'], receipt['finished_at'], run['started_at'])]
+        if not run_start <= start <= end <= datetime.now(timezone.utc):
+            raise ValueError('Invalid local execution timestamps')
+        before = receipt['fingerprint_before']
+        after = receipt['fingerprint_after']
+        files = before['files']
+        if not isinstance(files, list) or any(not isinstance(p, str) for p in files):
+            raise ValueError('Invalid local execution inputs')
+    except (KeyError, TypeError, AttributeError):
+        raise ValueError('Malformed local execution receipt') from None
+    if (not isinstance(receipt.get('python_version'), str)
+            or not re.fullmatch(r'\d+\.\d+\.\d+', receipt['python_version'])
+            or not isinstance(receipt.get('output_sha256'), str)
+            or not re.fullmatch(r'[0-9a-f]{64}', receipt['output_sha256'])
+            or type(receipt.get('output_bytes')) is not int
+            or not 0 <= receipt['output_bytes'] <= security_test_runner.MAX_OUTPUT):
+        raise ValueError('Invalid local execution metadata')
+    current = _selected_inputs(root, run, finding, files, receipt.get('test_file'))
+    if before != after or after != current:
+        raise ValueError('Local execution evidence is stale; rerun verification')
+
+
+def run_test(args):
+    """Collect runner evidence in this process; never import a claimed receipt."""
+    if not args.authorize_local_test:
+        raise ValueError('Explicit local test authorization required')
+    root, store = root_and_store(args.root)
+    with locked(store):
+        index, ledger = load_state(store)
+        _, run = ensure_run(store, index, args.run)
+        finding = ledger['findings'].get(args.finding_id)
+        before = _selected_inputs(root, run, finding, args.file, args.test_file)
+        stamp = _finding_stamp(finding)
+        scope = run['scope_resolution']
+    # Do not hold the ledger lock while executing user-authorized test code.
+    receipt = security_test_runner.run(args)
+    receipt.update({'run_id': args.run, 'finding_stamp': stamp,
+                    'scope_stamp': _finding_stamp(scope)})
+    with locked(store):
+        index, ledger = load_state(store)
+        rdir, run = ensure_run(store, index, args.run)
+        finding = ledger['findings'].get(args.finding_id)
+        if (not finding or _finding_stamp(finding) != stamp or run.get('scope_resolution') != scope):
+            raise ValueError('Finding or run scope changed during execution; rerun')
+        if receipt.get('result') == 'PASS':
+            if receipt.get('fingerprint_before') != before:
+                raise ValueError('Selected inputs changed before execution; rerun')
+            validate_execution_receipt(root, run, finding, receipt)
+        outcome = receipt.get('result')
+        status = outcome if outcome in {'PASS', 'FAIL'} else 'BLOCKED'
+        entry = validate_test({'name': 'Authorized local unittest regression',
+                               'result': status, 'reason': receipt.get('reason', ''),
+                               'finding_ids': [args.finding_id],
+                               'command_or_method': 'python-unittest-v1',
+                               'evidence': ['Local execution receipt in run manifest']})
+        entry.update({'test_id': 'SGT-' + secrets.token_hex(8).upper(),
+                      'evidence_quality': 'LOCAL_EXECUTION',
+                      'execution_receipt': receipt,
+                      'executed': receipt.get('executed') is True,
+                      'git_commit': git_meta(root).get('commit')})
+        run['tests'].append(entry)
+        append_event(rdir/'events.jsonl', {'at': now(), 'type': 'LOCAL_TEST_RECORDED',
+                                          'test_id': entry['test_id'], 'result': outcome})
+        save_state(store, index, ledger)
+        snapshot(store, rdir, run, ledger, read_json(rdir/'scanner.json'))
+    print(dump({'run_id': args.run, 'test_id': entry['test_id'], 'result': outcome,
+                'evidence_quality': 'LOCAL_EXECUTION', 'independently_verified_fix': False}).strip())
 
 
 def finish(args):
@@ -657,6 +788,15 @@ def main():
     p.add_argument('--run', required=True)
     p.add_argument('--file')
     p.set_defaults(fn=tests)
+    p = subs.add_parser('run-test', help='Execute explicitly authorized local unittest and record evidence')
+    p.add_argument('--root', default='.')
+    p.add_argument('--run', required=True)
+    p.add_argument('--finding-id', required=True)
+    p.add_argument('--test-file', required=True)
+    p.add_argument('--file', action='append', default=[])
+    p.add_argument('--timeout', type=int, default=15)
+    p.add_argument('--authorize-local-test', action='store_true')
+    p.set_defaults(fn=run_test)
     p = subs.add_parser('finish', help='Finalize one run and freeze the run archive')
     p.add_argument('--root', default='.')
     p.add_argument('--run', required=True)

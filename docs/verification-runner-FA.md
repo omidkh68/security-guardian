@@ -34,3 +34,5 @@ Timeout بین ۱ تا ۶۰ ثانیه است؛ خروجی ترکیبی ذخیر
 ## آزمون و بازگردانی
 
 `python3 scripts/validate_package.py` و `python3 -m unittest discover -s plugins/security-guardian/skills/security-guardian/tests -v` را اجرا کنید. تست‌های مصنوعی مجوز، محدوده، موفقیت/شکست واقعی، تست صفر/Skip، Timeout، سورس تغییرکرده و سقف خروجی مستقیم را بررسی می‌کنند. Windows و Adapterهای تخصصی فریم‌ورک هنوز پیاده‌سازی نشده‌اند. در صورت نیاز Adapter مستقل، تست‌ها و مستندات را بازگردانید؛ رکوردهای Ledger قبلی مهاجرت نمی‌کنند.
+
+برای ثبت شواهد در اجرای فعال، به‌جای واردکردن JSON مستقل، از [یکپارچه‌سازی مجاز Tracker](tracker-execution-evidence-FA.md) استفاده کنید. فرمان مستقل همچنان وضعیت یافته را تغییر نمی‌دهد.
