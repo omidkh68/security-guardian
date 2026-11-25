@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Add scoped web-core v1 metadata and three reusable browser indicators for selected JS/TS frontend components; preserve legacy control identities and unscoped behavior (#62).
 - Add a private dependency-free Node CLI preview, exact npm tarball checks and offline npx install-to-report smoke; registry publication remains pending (#46).
 - Bind explicitly authorized local unittest evidence to active scoped tracker runs and findings; distinguish manual reports and recheck selected-file freshness (#58, #60).
 - Read-only project scope preview, manifest-based component inventory and explicit frontend/backend/fullstack/mobile/custom profiles; selected scanner rule families and per-run scope metadata (#31).
