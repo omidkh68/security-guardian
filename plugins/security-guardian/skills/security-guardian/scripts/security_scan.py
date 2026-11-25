@@ -106,16 +106,51 @@ def _web_core(component):
             and bool(WEB_CORE_FRAMEWORKS.intersection(component['frameworks'])))
 
 
-def _rules_for_file(p, allowed_domains, web_core):
-    """Select once per inspected file; preserve unscoped legacy behavior."""
+BACKEND_CORE_PACK = 'backend-core'
+BACKEND_CORE_VERSION = 1
+BACKEND_CORE_FRAMEWORKS = {'NestJS', 'Express', 'Fastify', 'Koa', 'Hono'}
+BACKEND_CORE_SUFFIXES = {'.js', '.ts', '.mjs', '.cjs'}
+BACKEND_CORE_RULES = {
+    ('API-02', 'Wildcard CORS origin hint'): 'BACKEND.HTTP.CORS_WILDCARD',
+    ('API-10', 'Development stack traces returned to clients'): 'BACKEND.HTTP.ERROR_DISCLOSURE',
+    ('API-15', 'Untrusted forwarding header read'): 'BACKEND.HTTP.FORWARDED_HEADER',
+    ('BIZ-02', 'Client-supplied privileged entity field'): 'BACKEND.API.PRIVILEGED_FIELD',
+}
+CORS_WILDCARD = re.compile(r'origin\s*:\s*[\'"]\*[\'"]', re.I)
+NEST_ONLY_LABELS = {'Potentially loose ValidationPipe whitelist',
+                    'Potentially loose non-whitelisted input policy'}
+
+
+def _backend_core(component):
+    return ('backend' in component['roles']
+            and bool(BACKEND_CORE_FRAMEWORKS.intersection(component['frameworks'])))
+
+
+def _rules_for_file(p, allowed_domains, web_core, backend_core=False, nest=False):
+    """Select scoped pack rules once per file; retain unscoped legacy matching."""
     for cid, label, regex, extensions, confidence, severity in PATTERNS:
-        pack_rule = WEB_CORE_RULES.get((cid, label)) if web_core and p.suffix in WEB_CORE_SUFFIXES else None
+        if allowed_domains is not None and not nest and label in NEST_ONLY_LABELS:
+            continue
+        pack_id, pack_rule = None, None
+        if web_core and p.suffix in WEB_CORE_SUFFIXES:
+            pack_rule = WEB_CORE_RULES.get((cid, label))
+            if pack_rule:
+                pack_id = WEB_CORE_PACK
+        if backend_core and p.suffix in BACKEND_CORE_SUFFIXES:
+            common = BACKEND_CORE_RULES.get((cid, label))
+            if common:
+                pack_id, pack_rule = BACKEND_CORE_PACK, common
         if pack_rule is None:
             if allowed_domains is not None and cid.split('-')[0] not in allowed_domains:
                 continue
             if p.suffix not in extensions and p.name not in extensions:
                 continue
-        yield cid, label, regex, confidence, severity, pack_rule
+        if allowed_domains is not None and label == 'Wildcard CORS origin hint':
+            # The historic regex includes Nest-specific enableCors(). Keep that
+            # branch only for Nest's original file eligibility.
+            if not nest or p.suffix not in extensions:
+                regex = CORS_WILDCARD
+        yield cid, label, regex, confidence, severity, pack_id, pack_rule
 
 
 def _multiline_window(line, following):
@@ -449,6 +484,9 @@ def process(root:Path, profile=None, components=()):
     web_roots = {root_id for root_id, component in selected_by_root.items() if _web_core(component)}
     web_files = 0
     web_counts = Counter()
+    backend_roots = {root_id for root_id, component in selected_by_root.items() if _backend_core(component)}
+    backend_files = 0
+    backend_counts = Counter()
     rels={p.relative_to(root).as_posix():p for p in files}
     names=set(rels)
     evidence=[]
@@ -509,19 +547,23 @@ def process(root:Path, profile=None, components=()):
         owner = _owner(fn, scope['components']) if scope else None
         allowed_domains = _domains(selected_by_root[owner]) if scope else None
         web_core = owner in web_roots
+        backend_core = owner in backend_roots
+        nest = bool(scope and 'NestJS' in selected_by_root[owner]['frameworks'])
         if is_test:
             coverage['skipped']['test_fixture']=coverage['skipped'].get('test_fixture',0)+1
         else:
             coverage['inspected_files'] += 1
-            rules = tuple(_rules_for_file(p, allowed_domains, web_core))
+            rules = tuple(_rules_for_file(p, allowed_domains, web_core, backend_core, nest))
             if web_core and p.suffix in WEB_CORE_SUFFIXES:
                 web_files += 1
+            if backend_core and p.suffix in BACKEND_CORE_SUFFIXES:
+                backend_files += 1
             source_lines = content.splitlines()
             for lineno,line in enumerate(source_lines,1):
                 if not line.strip() or line.lstrip().startswith(('*','//','#','<!--')):continue
                 window = (_multiline_window(line, source_lines[lineno])
                           if lineno < len(source_lines) else None)
-                for cid,label,regex,confidence,severity,pack_rule in rules:
+                for cid,label,regex,confidence,severity,pack_id,pack_rule in rules:
                     matched = bool(regex.search(line))
                     if not matched and window is not None and label in MULTILINE_LABELS:
                         # Only count matches starting on this line and crossing
@@ -530,14 +572,18 @@ def process(root:Path, profile=None, components=()):
                                       for m in regex.finditer(window))
                     if matched:
                         signal_counts[cid] += 1
-                        if pack_rule:
+                        if pack_id == BACKEND_CORE_PACK and pack_rule == 'BACKEND.HTTP.CORS_WILDCARD' and not CORS_WILDCARD.search(line):
+                            pack_id, pack_rule = None, None
+                        if pack_id == WEB_CORE_PACK:
                             web_counts[pack_rule] += 1
+                        elif pack_id == BACKEND_CORE_PACK:
+                            backend_counts[pack_rule] += 1
                         if len(evidence) < MAX_SIGNALS or len(control_evidence[cid]) < MAX_CONTROL_SIGNALS:
                             entry={'control_id':cid,'signal':label,'path':fn,'line':lineno,
                                 'confidence':confidence,'suggested_severity':severity,
                                 'status':'HEURISTIC_REVIEW_ONLY'}
                             if pack_rule:
-                                entry.update({'pack_id': WEB_CORE_PACK, 'pack_version': WEB_CORE_VERSION,
+                                entry.update({'pack_id': pack_id, 'pack_version': (WEB_CORE_VERSION if pack_id == WEB_CORE_PACK else BACKEND_CORE_VERSION),
                                               'rule_id': pack_rule, 'control_mapping': 'LEGACY_COMPATIBILITY'})
                             if len(evidence) < MAX_SIGNALS:
                                 evidence.append(entry)
@@ -572,7 +618,9 @@ def process(root:Path, profile=None, components=()):
                     if web_roots and id in {key[0] for key in WEB_CORE_RULES}:
                         reason='Common web-core indicator maps to this legacy control for triage; review actual applicability, not Angular-specific acceptance.'
                 elif d in {'API','BIZ'} and 'NestJS' not in stack:
-                    status,reason='NEEDS_DISCOVERY','Non-Nest backend: verify applicable controls in actual framework; no dedicated pack in this revision.'
+                    status,reason='NEEDS_DISCOVERY','Non-Nest backend: verify applicable controls in actual framework; no dedicated framework pack in this revision.'
+                    if backend_roots and id in {key[0] for key in BACKEND_CORE_RULES}:
+                        reason='Common backend-core indicator maps to this legacy control for triage; review actual framework and security semantics.'
                 elif d=='MOB' and 'Flutter' not in stack:
                     status,reason='NEEDS_DISCOVERY','Mobile framework requires manual capability review.'
                 else:
@@ -612,6 +660,16 @@ def process(root:Path, profile=None, components=()):
             'limitations': ['JS/TS text indicators only; no template, data-flow or client/server semantic analysis.',
                             'Framework discovery does not certify version compatibility or vulnerability coverage.'],
         }
+        summary['backend_core'] = {
+            'pack_id': BACKEND_CORE_PACK, 'pack_version': BACKEND_CORE_VERSION,
+            'selected_roots': sorted(backend_roots),
+            'status': 'HEURISTIC_REVIEW_ONLY' if backend_roots else 'NOT_SELECTED',
+            'inspected_eligible_files': backend_files,
+            'rules': [{'rule_id': rule, 'legacy_control_id': cid, 'matches': backend_counts[rule]}
+                      for (cid, label), rule in BACKEND_CORE_RULES.items()],
+            'limitations': ['JS/TS text indicators only; no authorization, request flow or framework semantic analysis.',
+                            'Framework discovery does not certify version compatibility or vulnerability coverage.'],
+        }
     return {'summary':summary,'signals':evidence,'controls':result,
       'limitations':['Regex signatures are not vulnerability proof.',
       'No network requests or dynamic tests were executed.',
@@ -641,6 +699,12 @@ def markdown(result):
                   f"- Web core component roots: {', '.join(pack['selected_roots']) or 'None'}",
                   f"- Web core eligible files inspected: {pack['inspected_eligible_files']}",
                   '- Web core uses legacy control mappings for triage only; no framework-specific verification.', '']
+    if s.get('backend_core'):
+        pack = s['backend_core']
+        lines += [f"- Backend core v{pack['pack_version']}: {pack['status']}",
+                  f"- Backend core component roots: {', '.join(pack['selected_roots']) or 'None'}",
+                  f"- Backend core eligible files inspected: {pack['inspected_eligible_files']}",
+                  '- Backend core uses legacy control mappings for triage only; no framework-specific verification.', '']
     for status,qty in sorted(s['applicability'].items()):lines.append(f'- {status}: {qty}')
     lines+=['', '## Scan coverage and limitations', '']
     lines += [f'- {key}: {value}' for key,value in sorted(s['scan_coverage']['skipped'].items())]
