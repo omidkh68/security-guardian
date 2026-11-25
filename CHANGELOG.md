@@ -11,6 +11,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 - Add read-only, bounded selected-file SHA-256 fingerprints as a prerequisite for stale-evidence detection (#51, #52). No automatic verification or test execution.
 
 ### Fixed
+- Standardize canonical English and Persian documentation filenames and track legacy translation debt (#54).
 - Preserve multiple rules per line, detect selected adjacent-line indicators and expose incomplete scan/evidence coverage (#45, #48, #50).
 
 ### Compatibility
