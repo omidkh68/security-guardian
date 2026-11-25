@@ -429,3 +429,5 @@ For contributors: [private npm/npx distribution preview](docs/npm-distribution.m
 [Backend core indicator pack](docs/backend-core.md) ([فارسی](docs/backend-core-FA.md)): scoped Node HTTP/API candidates; not authorization or framework-specific verification.
 
 [React/Next.js review pack](docs/react-next.md) ([فارسی](docs/react-next-FA.md)): scoped raw HTML, public secret-like names and browser source-map candidates; SSR and server authorization still require review.
+
+[Vue/Nuxt review pack](docs/vue-nuxt.md) ([فارسی](docs/vue-nuxt-FA.md)): scoped v-html and public runtime-config candidates; manual SSR and server authorization review.
