@@ -41,6 +41,8 @@ test('install all, share Codex/Gemini, protect existing files and back up upgrad
     assert.ok(fs.existsSync(path.join(target, 'scripts/security_tracker.py')));
     assert.ok(fs.existsSync(path.join(target, 'scripts/security_js_sql_flow.py')));
     assert.ok(fs.existsSync(path.join(target, 'scripts/js_sql_flow.mjs')));
+    assert.ok(fs.existsSync(path.join(target, 'scripts/js_ssr_flow.mjs')));
+    assert.ok(fs.existsSync(path.join(target, 'scripts/security_js_ssr_flow.py')));
     assert.ok(!fs.existsSync(path.join(target, 'tests')));
     fs.writeFileSync(path.join(target, 'local-note.txt'), folder);
   }
