@@ -47,7 +47,7 @@ flowchart TD
 | Express | backend-core، express-fastify (قوانین Express) | SQL در pg؛ شواهد منابع Prisma/TypeORM |
 | Fastify | backend-core، express-fastify (قوانین Fastify) | SQL در pg؛ شواهد منابع Prisma/TypeORM |
 | Koa، Hono | backend-core | بدون AST نام‌دار |
-| Flask | بدون Pack نشانگر نام‌دار | SQL در Flask/SQLite در Scanner محدوده‌دار |
+| Flask | بدون Pack نشانگر نام‌دار | SQL در Flask/SQLite محدوده‌دار با Context محدود Helper، Loop و Slot داده |
 | Django، FastAPI، Spring Boot، ASP.NET Core، Laravel | بدون Pack نشانگر نام‌دار | بدون AST نام‌دار |
 | Flutter | بدون Pack نشانگر نام‌دار؛ نشانگرهای قدیمی موبایل | بدون AST نام‌دار |
 
@@ -77,3 +77,6 @@ flowchart TD
 | CLI قطعی و Redaction | عدم اجرای هدف، خروج نسخه خام یا تغییر Ledger |
 
 موجودی افزوده است؛ قالب Scanner و Tracker، کلیدها و اسکن پیش‌فرض تغییر نمی‌کنند. بازگشت با Revert و بدون مهاجرت Ledger است. ارزیابی مستقل (#96)، Verification چندفناوری (#35) و Runtime ایجنت (#32) جداگانه باقی می‌مانند.
+
+
+توسعه #107: برای مدل‌های جاری و محدودیت‌ها و ارزیابی جداگانه، [توسعه پوشش معنایی](semantic-expansion-FA.md) را ببینید. توضیحات نسخه‌های قبلی خط مبنای تاریخی هستند.

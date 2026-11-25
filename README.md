@@ -461,3 +461,6 @@ Python SQL AST v4 adds direct SQLite context-manager normal-path review (#90), w
 [Standards crosswalk](docs/standards-crosswalk.md) ([فارسی](docs/standards-crosswalk-FA.md)): versioned advisory relationships, separate applicability and verification.
 
 [Professional reporting](docs/pdf-reporting.md) ([فارسی](docs/pdf-reporting-FA.md)): structured management/technical PDF, JSON and Markdown views, residual risk and finalized snapshot exports.
+
+
+Expansion #107: see [semantic coverage expansion](docs/semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.

@@ -25,3 +25,6 @@ Recognizes direct module-level `from flask import request as ...` and `import sq
 ## Direct SQLite context managers (pack v4)
 
 A single `with sqlite3.connect(<literal string>) as name:` (including the supported direct sqlite3 import aliases) binds a known connection for normal-path analysis of its body and continuation. Python with does not create a local scope, and SQLite's connection context manager manages transactions rather than closing the connection. Exception/commit/rollback semantics are not modeled; these paths remain PARTIAL even when a candidate is observed. Unknown managers, dynamic connect arguments and multi-item contexts stop the affected path. Existing path/step budgets apply. Report context_manager_paths as a count of analyzed entries, not executed transactions. The 14-case SQL benchmark is unchanged. Regression fixtures cover direct flow, branch isolation, parameter binding, continuation and unsupported contexts. This is no proof of database behavior or exploitability. Revert for rollback; no ledger migration.
+
+
+Expansion #107: see [semantic coverage expansion](semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.

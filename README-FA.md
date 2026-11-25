@@ -458,3 +458,6 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 [نگاشت استانداردها](docs/standards-crosswalk-FA.md) ([English](docs/standards-crosswalk.md)): روابط نسخه‌دار و تفکیک کاربرد و تأیید.
 
 [گزارش‌دهی حرفه‌ای](docs/pdf-reporting-FA.md) ([English](docs/pdf-reporting.md)): گزارش مدیریتی و فنی PDF، JSON و Markdown، ریسک باقی‌مانده و خروجی نسخه نهایی.
+
+
+توسعه #107: برای مدل‌های جاری و محدودیت‌ها و ارزیابی جداگانه، [توسعه پوشش معنایی](docs/semantic-expansion-FA.md) را ببینید. توضیحات نسخه‌های قبلی خط مبنای تاریخی هستند.
