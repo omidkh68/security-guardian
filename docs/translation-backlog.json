@@ -23,7 +23,6 @@
     "docs/wiki/SG-Vision.md",
     "examples/angular-ssr-jsonld-remediation.md",
     "examples/illustrative-run.md",
-    "plugins/security-guardian/skills/security-guardian/SKILL.md",
     "plugins/security-guardian/skills/security-guardian/references/controls-index.md",
     "plugins/security-guardian/skills/security-guardian/references/domains/ang.md",
     "plugins/security-guardian/skills/security-guardian/references/domains/api.md",
@@ -149,7 +148,6 @@
     "plugins/security-guardian/skills/security-guardian/references/workflows/applicability.md",
     "plugins/security-guardian/skills/security-guardian/references/workflows/remediation.md",
     "plugins/security-guardian/skills/security-guardian/references/workflows/reporting.md",
-    "plugins/security-guardian/skills/security-guardian/references/workflows/tracking.md",
-    "plugins/security-guardian/skills/security-guardian/references/workflows/verification.md"
+    "plugins/security-guardian/skills/security-guardian/references/workflows/tracking.md"
   ]
 }
