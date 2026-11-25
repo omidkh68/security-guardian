@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Add versioned framework/pack coverage inventory and bilingual contributor mapping contract (#95).
 - Consolidate optional JS AST parser and evidence contracts; preserve DOM sanitizer call evidence without suppressing review candidates (#94).
 - Add optional route-to-resource authorization evidence matrix for Express, Fastify and NestJS with Prisma selectors (#93).
 - Add optional bounded Next.js Pages/App Router, Angular SSR, Nuxt H3 and SvelteKit HTML response and credential transfer AST review and manual coverage matrix (#92).
