@@ -194,3 +194,223 @@ Security Guardian علاوه بر بررسی اولیه Python بدون وابس
 
 هر ۱۴۵ کنترل در [`references/controls.json`](plugins/security-guardian/skills/security-guardian/references/controls.json) و [فهرست خواندنی](plugins/security-guardian/skills/security-guardian/references/controls-index.md) هستند. وجود یک کنترل در کاتالوگ، اثبات بررسی یا رعایت آن نیست.
 
+<a id="how-it-works"></a>
+
+## 🧠 نحوه کار
+
+```mermaid
+flowchart TD
+    A[اجرای Security Guardian در مخزن هدف] --> B[آغاز اجرای ممیزی نسخه‌دار]
+    B --> C[کشف آفلاین Stack و بررسی اولیه الگوها]
+    C --> D[انتخاب کنترل‌های مرتبط از کاتالوگ]
+    D --> E[بررسی سورس و تنظیمات و Playbookهای تخصصی]
+    E --> F{شواهد کافی است؟}
+    F -- خیر --> G[NEEDS_REVIEW / OUT_OF_SCOPE / BLOCKED]
+    F -- بله --> H[یافته تأییدشده یا کنترل راستی‌آزمایی‌شده]
+    H --> I{اصلاح صریحاً درخواست شده؟}
+    I -- خیر --> J[فهرست کارها و اقدامات بعدی]
+    I -- بله --> K{تغییر پرریسک است؟}
+    K -- بله --> L[دریافت تأیید جداگانه یا تعویق]
+    K -- خیر --> M[وصله کوچک و برگشت‌پذیر]
+    L --> M
+    M --> N[اجرای تست‌های مجاز رگرسیون امنیتی]
+    N --> O{تأیید با شواهد انجام شد؟}
+    O -- بله --> P[VERIFIED_FIXED]
+    O -- خیر --> Q[FIXED_UNVERIFIED]
+    G --> R[نهایی‌سازی Snapshot اجرا]
+    J --> R
+    P --> R
+    Q --> R
+    R --> S[CURRENT.md + ledger.json + تاریخچه تغییرناپذیر Runها]
+```
+
+این گردش کار بین **یافته احتمالی / یافته تأییدشده / اصلاح‌شده اما تأییدنشده / اصلاح تأییدشده / ریسک پذیرفته‌شده / مسدودشده** تفاوت قائل می‌شود. ناپدیدشدن سیگنال اسکنر به‌تنهایی یافته قبلی را نمی‌بندد.
+
+<a id="real-world-use-cases"></a>
+
+## 📚 سناریوهای کاربردی دنیای واقعی
+
+مثال‌های زیر **صرفاً آموزشی و فرضی** هستند، نه نتایج بررسی مخزن واقعی یک مشتری. روش‌های قدم‌به‌قدم در [docs/use-cases.md](docs/use-cases.md) قرار دارند.
+
+<details>
+<summary><b>۱. آسیب‌پذیری XSS در Tooltipهای پویای نقشه Angular</b></summary>
+
+**وضعیت:** داشبورد Angular برچسب سایتی را که کاربر می‌تواند کنترل کند به Popup نقشه شخص ثالث می‌فرستد؛ این Popup ورودی HTML می‌پذیرد. **بررسی:** کنترل‌های `ANG-01` و `ANG-13`، منشأ واقعی داده، محل مصرف در DOM و Escapeکردن خروجی. **اقدام:** نمایش امن به‌صورت متن و تست رگرسیون هدفمند. **پیگیری:** یافته احتمالی ← تأییدشده ← اصلاح ← در صورت اجرای واقعی تست، راستی‌آزمایی‌شده.
+
+```text
+/security-guardian audit
+/security-guardian fix ANG-01
+/security-guardian verify
+```
+
+</details>
+
+<details>
+<summary><b>۲. دسترسی غیرمجاز بین مستأجرها (IDOR) در NestJS</b></summary>
+
+**وضعیت:** مسیر `GET /orders/:id` سفارش را فقط با شناسه آن پیدا می‌کند، در حالی که کاربر درخواست‌کننده به یک Tenant مشخص محدود است. **بررسی:** کنترل‌های `IAM-01`، `BIZ-01`، `DATA-02`، سیاست‌های Service و مرزهای Query در Repository. **اقدام:** مقیدکردن Query به Tenant استخراج‌شده از هویت معتبر و تست Tenant A در برابر Tenant B. UUID را معادل مجوز دسترسی ندانید.
+
+```text
+/security-guardian plan P0
+/security-guardian fix BIZ-01
+```
+
+</details>
+
+<details>
+<summary><b>۳. دسترسی WebView در Flutter به عملیات امضای Native</b></summary>
+
+**وضعیت:** یک پل JavaScript در WebView می‌تواند عملیات امضا درخواست کند. **بررسی:** فهرست مجاز Originها، مجوز متدها، رضایت کاربر، مالکیت کلید بومی و اعتبارسنجی واقعی سمت سرور (`MOB-05`، `MOB-08`، `PKI-04`). **اقدام:** پیشنهاد سخت‌سازی مرزهای اعتماد و دریافت تأیید قبل از تغییر رفتار امضا.
+
+```text
+/security-guardian skill mobile-webview-bridge-audit
+/security-guardian plan P0
+```
+
+</details>
+
+<details>
+<summary><b>۴. درمعرض‌بودن Image داکر یا GitLab Runner</b></summary>
+
+**وضعیت:** فایل Compose از `privileged: true` استفاده می‌کند یا سرویس‌های داخلی را در معرض دسترسی قرار می‌دهد؛ Pipelineهای انتشار نیز ممکن است اسرار را افشا کنند. **بررسی:** کنترل‌های `CLOUD-02`، `HOST-03`، کنترل‌های زنجیره تأمین مرتبط و تنظیمات مستقرشده. **اقدام:** تهیه وصله با حداقل دسترسی همراه با برنامه امن استقرار و بازگشت؛ **بدون مجوز، محیط تولید را تغییر ندهید**.
+
+```text
+/security-guardian audit
+/security-guardian release-gate
+```
+
+</details>
+
+<a id="versioned-findings--audit-history"></a>
+
+## 🗂️ یافته‌ها و تاریخچه ممیزی نسخه‌دار
+
+هر بار فراخوانی عملیاتی ممیزی، یک Run نسخه‌دار جدید را در **پروژه هدف** می‌سازد، نه در پوشه Skill نصب‌شده:
+
+```text
+my-angular-app/
+└── .security-guardian/           # Keep private / ignored in Git
+    ├── CURRENT.md               # Current unresolved/resolved status and reasons
+    ├── index.json               # Run metadata and sequential version numbers
+    ├── ledger.json              # Stable finding IDs and status history
+    └── runs/
+        ├── v0001-.../
+        │   ├── RUN.md           # Human-readable report
+        │   ├── manifest.json    # Git context, mode, test records, completion
+        │   ├── scanner.json     # Unconfirmed offline signals
+        │   ├── findings.json    # Snapshot of tracked findings
+        │   └── events.jsonl     # Per-run event chronology
+        └── v0002-.../
+            └── ...
+```
+
+نمونه چرخه عمر یک یافته:
+
+```text
+v0001  SG-BIZ-01-xxxxxxxxxxxx  CANDIDATE
+v0002  same finding ID         CONFIRMED_OPEN        (owner-scope bypass confirmed)
+v0003  same finding ID         FIXED_UNVERIFIED     (patch applied; test unavailable)
+v0004  same finding ID         VERIFIED_FIXED       (negative test executed, passed)
+v0005  same finding ID         CONFIRMED_OPEN        (regression reproduced; reopened)
+```
+
+علت بازماندن یافته (مثل نبود Fixture برای تست Tenant، نداشتن دسترسی زیرساختی، مهاجرت پرخطر در محیط تولید یا پذیرش ریسک به‌وسیله تأییدکننده مشخص) باید مستند شود. **تست ثبت‌شده با `NOT_RUN` نمی‌تواند مبنای تأیید اصلاح باشد.** Tracker اجازه بازکردن دوباره Snapshot اجرای نهایی‌شده را نمی‌دهد.
+
+پرس‌وجوی دستی از Tracker:
+
+```bash
+SG=~/.claude/skills/security-guardian/scripts/security_tracker.py
+python3 "$SG" summary --root /path/to/app
+python3 "$SG" history --root /path/to/app --id SG-BIZ-01-<actual-id>
+```
+
+[قراردادهای پیگیری](docs/tracking.md) و [گردش کار داخلی پیگیری](plugins/security-guardian/skills/security-guardian/references/workflows/tracking.md) را ببینید.
+
+## 🔐 ایمنی و مرزهای عملکرد
+
+- **بدون ادعای کاذب پوشش کامل:** فقط بخشی از کنترل‌های کاتالوگ دارای نشانگرهای خودکار تحلیل ایستا هستند. برای هر کنترل، تصمیم مستقل درباره کاربرد آن و شواهد لازم است.
+- **اسکنر اکتشافی آفلاین:** بدون نصب وابستگی، اسکن میزبان، درخواست HTTP خارجی یا تغییر سورس برنامه.
+- **Tracker ابزار ثبت سوابق است، نه موتور اجرای تست امنیتی:** نتایج و شواهد از بازبینی واقعی و فرمان‌های اجراشده با مجوز می‌آیند؛ نباید آن‌ها را جعل کرد.
+- **تأیید تغییرات پرریسک:** احراز هویت، RBAC، OTP، پرداخت، PKI، مهاجرت پایگاه داده، SSH/Firewall، اسرار CI و استقرار تولید صرفاً به‌خاطر یک درخواست کلی اصلاح، خودکار تغییر نمی‌کنند.
+- **محرمانگی پیش‌فرض:** تاریخچه ممیزی ممکن است معماری داخلی یا آسیب‌پذیری‌های رفع‌نشده را آشکار کند. `.gitignore` این مخزن فقط همین مخزن را محافظت می‌کند؛ در صورت نیاز `.security-guardian/` را به `.gitignore` هر پروژه هدف اضافه کنید.
+- **توجه به مدل تهدید:** Guard سمت کلاینت، Obfuscation، WAF و خلاصه‌های AI جایگزین اجرای کنترل سمت سرور و تست تجربی نیستند.
+
+[SECURITY.md](SECURITY.md)، [مدل امنیت و اعتماد](docs/security-model.md) و [مراجع OWASP](docs/provenance.md) را ببینید.
+
+## 🧪 توسعه و تست
+
+```bash
+git clone https://github.com/omidkh68/security-guardian.git
+cd security-guardian
+python3 scripts/validate_package.py
+python3 -m unittest discover -s plugins/security-guardian/skills/security-guardian/tests -v
+# or
+make validate test
+```
+
+GitHub Actions مجموعه تست آفلاین را روی سه نسخه Python اجرا می‌کند و کاتالوگ و تست اولیه نصب را بررسی می‌کند. CI **جایگزین بازبینی زمان اجرای مجاز برنامه هدف نیست**. اگر نسخه نصب‌شده Claude Code پشتیبانی کند، می‌توانید ساختار Marketplace را روی سیستم خود با `claude plugin validate .` اعتبارسنجی کنید.
+
+## 📁 ساختار مخزن
+
+```text
+.
+├── .claude-plugin/marketplace.json      # GitHub-installable marketplace
+├── plugins/security-guardian/
+│   ├── .claude-plugin/plugin.json       # Plugin metadata
+│   └── skills/security-guardian/
+│       ├── SKILL.md                     # Agent workflow
+│       ├── scripts/                     # Offline scanner + versioned tracker
+│       ├── references/
+│       │   ├── controls.json            # 145 controls
+│       │   ├── domains/                 # 13 domains
+│       │   ├── playbooks/               # 107 playbooks
+│       │   └── workflows/               # Audit/remediation/reporting rules
+│       └── tests/
+├── docs/                                # User/admin documentation
+├── examples/                            # Sanitized demonstration scenarios
+├── .github/                              # CI and community templates
+├── install-agent.sh                     # Interactive/noninteractive multi-agent installer
+├── install.sh                           # Standalone Claude Code Skill installer
+└── LICENSE                              # MIT
+```
+
+<a id="documentation"></a>
+
+## 📖 مستندات
+
+| راهنما | محتوای راهنما |
+|---|---|
+| [نصب](docs/installation.md) | تفاوت Plugin و Skill مستقل، محدوده کاربر/پروژه و ارتقا |
+| [نصب‌کننده چندایجنتی](docs/multi-agent.md) | راه‌اندازی تعاملی و فعال‌سازی |
+| [گزارش‌های مدیریتی PDF](docs/pdf-reporting.md) | گزارش‌های محلی اختیاری و محدودیت‌های اشتراک‌گذاری |
+| [فرمان‌ها و حالت‌ها](docs/commands.md) | معنای فرمان‌ها، مجوزها و مثال‌های دقیق |
+| [معماری](docs/architecture.md) | اسکنر، ایجنت، Playbookها، Tracker و مرزهای اعتماد |
+| [سناریوهای کاربردی](docs/use-cases.md) | هشت سناریوی واقع‌گرایانه امنیتی و نتیجه‌های مورد انتظار |
+| [پیگیری](docs/tracking.md) | معنای وضعیت‌ها، نسخه‌بندی، دلایل، اصلاح ناموفق و شناسه‌های رگرسیون |
+| [مدل امنیتی](docs/security-model.md) | اجرای امن، فایل‌های حساس و محدودیت‌ها |
+| [رفع اشکال](docs/troubleshooting.md) | مشکلات رایج نصب یا پیگیری |
+| [مشارکت در Playbookها](docs/contributing-playbook.md) | افزودن یا بهبود امن کنترل‌ها |
+| [منشأ و منابع](docs/provenance.md) | استانداردها، خط مبنا و تفسیر امتیازهای دشواری |
+| [فارسی](README.fa.md) | راهنمای فارسی شروع سریع و استفاده |
+
+## 🤝 مشارکت
+
+False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ورک جدید می‌خواهید؟ می‌خواهید نگاشت OWASP را بهبود دهید یا تست رگرسیون اضافه کنید؟ [CONTRIBUTING.md](CONTRIBUTING.md) را بخوانید و سپس Issue یا Pull Request ارسال کنید. **آسیب‌پذیری پروژه‌های خصوصی را در Issue عمومی منتشر نکنید**؛ [SECURITY.md](SECURITY.md) را ببینید.
+
+## 📜 مجوز و ارجاع به منابع
+
+پیاده‌سازی اصلی Security Guardian، Playbookها و مستندات پروژه تحت [مجوز MIT](LICENSE) در دسترس هستند. کنترل‌های خط مبنا از راهنمای ارائه‌شده توسط کاربر به نام *Defense-in-Depth Software Security Engineering / 2026* گردآوری شده‌اند. ارجاع به OWASP، NIST، SLSA، Angular، NestJS، Flutter، Anthropic و محصولات شخص ثالث صرفاً اطلاع‌رسانی است؛ این سازمان‌ها **حامی مالی یا تأییدکننده پروژه نیستند**. استانداردهای شخص ثالثِ ارجاع‌شده، مجوزها و نشان‌های تجاری خود را حفظ می‌کنند.
+
+**برای مهندسی امنیت دفاعی ساخته شده است: محلی ارزیابی کنید، با دقت اصلاح کنید، با شواهد راستی‌آزمایی کنید و هر تصمیم را ثبت کنید.**
+
+## Skill قابل‌حمل چندایجنتی و گزارش PDF
+
+یک فایل مرجع `SKILL.md` مشترک برای **Claude Code، OpenAI Codex و Gemini CLI** به‌کار می‌رود. از Claude Marketplace یا `install-agent.sh` محلی برای نصب در مسیرهای `.agents/skills` استفاده کنید. [راهنمای چندایجنتی](docs/multi-agent.md).
+
+اجرای نهایی‌شده ممیزی در صورت نصب محلی ReportLab می‌تواند فایل‌های `RUN.pdf` و `CURRENT.pdf` را برای ارائه به ذی‌نفعان بسازد. این گزارش‌ها واقعیت‌های تأییدشده، کارهای انجام‌شده و ریسک‌ها را نشان می‌دهند، نه گواهی ساختگی امنیت یا انطباق. [راهنمای گزارش PDF](docs/pdf-reporting.md).
+
+برای عیب‌یابی مستقیم و فقط خواندنی نگاشت کنترل‌ها، `python3 <skill-dir>/scripts/security_tracker.py mapping-audit --root .` را اجرا کنید. برای خروجی مجدد PDF بدون ایجاد نسخه تازه ممیزی نیز `python3 <skill-dir>/scripts/security_report.py --root .` را اجرا کنید.
+
+## چشم‌انداز مهندسی و نقشه راه
+
+[سورس Wiki مهندسی](docs/wiki/SG-Home.md) شامل وضعیت مبنای نسخه ۱.۲.۱، استانداردهای ۲۰۲۶ و طراحی آینده آگاه از محدوده پروژه است. RFCها پیشنهادهایی در انتظار بررسی‌اند، نه قابلیت‌های منتشرشده. [GitHub Wiki](https://github.com/omidkh68/security-guardian/wiki) جداگانه نگه‌داری می‌شود؛ [دستورالعمل انتشار Wiki](docs/wiki-publishing.md) را ببینید.
