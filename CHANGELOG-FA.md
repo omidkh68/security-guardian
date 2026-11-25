@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### افزوده‌شده
+- افزودن ماتریس اختیاری شواهد مجوزدهی مسیر تا منبع در Express، Fastify و NestJS با شرط‌های Prisma (#93).
 - افزودن بازبینی اختیاری و محدود AST رندر SSR در Next.js، Angular، Nuxt و SvelteKit و انتقال اعتبارنامه و ماتریس پوشش دستی (#92).
 - افزودن بازبینی اختیاری و محدود جریان ورودی API تا SQL در Express/Fastify/NestJS و گیرنده محلی pg (#91).
 - توسعه بازبینی AST جریان SQL پایتون با مسیر عادی محدود Context Manager مستقیم SQLite (#90).

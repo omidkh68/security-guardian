@@ -443,6 +443,8 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 
 [بازبینی اختیاری SSR](docs/js-ssr-flow-FA.md) ([English](docs/js-ssr-flow.md)): تحلیل محدود Next.js Pages/App Router، رندر سرور و انتقال اعتبارنامه Angular، و Endpointهای HTML در Nuxt و SvelteKit؛ مسیرهای دیگر نیازمند بازبینی.
 
+[بازبینی اختیاری شواهد مجوزدهی](docs/js-authz-flow-FA.md) ([English](docs/js-authz-flow.md)): ماتریس محدوده منابع Express، Fastify و NestJS با شرط‌های صریح Prisma؛ همه ردیف‌ها تأییدنشده.
+
 نسخه ۲ تحلیل AST جریان DOM در JS/TS مسیرهای شرطی و خلاصه تابع کمکی همان فایل را اضافه می‌کند (#88).
 
 نسخه ۴ تحلیل AST جریان SQL پایتون، مسیر عادی Context Manager مستقیم SQLite را اضافه می‌کند (#90) و معنای تراکنش/استثنا را ناقص گزارش می‌دهد.
