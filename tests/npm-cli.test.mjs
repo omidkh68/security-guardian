@@ -39,6 +39,8 @@ test('install all, share Codex/Gemini, protect existing files and back up upgrad
     const target = path.join(project, folder, 'skills', 'security-guardian');
     assert.deepEqual(fs.readFileSync(path.join(target, 'SKILL.md')), fs.readFileSync(path.join(source, 'SKILL.md')));
     assert.ok(fs.existsSync(path.join(target, 'scripts/security_tracker.py')));
+    assert.ok(fs.existsSync(path.join(target, 'scripts/security_js_sql_flow.py')));
+    assert.ok(fs.existsSync(path.join(target, 'scripts/js_sql_flow.mjs')));
     assert.ok(!fs.existsSync(path.join(target, 'tests')));
     fs.writeFileSync(path.join(target, 'local-note.txt'), folder);
   }
