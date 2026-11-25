@@ -910,10 +910,30 @@ def _sql_condition(node):
     return False
 
 
-def _sql_function_paths(fn, stats, request_names, db_names, helpers):
+class _SqlFinally:
+    """Internal continuation marker; never derived from executable code."""
+    def __init__(self, body, handlers=(), normal_prefix=()):
+        self.body=tuple(body)
+        self.handlers=tuple(handlers)
+        self.normal_prefix=tuple(normal_prefix)
+
+
+def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bindings=()):
     # Each pending path owns its bindings. Never join taint from one branch
     # with a receiver from another. Unmodeled paths terminate, visibly partial.
     pending = [(tuple(fn.body), {}, {})]
+    shadowed=set(module_bindings)|_binding_names(fn)
+    def leave(tail, values, receivers, raising=False):
+        # Only explicit exits; unknown calls may still raise. For raises,
+        # do not guess the effect of an intervening exception handler.
+        cleanup=[]
+        for part in tail:
+            if isinstance(part,_SqlFinally):
+                if raising and part.handlers:break
+                cleanup.append(_SqlFinally(part.body))
+        if cleanup:
+            stats['explicit_finally_paths']+=1
+            pending.append((tuple(cleanup),values.copy(),receivers.copy()))
     sources_by_sink = defaultdict(set)
     partial = False
     paths, steps = 1, 0
@@ -924,13 +944,33 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
             if steps > PY_SQL_MAX_STEPS:
                 stats['path_limited_functions'] += 1
                 return sources_by_sink, True
+            if isinstance(stmt,_SqlFinally):
+                if stmt.normal_prefix:
+                    pending.append((stmt.normal_prefix+(_SqlFinally(stmt.body),)+statements[index+1:],values.copy(),receivers.copy()))
+                else:
+                    pending.append((stmt.body+statements[index+1:],values.copy(),receivers.copy()))
+                break
             if isinstance(stmt, ast.Try):
-                # Only the normal path through try/else/finally is modeled.
-                # Never infer an exception handler path or skip control transfers.
                 partial=True
                 stats['try_normal_paths']+=1
-                pending.append((tuple(stmt.body+stmt.orelse+stmt.finalbody)+statements[index+1:], values.copy(), receivers.copy()))
+                # Keep a boundary marker instead of flattening finally into
+                # the normal tail. Explicit returns run finally before exit.
+                # Handlers and implicit exceptions remain unsupported.
+                pending.append((tuple(stmt.body)+(_SqlFinally(stmt.finalbody,stmt.handlers,stmt.orelse),)+statements[index+1:], values.copy(), receivers.copy()))
                 break
+            if isinstance(stmt, ast.Raise):
+                partial=True
+                leave(statements[index+1:],values,receivers,raising=True)
+                break
+            if (isinstance(stmt,ast.Expr) and isinstance(stmt.value,ast.Call)
+                    and _name(stmt.value.func,'print') and 'print' not in shadowed
+                    and not stmt.value.keywords and len(stmt.value.args)<=16
+                    and all(_sql_value(x,values,receivers,request_names,db_names,helpers)[0] for x in stmt.value.args)):
+                # Syntactic builtin logging only; no call is executed.
+                # Formatting/IO and dynamic runtime effects are unverified.
+                partial=True
+                stats['builtin_print_paths']+=1
+                continue
             if isinstance(stmt,ast.Import):
                 # Explicit import at this point in the current path; never
                 # execute it. Absolute module resolution is component-root
@@ -1059,7 +1099,9 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
                 if known and sources:sources_by_sink[call.lineno].update(sources)
                 if not known:
                     partial=True;break
-                if isinstance(stmt,ast.Return):break
+                if isinstance(stmt,ast.Return):
+                    leave(statements[index+1:],values,receivers)
+                    break
                 if target is not None:
                     # Query results and cursor aliases are not inferred from
                     # an assigned execute/fetch expression.
@@ -1103,6 +1145,7 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers):
             if isinstance(stmt, ast.Pass) or (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant)):
                 continue
             if isinstance(stmt, ast.Return) and (stmt.value is None or _sql_value(stmt.value, values, receivers, request_names, db_names, helpers)[0]):
+                leave(statements[index+1:],values,receivers)
                 break
             partial = True
             break
@@ -1141,6 +1184,13 @@ def python_sql_flow(content, sibling_exports=None, qualified_exports=None):
             for a in n.names:
                 alias=a.asname or a.name
                 if a.name in exports and bindings[alias]==1:imported_helpers[alias]=exports[a.name]
+    for n in tree.body:
+        if isinstance(n,ast.ImportFrom) and n.level==0 and n.module:
+            exports=(qualified_exports or {}).get(n.module,{})
+            for a in n.names:
+                alias=a.asname or a.name
+                if exports.get(a.name)==(0,(), 'connection') and bindings[alias]==1:
+                    imported_helpers[alias]=exports[a.name]
     watched = request_names | db_names
     # Explicit writes to imported module members invalidate receiver provenance.
     if any(isinstance(n,ast.Attribute) and isinstance(n.ctx,(ast.Store,ast.Del)) and _qualified_parts(n) and _qualified_parts(n)[0] in watched for n in ast.walk(tree)):
@@ -1181,7 +1231,7 @@ def python_sql_flow(content, sibling_exports=None, qualified_exports=None):
         stats['analyzed_functions'] += 1
         try:
             local_helpers = {name: summary for name, summary in helpers.items() if name not in _binding_names(fn)}
-            sources_by_sink, partial = _sql_function_paths(fn, stats, request_names, db_names, local_helpers)
+            sources_by_sink, partial = _sql_function_paths(fn, stats, request_names, db_names, local_helpers, bindings)
             for line, source_set in sorted(sources_by_sink.items()):
                 sources = sorted(source_set)
                 hits.append({'line':line,'source_lines':sources[:16],
@@ -1330,10 +1380,13 @@ def process(root:Path, profile=None, components=()):
                                     except (OSError,UnicodeError):factory_cache[sibling]={}
                                 siblings[n.module]=factory_cache[sibling]
                             for n in ast.walk(parsed):
-                                if not isinstance(n,ast.Import):continue
-                                for a in n.names:
-                                    if '.' not in a.name:continue
-                                    module_path=(Path(owner)/Path(*a.name.split('.'))).as_posix()
+                                if isinstance(n,ast.Import):
+                                    modules=[a.name for a in n.names if '.' in a.name]
+                                elif isinstance(n,ast.ImportFrom) and n.level==0 and n in parsed.body and n.module:
+                                    modules=[n.module]
+                                else:continue
+                                for module in modules:
+                                    module_path=(Path(owner)/Path(*module.split('.'))).as_posix()
                                     candidate=module_path+'.py'
                                     if candidate==fn or candidate not in rels or module_path+'/__init__.py' in rels or _test_file(candidate) or _owner(candidate,scope['components'])!=owner:continue
                                     cache_key=('qualified',candidate)
@@ -1344,7 +1397,7 @@ def process(root:Path, profile=None, components=()):
                                             with rels[candidate].open('rb') as h:raw=h.read(PY_SQL_MAX_BYTES+1)
                                             factory_cache[cache_key]=_qualified_connection_exports(raw.decode('utf-8')) if len(raw)<=PY_SQL_MAX_BYTES else {}
                                         except (OSError,UnicodeError):factory_cache[cache_key]={}
-                                    if factory_cache[cache_key]:qualified[a.name]=factory_cache[cache_key]
+                                    if factory_cache[cache_key]:qualified[module]=factory_cache[cache_key]
                     except (SyntaxError,RecursionError,MemoryError,ValueError):pass
                 flow_hits, flow_stats = python_sql_flow(content,siblings,qualified)
                 python_sql_stats.update(flow_stats)
@@ -1355,7 +1408,7 @@ def process(root:Path, profile=None, components=()):
                     entry = {'control_id':cid, 'signal':'Flask request value reaches SQLite SQL argument',
                              'path':fn, 'confidence':'medium', 'suggested_severity':'high',
                              'status':'HEURISTIC_REVIEW_ONLY', 'technique':'BOUNDED_AST_FLOW',
-                             'pack_id':PY_SQL_PACK, 'pack_version':6, 'rule_id':PY_SQL_RULE,
+                             'pack_id':PY_SQL_PACK, 'pack_version':7, 'rule_id':PY_SQL_RULE,
                              'control_mapping':'LEGACY_COMPATIBILITY', **hit}
                     if len(evidence) < MAX_SIGNALS:
                         evidence.append(entry)
@@ -1554,10 +1607,10 @@ def process(root:Path, profile=None, components=()):
         }
         partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions','path_limited_functions')
         summary['python_sql_flow'] = {
-            'pack_id': PY_SQL_PACK, 'pack_version':6, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
+            'pack_id': PY_SQL_PACK, 'pack_version':7, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
             'selected_roots':sorted(python_sql_roots),
             'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or python_sql_stats['cross_file_receiver_bindings'] or python_sql_stats['cross_file_request_wrappers'] or python_sql_stats['named_path_factory_candidates'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
-            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings','cross_file_request_wrappers','try_normal_paths','named_path_factory_candidates',*partial_keys)},
+            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings','cross_file_request_wrappers','try_normal_paths','explicit_finally_paths','builtin_print_paths','named_path_factory_candidates',*partial_keys)},
             'limitations':['Bounded local paths, literal loops, dictionary/configuration slots, selected encoding transformations, simple request-holder class summaries, request headers/cookies, one-hop query helpers, sibling and component-root qualified connection factories, nested route bodies, normal try paths and execute/fetch chains; no generic cross-module taint, dynamic import/dispatch, exception semantics or exploit analysis.',
                            'Unmodeled statements and imports are not proof of safety; no target code is executed.'],
         }
