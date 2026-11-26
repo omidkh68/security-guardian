@@ -71,6 +71,26 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual(receipt['result'], status)
                 self.assertFalse(receipt['independently_verified_fix'])
 
+    def test_subtest_failure_events_are_not_bounded_by_test_methods(self):
+        body = ('import unittest\nclass Tests(unittest.TestCase):\n'
+                '    def test_matrix(self):\n'
+                '        for n in range(3):\n'
+                '            with self.subTest(n=n):\n'
+                '                self.assertEqual(n, -1, "PRIVATE_FIXTURE_OUTPUT")\n')
+        code, receipt = self.execute(body)
+        self.assertEqual(code, 1)
+        self.assertEqual(receipt['result'], 'FAIL')
+        self.assertEqual(receipt['counts']['tests_run'], 1)
+        self.assertEqual(receipt['counts']['failures'], 3)
+        self.assertEqual(receipt['counts']['errors'], 0)
+        self.assertTrue(receipt['executed'])
+        self.assertFalse(receipt['independently_verified_fix'])
+        self.assertEqual(receipt['fingerprint_before'], receipt['fingerprint_after'])
+        code, receipt = self.execute(body.replace('self.assertEqual(n, -1,','self.assertEqual(n, n,'))
+        self.assertEqual((code, receipt['result']), (0, 'PASS'))
+        self.assertEqual(receipt['counts']['tests_run'], 1)
+        self.assertEqual(receipt['counts']['failures'], 0)
+
     def test_class_setup_error_is_real_failure_and_class_skip_is_incomplete(self):
         cases = [
             ('import unittest\nclass Tests(unittest.TestCase):\n'

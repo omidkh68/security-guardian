@@ -180,8 +180,12 @@ def _execute_command(root, command, timeout):
                     'expected_failures', 'unexpected_successes'}
             if (not isinstance(payload, dict) or set(payload) != keys
                     or any(type(v) is not int or v < 0 for v in payload.values())
+                    # unittest counts each failed subTest as a failure event,
+                    # not as a separately started test. Do not cap failures
+                    # by tests_run for Python; Node's fixed worker separately
+                    # validates its mutually exclusive summary counts.
                     or any(payload[k] > payload['tests_run'] for k in
-                           ('failures', 'expected_failures', 'unexpected_successes'))):
+                           ('expected_failures', 'unexpected_successes'))):
                 raise ValueError('invalid adapter counts')
             counts = payload
         except (ValueError, UnicodeError):

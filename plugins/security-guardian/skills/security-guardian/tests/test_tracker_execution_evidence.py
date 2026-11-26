@@ -444,10 +444,11 @@ class HTTPBoundaryTests(unittest.TestCase):
                           'files':['api/app.py']}}
         ident = self.call('record','--run',self.run_id,payload=finding)['finding_ids'][0]
         before = self.execute(finding=ident,extra=('--timeout','15'))
-        self.assertEqual(before['result'],'FAIL')
         red = self.run_data()['tests'][-1]['execution_receipt']
+        self.assertEqual(before['result'],'FAIL', {k:red.get(k) for k in
+                         ('result','execution_result','exit_code','counts','elapsed_ms','output_bytes')})
         self.assertEqual(red['counts']['tests_run'],2)
-        self.assertGreater(red['counts']['failures'],0)
+        self.assertGreater(red['counts']['failures'],red['counts']['tests_run'])
         self.assertEqual(red['counts']['errors'],0)
         verification = {'executed':True,'result':'PASS','test_id':before['test_id'],
                         'evidence':['loopback HTTP regression'],
