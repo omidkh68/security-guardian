@@ -153,3 +153,19 @@ flowchart LR
  C --> D[Paired sink outcomes]
  C --> E[Partial and parse blocked evidence]
 ```
+
+## Post-v12 receiver and transformation regressions (v13, #111)
+
+Independent CI 45823731266 on frozen v12: TP2 TN7 FP0 FN5, all 14 PARTIAL, zero parse-blocked. Five misses across four patterns: imported Row-configured SQLite factories, close/reopen and empty list, direct hashlib digest chain, and seeded connection factory. v13 adds source-only imported Row and bounded literal seed factory summaries (no target code executed); exact close invalidates all live SQLite receiver aliases conservatively until explicit re-establishment; empty list known; direct unshadowed hashlib digest chains retain source provenance, never classify as a SQL sanitizer. Literal seed setup requires exact connection/optional Row, one to four constant execute/executemany calls, bounded literals and same returned receiver. Dynamic setup, unknown calls, mutation and closed receivers are not inferred. Coverage PARTIAL remains, not a proof of safety or runtime behavior.
+
+```mermaid
+flowchart LR
+ A[Imported or local factory] --> B[Bounded receiver provenance]
+ C[Close] --> D[Invalidate live receivers]
+ D --> B
+ E[Request and hash transform] --> F[Retained source provenance]
+ B --> G[SQL argument review]
+ F --> G
+```
+
+Run offline tests and `python scripts/benchmark_final_sql_holdout.py`; prior frozen evidence retained. New tests cover mutations, dynamic seed setup, stale receiver alias, parameterized negatives and digest provenance. Implementation CI pending; revert this bounded scanner increment for rollback. New cohort becomes regression evidence after tuning.
