@@ -49,6 +49,9 @@ jobs:
       - name: Measure pinned external author-labeled Flask SQLite lab (report only)
         if: matrix.python-version == '3.12'
         run: python scripts/benchmark_semantic_context.py --external-lab
+      - name: Measure new pinned external SQL route pairs (report only)
+        if: matrix.python-version == '3.12'
+        run: python scripts/benchmark_independent_sql.py
       - name: Verify no tracked secret-like files or generated reports
         run: |
           if git ls-files | grep -E '(^|/)(\.env(\.|$)|\.security-guardian/)|\.(pem|p12|pfx|key)$' ; then
