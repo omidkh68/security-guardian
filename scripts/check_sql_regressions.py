@@ -2,6 +2,7 @@
 """Enforce exposed SQL regression cohorts without claiming production safety."""
 from collections import Counter
 import json
+import re
 from pathlib import Path
 import sys
 
@@ -59,6 +60,39 @@ def unit_rows(units, *, require_parsed=False):
     return rows
 
 
+def matched_context(isolated, contextual):
+    """Match the exact labeled route bytes, not just aggregate denominators."""
+    provenance=isolated["provenance"]
+    if (provenance["revision"]!=contextual["revision"]
+            or provenance["labels_sha256"]!=contextual["labels_sha256"]
+            or not re.fullmatch(r"[0-9a-f]{40}",provenance["revision"])
+            or not re.fullmatch(r"[0-9a-f]{64}",provenance["labels_sha256"])):
+        raise ValueError("OWASP provenance mismatch")
+    helpers=contextual["helper_sha256"]
+    expected_helpers={"helpers/db_sqlite.py","helpers/separate_request.py","helpers/utils.py"}
+    if set(helpers)!=expected_helpers or any(not re.fullmatch(r"[0-9a-f]{64}",v) for v in helpers.values()):
+        raise ValueError("OWASP helper identity missing")
+    def index(rows, count):
+        result={}
+        for row in rows:
+            ident=row["id"]
+            if (not re.fullmatch(r"BenchmarkTest[0-9]{5}",ident) or ident in result
+                    or not re.fullmatch(r"[0-9a-f]{64}",row["source_sha256"])
+                    or type(row["expected"]) is not bool
+                    or type(row["eligible_files"]) is not int or type(row["parsed_files"]) is not int
+                    or row["eligible_files"]!=count or row["parsed_files"]!=count):
+                raise ValueError("OWASP route identity or parsing incomplete")
+            result[ident]=(row["source_sha256"],row["expected"])
+        return result
+    left=index(isolated["cases_detail"],1)
+    right=index(contextual["cases"],1+len(helpers))
+    if left!=right or len(left)!=16:
+        raise ValueError("OWASP matched route identity changed")
+    return {"matched_routes":len(left),"isolated_sources_per_case":1,
+            "contextual_sources_per_case":1+len(helpers),
+            "same_route_bytes_and_labels":True}
+
+
 def validate(reports):
     result={}
     iso=reports["isolated"]
@@ -69,6 +103,7 @@ def validate(reports):
     result["isolated_context_limitation"]=check_rows(corpora[0]["cases_detail"],5,11,isolated=True)
     c=context(reports["contextual"],"OWASP_CWE89_CONTEXTUAL_REPLAY")
     result["contextual_owasp"]=check_rows(c["cases"],5,11)
+    pairing=matched_context(corpora[0],c)
     c=context(reports["fresh_pair"],"MATCHED_INPUT_EXTERNAL_PAIR_REPLAY")["current"]
     if c["parsed_files"]!=c["eligible_files"]:
         raise ValueError("Pair parsing incomplete")
@@ -93,6 +128,7 @@ def validate(reports):
     result["post_v12_regression"]=check_rows(unit_rows(p["results"]["current"],require_parsed=True),7,7)
     return {"schema_version":1,"status":"SQL_REGRESSION_GATE_PASS",
             "isolated_context_limitation_is_not_a_detection_pass":True,
+            "owasp_matched_context":pairing,
             "results":result,"safety_claim":"NONE; source-only candidate regression gate"}
 
 

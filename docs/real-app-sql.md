@@ -198,3 +198,7 @@ flowchart LR
  D --> E
  E --> F[Release review separate]
 ```
+
+## Matched-context evidence hardening (reopened #111)
+
+The gate now cross-checks the exact 16 unique OWASP route IDs, source SHA-256, boolean labels, corpus revision and label-file digest between isolated and contextual runs. Require one fully parsed selected Python file in isolation and all four selected files (route plus three pinned helpers) in context; helper identity metadata must be present. Reject duplicate/replaced routes, mismatched labels or hashes and incomplete parsing even if aggregate metrics remain unchanged. The five isolated misses are still misses, not waived positives or a reason to infer unseen code. No scanner heuristic or label changes. Offline tests mutate synthetic report metadata and the required CI runs the original source-only corpus. CI pending; revert this gate increment to roll back.

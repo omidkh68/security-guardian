@@ -110,8 +110,8 @@ def evaluate(c,parser):
                     or s['signal_coverage']['truncated'] or s['scan_coverage']['skipped'].get('outside_selected_scope')!=2):
                 raise ValueError('Scope or completeness failure')
             flow=s['python_sql_flow']
-            if flow['eligible_files']!=1:
-                raise ValueError('Expected Python file not eligible')
+            if flow['eligible_files']!=1 or flow['parsed_files']!=1:
+                raise ValueError('Expected Python file not fully parsed')
             status=flow['status']
         else:
             report=module.review(root,'custom',['app'],parser)
@@ -137,6 +137,8 @@ def evaluate(c,parser):
                 raise ValueError('Invalid evidence identity')
             observed=bool(matched)
             row.update(observed=observed,classification=classify(c['expected'],observed))
+        if module is None:
+            row.update(eligible_files=flow['eligible_files'],parsed_files=flow['parsed_files'])
         if 'source_sha256' in c:
             row['source_sha256']=c['source_sha256']
         return row

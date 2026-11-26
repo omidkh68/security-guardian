@@ -61,11 +61,14 @@ def contextual(repo):
     for c in cases:
         path='testcode/'+c['file']
         hits,flow,elapsed=scan_files({path:c['source'].encode('utf-8'),**helpers})
+        if flow['eligible_files']!=1+len(helpers) or flow['parsed_files']!=flow['eligible_files']:
+            raise ValueError('Contextual replay did not parse every selected source')
         observed=any(x['path']=='app/'+path for x in hits)
         rows.append({'id':c['id'],'expected':c['expected'],'observed':observed,
                      'classification':classify(c['expected'],observed),'coverage_status':flow['status'],
                      'candidate_sink_lines':[x['line'] for x in hits if x['path']=='app/'+path],
-                     'elapsed_seconds':elapsed,'source_sha256':c['source_sha256']})
+                     'elapsed_seconds':elapsed,'source_sha256':c['source_sha256'],
+                     'eligible_files':flow['eligible_files'],'parsed_files':flow['parsed_files']})
     return {'kind':'OWASP_CWE89_CONTEXTUAL_REPLAY','revision':UPSTREAM,'labels_sha256':label_hash,
             'helper_sha256':{p:hashlib.sha256(raw).hexdigest() for p,raw in helpers.items()},
             'selection':'All 16 previously labeled route files, unchanged, with three pinned helper sources. Not a fresh holdout or a full application run.',

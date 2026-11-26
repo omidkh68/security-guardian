@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Enforce matched OWASP route identities, source hashes, labels and complete parsing across isolated/contextual SQL regression evidence (#111).
 - Reject inconsistent or malformed stored execution receipts, unknown evidence quality and mismatched adapter metadata (#58, #35).
 - Require real Angular platform-server SSR runtime receipt fixture in isolated CI (#35, ANG-06).
 - Require isolated real Flask/Jinja/SQLite framework receipt verification in Python 3.12 CI, without adding product dependencies (#35).
