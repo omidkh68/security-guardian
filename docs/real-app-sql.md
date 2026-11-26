@@ -79,3 +79,17 @@ flowchart LR
 ```
 
 Run: `python scripts/benchmark_external_sql_boundaries.py`. Three offline evaluator tests cover duplicate labels, raw bytes, partial misses, unlabeled hits and wrong selection. Execution pending CI. Revert benchmark-only change to roll back. No #111 closure or release decision.
+
+## Python source coverage and JSON routes (v9, #111)
+
+#122 CI 45777804891 found zero parsed files in the direct cohort (UTF-8 BOM), and all six positive cases across boundaries were missed. The scanner removes only one leading decoded BOM before AST parsing, preserving raw artifact identities and line numbering; other syntax failures remain PARTIAL. The evaluator retains historical totals and separately reports parse-blocked cases and metrics for fully parsed units (null if none). The bounded local model adds no-argument Flask request.get_json() optionally followed by or an empty dict, literal string key reads, exact local SQLite connection factories with optional Row setup and literal os.path join/dirname, and zero-argument locally constructed Flask app factories with restricted setup and direct route declarations. No arbitrary JSON mutations, unknown calls or blacklist sanitizer summaries are inferred. Cross-module data flow, exception paths and runtime identity remain unsupported. All new semantic paths are review candidates, not safety proof.
+
+```mermaid
+flowchart LR
+ A[Raw pinned Python bytes] --> B[Leading BOM aware parser]
+ B --> C[Bounded JSON and route flow]
+ B --> D[Parse blocked accounting]
+ C --> E[Candidate or PARTIAL]
+```
+
+Tests: BOM line preservation and duplicate BOM rejection, JSON source/parameter binding and mutations, factory provenance and shadowing, evaluator parse-blocked separation. Run offline suite and `python scripts/benchmark_external_sql_boundaries.py`. #123 results pending; revert scanner/evaluator change for rollback.
