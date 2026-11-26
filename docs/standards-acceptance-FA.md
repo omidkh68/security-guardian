@@ -42,3 +42,7 @@ flowchart TD
 ```
 
 منابع رسمی: [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html)، [مثال‌های FIRST](https://www.first.org/cvss/v4.0/examples)، [SPDX 2.3](https://spdx.github.io/spdx-spec/v2.3/)، [CycloneDX 1.5](https://cyclonedx.org/docs/1.5/json/)، [npm SBOM](https://docs.npmjs.com/cli/commands/npm-sbom/)، [Scorecard v5.7.0](https://github.com/ossf/scorecard/releases/tag/v5.7.0)، [اعتبارسنجی Attestation](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations). Git blobهای Schema و نسخه ابزار در پیاده‌سازی و Workflow ثبت شده‌اند. متن استانداردها همراه بسته توزیع نمی‌شود. نتیجه اجرای واقعی را گزارش کنید؛ تعریف Workflow به‌تنهایی شاهد اجرا نیست.
+
+## اجرای منشأ پیش‌نمایش و تثبیت Actionها
+
+Workflow منشأ با ادغام تغییر فایل خودش در main نیز اجرا می‌شود؛ روی PR اجرا یا بسته منتشر نمی‌شود. امضای پیش‌نمایش با مخزن مورد انتظار، Workflow امضاکننده، Source ref شاخه main و Digest دقیق سورس بررسی شود؛ نتیجه امضا باید آرایه JSON غیرخالی باشد. Actionهای هر دو Workflow جدید استانداردها روی Commit دقیق ثابت شده‌اند. این بهبود فقط زنجیره تأمین Workflow جدید است؛ یافته‌های Scorecard کل مخزن، از جمله Actionهای قدیمی ثابت‌نشده، نیازمند بازبینی‌اند. سطح SLSA یا منشأ انتشار نهایی ادعا نشود.
