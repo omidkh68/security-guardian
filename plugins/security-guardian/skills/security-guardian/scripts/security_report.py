@@ -268,13 +268,29 @@ def markdown(d):
         if k in d:lines.append('- '+esc(k)+': '+esc(d[k]))
     return '\n'.join(lines)+'\n'
 
+def visual_summary(d):
+    """Only the existing privacy-filtered snapshot, never inferred risk scores."""
+    findings=d['findings']
+    residual=[f for f in findings if f['residual_risk']]
+    severity=Counter(f['severity'] for f in findings)
+    status=Counter(f['status'] for f in findings)
+    concentration=Counter(f['control_id'] for f in residual)
+    priorities=sorted(residual,key=lambda f:(
+        SEVERITIES.index(f['severity']),f['status']!='CONFIRMED_OPEN',f['id']))[:5]
+    return {'severity':{k:severity[k] for k in SEVERITIES if severity[k]},
+            'status':dict(sorted(status.items())),
+            'concentration':sorted(concentration.items(),key=lambda item:(-item[1],item[0]))[:5],
+            'priorities':priorities,'total':len(findings),'residual':len(residual)}
+
+
 def render_pdf(d,output,font=None):
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle
         from reportlab.lib.units import mm
-        from reportlab.platypus import SimpleDocTemplate,Paragraph,Spacer,Table,TableStyle
+        from reportlab.platypus import (SimpleDocTemplate,Paragraph,Spacer,Table,
+                                        TableStyle,Flowable,PageBreak,KeepTogether)
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
         from xml.sax.saxutils import escape
@@ -285,54 +301,241 @@ def render_pdf(d,output,font=None):
         fp=Path(font).expanduser()
         if not fp.is_file():raise ValueError('Font file not found')
         pdfmetrics.registerFont(TTFont('SecurityGuardianUser',str(fp)));face='SecurityGuardianUser'
-    navy=colors.HexColor('#13243B');accent=colors.HexColor('#166D87');gray=colors.HexColor('#526174')
-    styles={k:ParagraphStyle(k,fontName=face,fontSize=size,leading=leading,textColor=color,spaceAfter=after,
-                  spaceBefore=before,splitLongWords=1,keepWithNext=k in {'title','heading','sub'})
-            for k,size,leading,color,after,before in [('title',24,29,navy,12,0),('heading',14,19,accent,7,13),
-                       ('sub',11,15,navy,5,9),('body',9,13,navy,4,0),('small',8,11,gray,4,0)]}
+    bold='Helvetica-Bold' if face=='Helvetica' else face
+    C=colors.HexColor
+    navy=C('#112740');ink=C('#233D55');teal=C('#087E88');muted=C('#526779')
+    line=C('#D8E3EB');wash=C('#F1F6F9');white=colors.white
+    severity_colors={'CRITICAL':'#B42336','HIGH':'#C45420','MEDIUM':'#9B650B',
+                     'LOW':'#2464A1','INFO':'#657A8B','UNKNOWN':'#64748B'}
+    status_colors={'VERIFIED_FIXED':'#177B58','CONFIRMED_OPEN':'#B42336',
+                   'FIXED_UNVERIFIED':'#9B650B','NEEDS_REVIEW':'#6952A3',
+                   'BLOCKED':'#A43D56','ACCEPTED_RISK':'#926022','DEFERRED':'#78654A',
+                   'CANDIDATE':'#2464A1','FALSE_POSITIVE':'#547083',
+                   'SUPERSEDED':'#64748B','UNKNOWN':'#64748B'}
+    styles={}
+    for k,sz,lead,color,after,before,strong in [
+        ('title',32,38,white,12,0,True),('cover',12,17,white,5,0,False),
+        ('heading',19,24,navy,9,13,True),('sub',11,15,teal,4,8,True),
+        ('body',9.4,13.4,ink,4,0,False),('small',8.1,11.2,muted,3,0,False),
+        ('label',8,11,muted,1,0,True),('value',26,30,navy,2,0,True),
+        ('chip',8,11,white,0,0,True),('id',8.4,11,navy,0,0,True),
+        ('finding',11,15,navy,5,5,True),('nav',10,14,teal,5,0,True)]:
+        styles[k]=ParagraphStyle(k,fontName=bold if strong else face,fontSize=sz,
+            leading=lead,textColor=color,spaceAfter=after,spaceBefore=before,
+            splitLongWords=1,keepWithNext=k in {'heading','sub','finding'})
     def p(value,style='body'):
         return Paragraph(escape(str(value)).replace('\n',' '),styles[style])
-    doc=SimpleDocTemplate(str(output),pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,topMargin=18*mm,bottomMargin=20*mm,
-                          title='Security Guardian | '+d['view'].title()+' report',author='Security Guardian')
-    story=[p('SECURITY GUARDIAN / CONFIDENTIAL','small'),p(d['view'].title()+' security report','title'),
-           p('Version '+str(d['run']['version'])+' | '+d['run']['status']+' | '+d['snapshot_kind']),
-           p(d['privacy'],'small'),p('Executive summary','heading')]
-    counts=d['counts']
-    labels=[('Residual risk',counts['residual_findings']),('Confirmed open',counts['status'].get('CONFIRMED_OPEN',0)),
-            ('Verified fixed',counts['status'].get('VERIFIED_FIXED',0)),('Test records',counts['test_records'])]
-    width=A4[0]-38*mm-12
-    t=Table([[p(n,'title') for _,n in labels],[p(k,'small') for k,_ in labels]],colWidths=[width/4]*4)
-    t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),colors.HexColor('#EEF4F7')),('VALIGN',(0,0),(-1,-1),'TOP')]))
-    story.append(t)
-    for k,v in counts.items():
-        if isinstance(v,dict):story.append(p(k.replace('_',' ')+': '+', '.join(str(a)+' '+str(b) for a,b in v.items())))
+    def readable(value):
+        if value is None:return 'Not available'
+        if value is True:return 'Yes'
+        if value is False:return 'No'
+        return str(value)
+    def label(key):return key.replace('_',' ').capitalize()
+    def field(key,value,style='small'):
+        return Paragraph('<b>'+escape(label(key))+':</b> '+escape(readable(value)).replace('\n',' '),styles[style])
+    width=A4[0]-36*mm-12
+    class ReportDoc(SimpleDocTemplate):
+        def afterFlowable(self,flowable):
+            section=getattr(flowable,'sg_section',None)
+            if section:
+                key,title=section
+                self.canv.bookmarkPage(key)
+                self.canv.addOutlineEntry(title,key,level=0,closed=False)
+    doc=ReportDoc(str(output),pagesize=A4,leftMargin=18*mm,rightMargin=18*mm,
+                  topMargin=21*mm,bottomMargin=19*mm,
+                  title='Security Guardian | '+d['view'].title()+' report',author='Security Guardian')
+    story=[]
+    def section(key,title):
+        h=p(title,'heading')
+        h.sg_section=(key,title)
+        story.append(h)
+    def table(rows,widths,*,header=False):
+        t=Table(rows,colWidths=widths,repeatRows=1 if header else 0,hAlign='LEFT')
+        rules=[('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),9),
+               ('RIGHTPADDING',(0,0),(-1,-1),9),('TOPPADDING',(0,0),(-1,-1),6),
+               ('BOTTOMPADDING',(0,0),(-1,-1),6),
+               ('LINEBELOW',(0,0),(-1,-1),.45,line),
+               ('ROWBACKGROUNDS',(0,0),(-1,-1),[white,wash])]
+        if header:rules.append(('BACKGROUND',(0,0),(-1,0),C('#E1EDF1')))
+        t.setStyle(TableStyle(rules));return t
+    def band(text,background=wash):
+        t=Table([[p(text)]],colWidths=[width],hAlign='LEFT')
+        t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),background),
+            ('BOX',(0,0),(-1,-1),.5,line),('LEFTPADDING',(0,0),(-1,-1),12),
+            ('RIGHTPADDING',(0,0),(-1,-1),12),('TOPPADDING',(0,0),(-1,-1),10),
+            ('BOTTOMPADDING',(0,0),(-1,-1),10)]))
+        return t
+    data=visual_summary(d);counts=d['counts']
+    is_technical=d['view']=='technical'
+    nav=[('dashboard','Risk dashboard' if not is_technical else 'Triage dashboard'),
+         ('scope','Scope and evidence coverage'),('findings','Findings and residual risk'),
+         ('tests','Recorded tests'),('standards','Standards references - advisory only'),
+         ('limitations','Limitations and disclosure')]
+    cover=Table([[p('SECURITY GUARDIAN  /  REPORT EDITION 02','cover')],
+                 [p('Technical security report' if is_technical else 'Management security report','title')],
+                 [p('Verification & remediation evidence' if is_technical else 'Risk priorities & decision support','cover')],
+                 [p('Run version '+str(d['run']['version'])+'  |  '+d['run']['status'],'cover')],
+                 [p(d['snapshot_kind'].replace('_',' ')+'  |  '+d['run']['mode'].upper(),'cover')]],
+                colWidths=[width],hAlign='LEFT')
+    cover.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),navy),
+        ('LINEABOVE',(0,0),(-1,0),5,teal),('LEFTPADDING',(0,0),(-1,-1),24),
+        ('RIGHTPADDING',(0,0),(-1,-1),24),('TOPPADDING',(0,0),(-1,-1),12),
+        ('BOTTOMPADDING',(0,0),(-1,-1),10)]))
+    story.extend([Spacer(1,22),cover,Spacer(1,16),
+                  p('CONFIDENTIAL  /  REVIEW BEFORE SHARING','sub'),
+                  p(d['privacy'].replace('_',' '),'small'),
+                  p('Based on recorded evidence in the selected finalized snapshot. Not a compliance certificate or a guarantee of security.'),
+                  p('Report navigation','heading')])
+    for n,(key,title) in enumerate(nav,1):
+        story.append(Paragraph('%02d  <a href="#%s">%s</a>'%(n,key,escape(title)),styles['nav']))
+    story.append(PageBreak())
+    section(*nav[0])
+    story.append(p('Counts describe recorded findings, not tested controls or a probability of compromise.','small'))
+    labels=[('Total findings',data['total']),('Residual findings',data['residual']),
+            ('Confirmed open',counts['status'].get('CONFIRMED_OPEN',0)),('Verified fixed',counts['status'].get('VERIFIED_FIXED',0))]
+    tiles=Table([[p(n,'value') for _,n in labels],[p(k,'label') for k,_ in labels]],
+                colWidths=[width/4]*4,hAlign='LEFT')
+    tiles.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),wash),
+        ('LINEABOVE',(0,0),(0,0),3,teal),('LINEABOVE',(1,0),(1,0),3,C('#C45420')),
+        ('LINEABOVE',(2,0),(2,0),3,C('#B42336')),('LINEABOVE',(3,0),(3,0),3,C('#177B58')),
+        ('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),10),
+        ('TOPPADDING',(0,0),(-1,-1),8),('BOTTOMPADDING',(0,0),(-1,-1),5),
+        ('INNERGRID',(0,0),(-1,-1),.4,white)]))
+    story.extend([tiles,Spacer(1,12)])
+    class Distribution(Flowable):
+        """Vector chart with text legends; safe zero-denominator behavior."""
+        def __init__(self):
+            super().__init__();self.width=width;self.height=225
+        def draw(self):
+            c=self.canv;w=self.width
+            c.setFillColor(wash);c.roundRect(0,0,w,self.height,9,stroke=0,fill=1)
+            c.setFillColor(navy);c.setFont(bold,10)
+            c.drawString(13,206,'Severity distribution')
+            x=w*.40
+            c.drawString(x,206,'Finding status')
+            total=data['total'];cx=72;cy=135;radius=42;angle=90
+            if total:
+                for k,n in data['severity'].items():
+                    extent=360*n/total
+                    c.setFillColor(C(severity_colors.get(k,'#64748B')))
+                    c.wedge(cx-radius,cy-radius,cx+radius,cy+radius,angle,extent,stroke=0,fill=1)
+                    angle+=extent
+            else:
+                c.setFillColor(line);c.circle(cx,cy,radius,stroke=0,fill=1)
+            c.setFillColor(wash);c.circle(cx,cy,25,stroke=0,fill=1)
+            c.setFont(bold,14);c.setFillColor(navy);c.drawCentredString(cx,cy-4,str(total))
+            c.setFont(face,8);c.setFillColor(muted);c.drawCentredString(cx,81,'Recorded findings')
+            for i,(k,n) in enumerate(data['severity'].items()):
+                # Two-column compact legend, absolute counts remain explicit.
+                lx=13+(i%2)*86;ly=64-(i//2)*16
+                c.setFillColor(C(severity_colors.get(k,'#64748B')));c.rect(lx,ly-1,7,7,stroke=0,fill=1)
+                c.setFont(face,7.4);c.setFillColor(ink);c.drawString(lx+11,ly,k+' '+str(n))
+            if not total:
+                c.setFont(face,8);c.drawString(13,48,'No findings recorded')
+            bar_x=x+126;bar_w=w-bar_x-32
+            for i,(k,n) in enumerate(sorted(data['status'].items(),key=lambda it:(-it[1],it[0]))):
+                y=186-i*15
+                c.setFillColor(ink);c.setFont(face,7.6);c.drawString(x,y,k.replace('_',' '))
+                c.setFillColor(line);c.roundRect(bar_x,y-1,bar_w,8,3,stroke=0,fill=1)
+                c.setFillColor(C(status_colors.get(k,'#64748B')))
+                c.roundRect(bar_x,y-1,max(1,bar_w*n/total),8,3,stroke=0,fill=1)
+                c.setFillColor(navy);c.setFont(bold,8);c.drawRightString(w-10,y,str(n))
+            if not total:
+                c.setFillColor(muted);c.setFont(face,9);c.drawString(x,178,'No status records')
+            c.setFillColor(muted);c.setFont(face,7.8)
+            c.drawString(x,9,'Bar length = share of recorded findings')
+    story.append(Distribution())
+    story.append(p('Residual risk concentration - top 5 control IDs','sub'))
+    if data['concentration']:
+        rows=[[p('Control','label'),p('Residual findings','label'),p('Share of residual records','label')]]
+        for key,n in data['concentration']:
+            # Small proportional vector bar, denominator stated; no risk score.
+            class Bar(Flowable):
+                def __init__(self,n):
+                    super().__init__();self.width=width*.42-20;self.height=13;self.n=n
+                def draw(self):
+                    c=self.canv;c.setFillColor(line);c.roundRect(0,2,self.width,8,3,stroke=0,fill=1)
+                    c.setFillColor(teal);c.roundRect(0,2,max(1,self.width*self.n/data['residual']),8,3,stroke=0,fill=1)
+            rows.append([p(key),p(n),Bar(n)])
+        story.append(table(rows,[width*.28,width*.30,width*.42],header=True))
+    else:story.append(p('No residual findings recorded. This does not establish security.'))
+    story.append(PageBreak())
+    story.append(p('Priority actions','heading'))
+    story.append(p('Up to five residual findings, ordered by recorded severity, then confirmed-open status, then ID. Not a risk score or a remediation SLA.','small'))
+    if data['priorities']:
+        rows=[[p('Finding / severity','label'),p('Recorded status','label'),p('Next action','label')]]
+        for f in data['priorities']:
+            rows.append([p(f['id']+' / '+f['severity'],'small'),p(f['status'],'small'),p(f['next_action'])])
+        story.append(table(rows,[width*.30,width*.23,width*.47],header=True))
+    else:story.append(band('No residual findings to prioritize; review scope and coverage before making security claims.'))
+    story.append(p('Evidence at a glance','heading'))
+    for key in ('test_results','test_evidence_quality'):
+        values=counts[key]
+        story.append(field(key,', '.join(str(a)+': '+str(b) for a,b in values.items()) or 'None recorded','body'))
+    story.append(field('test_records',counts['test_records'],'body'))
+    story.append(band('A manual PASS is reported evidence. A local receipt is bounded to the recorded inputs and assertions; neither establishes independent certification.'))
+    section(*nav[1])
     for heading,key in [('Scope','scope'),('Coverage','coverage'),('Changes in this run','delta')]:
-        story.append(p(heading,'heading'))
-        for k,v in d[key].items():story.append(p(k.replace('_',' ')+': '+str(v)))
-    story.append(p('Findings and residual risk','heading'))
-    if not d['findings']:story.append(p('No findings recorded. This does not establish security.'))
+        story.append(p(heading,'sub'))
+        story.append(table([[p(label(k),'small'),p(readable(v))] for k,v in d[key].items()],[width*.40,width*.60]))
+    story.append(PageBreak())
+    section(*nav[2])
+    story.append(p('Each card retains the finding identity, recorded disposition, verification evidence and next action.','small'))
+    if not d['findings']:story.append(band('No findings recorded. This does not establish security.'))
     for f in d['findings']:
-        story.append(p(f['id']+' | '+f['severity']+' | '+f['status'],'sub'))
-        story.append(p(f['title']))
-        for k,v in f.items():
-            if k not in {'id','title','severity','status','standard_relationships'}:story.append(p(k.replace('_',' ')+': '+str(v),'small'))
-        for r in f['standard_relationships']:story.append(p(r['reference']+' | '+r['relationship'],'small'))
-    story.append(p('Recorded tests','heading'))
-    if not d['tests']:story.append(p('NO EXECUTABLE TESTS RECORDED; no PASS is claimed.'))
+        head=Table([[p(f['id'],'id'),p(f['severity'],'chip'),p(f['status'],'chip')]],
+                   colWidths=[width*.44,width*.18,width*.38],hAlign='LEFT')
+        head.setStyle(TableStyle([('BACKGROUND',(0,0),(0,0),C('#E1EDF1')),
+            ('BACKGROUND',(1,0),(1,0),C(severity_colors.get(f['severity'],'#64748B'))),
+            ('BACKGROUND',(2,0),(2,0),C(status_colors.get(f['status'],'#64748B'))),
+            ('VALIGN',(0,0),(-1,-1),'TOP'),('TOPPADDING',(0,0),(-1,-1),7),
+            ('BOTTOMPADDING',(0,0),(-1,-1),7),('LEFTPADDING',(0,0),(-1,-1),9)]))
+        story.append(KeepTogether([head,p(f['title'],'finding'),field('reason',f['reason'],'body'),
+                                   field('next_action',f['next_action'],'body')]))
+        story.append(field('verification_condition',f['verification_condition']))
+        # Compact metadata rows; project prose (possibly long) remains
+        # ordinary splittable paragraphs, never an indivisible table cell.
+        used={'id','title','severity','status','reason','next_action','verification_condition','standard_relationships'}
+        compact=[];extended=[]
+        for key,value in f.items():
+            if key in used:continue
+            if key.startswith('private_') or key in {'implementation','playbook'}:
+                extended.append((key,value))
+            else:compact.append((key,value))
+        for i in range(0,len(compact),2):
+            pair=compact[i:i+2]
+            row=[field(k,v) for k,v in pair]
+            if len(row)==1:row.append(p(''))
+            story.append(table([row],[width/2,width/2]))
+        for k,v in extended:story.append(field(k,v,'body' if k=='implementation' else 'small'))
+        relations='; '.join(r['reference']+' | '+r['relationship'] for r in f['standard_relationships'])
+        story.append(field('standard_relationships',relations or 'None recorded'))
+        story.append(Spacer(1,14))
+    section(*nav[3])
+    if not d['tests']:story.append(band('NO EXECUTABLE TESTS RECORDED; no PASS is claimed.'))
     for t in d['tests']:
         story.append(p(' | '.join(str(t[k]) for k in ('ref','result','evidence_quality')),'sub'))
         for k,v in t.items():
-            if k not in {'ref','result','evidence_quality'}:story.append(p(k.replace('_',' ')+': '+str(v),'small'))
-    story.append(p('Standards references - advisory only','heading'))
+            if k not in {'ref','result','evidence_quality'}:story.append(field(k,v))
+    section(*nav[4])
+    story.append(band('Mapping relationships are advisory only. Applicability and verification are not assessed by this export.'))
+    story.append(field('crosswalk_version',d['standards']['crosswalk_version']))
     for k,r in d['standards']['references'].items():story.append(p(k+' | '+r['version']+' | '+r['source_url'],'small'))
-    story.append(p('Limitations','heading'))
+    section(*nav[5])
     for x in d['limitations']:story.append(p(x))
     for k in ('private_scope','private_notes'):
-        if k in d:story.append(p(k+': '+d[k]))
+        if k in d:story.append(field(k,d[k],'body'))
     def decorate(canvas,pdf_doc):
-        canvas.saveState();canvas.setFont(face,8);canvas.setFillColor(gray)
-        canvas.drawString(19*mm,12*mm,'SECURITY GUARDIAN / CONFIDENTIAL')
-        canvas.drawRightString(A4[0]-19*mm,12*mm,'Page '+str(pdf_doc.page));canvas.restoreState()
+        canvas.saveState()
+        canvas.setFillColor(navy);canvas.rect(0,A4[1]-9*mm,A4[0],9*mm,stroke=0,fill=1)
+        canvas.setFillColor(teal);canvas.rect(0,A4[1]-9*mm,5*mm,9*mm,stroke=0,fill=1)
+        canvas.setFont(bold,8);canvas.setFillColor(white)
+        canvas.drawString(18*mm,A4[1]-5.7*mm,'SECURITY GUARDIAN')
+        canvas.setFont(face,8);canvas.drawRightString(A4[0]-18*mm,A4[1]-5.7*mm,d['view'].upper()+'  /  V2')
+        canvas.setStrokeColor(line);canvas.line(18*mm,15*mm,A4[0]-18*mm,15*mm)
+        canvas.setFillColor(muted);canvas.drawString(18*mm,10*mm,'CONFIDENTIAL  |  Run v'+str(d['run']['version']))
+        canvas.drawRightString(A4[0]-18*mm,10*mm,'Page '+str(pdf_doc.page))
+        canvas.restoreState()
     doc.build(story,onFirstPage=decorate,onLaterPages=decorate)
 
 def export_report(store,rdir,run,*,cumulative=False,output=None,font=None,view='management',format='pdf',private_details=False):

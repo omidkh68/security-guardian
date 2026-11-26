@@ -56,3 +56,17 @@ Duplicate test IDs cannot support a linked PASS. Unknown or inconsistent local/m
 The required Python 3.12 CI step renders the existing wholly synthetic 125-finding fixture in both management and technical PDF views, asserts every finding ID is present, pagination and absence of private canary in text and metadata, and uploads only these synthetic PDFs as `synthetic-pdf-review` with seven-day retention. No customer data, private ledger or logs are uploaded. CI output is automated content evidence, not independent human typography or disclosure approval. Visual review of the artifacts remains a distinct recorded task. CI pending.
 
 A local PASS link additionally requires exact archived receipt finding, run, adapter, exit, boolean execution status and passing counts consistency. This is an archived consistency check, not live source freshness verification. Negative tests reject mismatched or malformed receipts.
+
+## PDF v2 - visual reporting (#139)
+
+The PDF renderer now uses a branded cover, clickable section navigation and outline, four snapshot KPI cards, vector severity donut and status bars, top-five residual control concentration, and a severity-ordered action table. Each finding has textual severity/status chips, reason/next action, verification condition, compact metadata and splittable technical/private prose. Technical view retains implementation, playbook and history fields. All data derives from the same privacy-filtered finalized snapshot; JSON/Markdown schemas, paths, optional ReportLab dependency and default disclosure policy are unchanged. Unknown/zero denominators remain explicit. No invented trends, risk scores, impact/likelihood matrix, component heatmap or compliance percentages; these require additional recorded inputs and are not implemented. Test empty reports, exact visual-summary counts, clickable navigation, long content, historical export, multi-page extraction and privacy. Synthetic CI PDF artifacts are the visual-review source; CI pending.
+
+```mermaid
+flowchart LR
+ A[Finalized snapshot] --> B[Existing privacy projection]
+ B --> C[Exact counts and priorities]
+ B --> D[Finding and evidence cards]
+ C --> E[Vector dashboard]
+ D --> F[Management or technical PDF]
+ E --> F
+```
