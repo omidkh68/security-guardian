@@ -130,3 +130,7 @@ flowchart LR
  C --> D[HTTP HTML cache and host checks]
  D --> E[Before and after finding receipts]
 ```
+
+## Strict stored execution receipt acceptance (reopened #58)
+
+A passing local receipt must also carry a matching PASS execution_result, exact integer schema version 1, bounded integer timeout, nonnegative integer elapsed milliseconds, and nonempty bounded output count/hash. The stored test must have boolean executed=true, a recognized evidence-quality value and the same adapter as the receipt. Manual records may not carry an execution receipt; legacy manual records without quality retain their explicit MANUAL_REPORTED interpretation. Canonical fingerprint comparison rejects JSON bool/float aliases of integer metadata. Existing finalized archives are not rewritten. The tests mutate synthetic stored receipts to check fail-closed schema/metadata and restore valid evidence; this is consistency checking of trusted private local state, not cryptographic tamper resistance or a guarantee against someone able to rewrite that state. No change to runner execution permissions or test timeout limits. Run the existing offline suite; revert this increment for rollback. CI evidence pending.

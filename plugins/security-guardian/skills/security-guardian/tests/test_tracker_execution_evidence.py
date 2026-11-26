@@ -112,7 +112,13 @@ class TrackerExecutionTests(unittest.TestCase):
                        {'scope_stamp':'0'*64}, {'adapter':'unknown'}, {'schema_version':2},
                        {'exit_code':False}, {'result':'BLOCKED'}, {'executed':False},
                        {'counts':{'tests_run':0}}, {'fingerprint_before':None},
-                       {'started_at':'bad timestamp'}, {'output_sha256':'invalid'}):
+                       {'started_at':'bad timestamp'}, {'output_sha256':'invalid'},
+                       {'schema_version':True}, {'schema_version':1.0},
+                       {'execution_result':'FAIL'}, {'execution_result':'TIMEOUT'},
+                       {'execution_result':None}, {'timeout_seconds':0},
+                       {'timeout_seconds':61}, {'timeout_seconds':True}, {'timeout_seconds':1.5},
+                       {'elapsed_ms':-1}, {'elapsed_ms':True}, {'elapsed_ms':None},
+                       {'output_bytes':0}):
             with self.subTest(fields=fields):
                 index = json.loads(original)
                 run = next(x for x in index['runs'] if x['id'] == self.run_id)
@@ -121,6 +127,40 @@ class TrackerExecutionTests(unittest.TestCase):
                 self.verified(result['test_id'],review='Reviewed synthetic assertion relevance',expected=2)
         index_path.write_text(original)
         self.verified(result['test_id'],review='Reviewed synthetic assertion relevance')
+
+    def test_stored_receipt_quality_and_command_must_agree(self):
+        result = self.execute()
+        index_path = self.root/'.security-guardian/index.json'
+        original = index_path.read_text()
+        for fields in (
+            {'evidence_quality':'UNKNOWN'},
+            {'evidence_quality':'MANUAL_REPORTED'},
+            {'execution_receipt':None},
+            {'command_or_method':'node-test-v1'},
+            {'executed':1},
+        ):
+            with self.subTest(fields=fields):
+                index = json.loads(original)
+                run = next(x for x in index['runs'] if x['id'] == self.run_id)
+                run['tests'][-1].update(fields)
+                index_path.write_text(json.dumps(index))
+                self.verified(result['test_id'],review='Reviewed relevant security assertions',expected=2)
+        index_path.write_text(original)
+        self.verified(result['test_id'],review='Reviewed relevant security assertions')
+
+    def test_missing_receipt_execution_metadata_cannot_verify(self):
+        result = self.execute()
+        index_path = self.root/'.security-guardian/index.json'
+        original = index_path.read_text()
+        for field in ('execution_result','timeout_seconds','elapsed_ms'):
+            with self.subTest(field=field):
+                index = json.loads(original)
+                run = next(x for x in index['runs'] if x['id'] == self.run_id)
+                del run['tests'][-1]['execution_receipt'][field]
+                index_path.write_text(json.dumps(index))
+                self.verified(result['test_id'],review='Reviewed relevant security assertions',expected=2)
+        index_path.write_text(original)
+        self.verified(result['test_id'],review='Reviewed relevant security assertions')
 
     def test_failed_execution_never_verifies_and_finalized_run_is_immutable(self):
         (self.api/'test_security.py').write_text(
