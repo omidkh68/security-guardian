@@ -46,3 +46,19 @@ flowchart LR
 ```
 
 Run: `python scripts/benchmark_independent_sql.py`. Rollback: revert this benchmark-only change; scanner behavior is unchanged.
+
+## Flask context-cache follow-up (v8, #111)
+
+The #120 CI baseline (45776574343) missed all four positive matched-route sinks (TP=0, TN=4, FP=0, FN=4; 8/8 PARTIAL). The bounded local model recognizes a single directly imported `flask.g` alias, a literal missing-key guard, a direct SQLite connection stored under that key, optional exact SQLite Row setup, and return of the same slot. Ambiguous imports, explicit competing context writes and unsupported bare context references fail closed. Literal `request.method` equality/inequality and membership guards are modeled along both paths, without runtime reachability claims. No cross-module context ownership, monkey-patch, teardown, arbitrary exception or application execution guarantee. Source-only candidate evidence remains PARTIAL. Stable rule IDs retained.
+
+```mermaid
+flowchart LR
+ A[Flask request and method guard] --> B[Independent bounded paths]
+ C[Direct Flask g import] --> D[Literal cache key and SQLite factory]
+ D --> E[Receiver evidence]
+ B --> F[SQL argument review]
+ E --> F
+ F --> G[Candidate or partial coverage]
+```
+
+Synthetic tests cover aliases, cached connections, execute/fetch, literal guards, parameterized negatives, shadowing, mutation, mismatched keys and unknown receivers. Test-first CI 45776952724 recorded two expected failures; implementation results pending. Run the offline suite and `python scripts/benchmark_independent_sql.py`; the eight exposed cases are regression only. Rollback by reverting this bounded scanner change.

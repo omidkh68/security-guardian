@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Add pinned independent matched Flask route pairs and bounded Python SQL AST v8 context-cache factories and literal method guards; retain the failed baseline and PARTIAL limitations (#111, #120, #121).
 - Add structured PDF/JSON/Markdown management and technical reporting with residual risk and privacy boundaries (#98, #109).
 - Expand bounded semantic flow (Python v5, DOM v4, Node SQL v2) and replay the pinned external context (#107, #110).
 - Extend Python SQL AST to v6/v7 with named and absolute-import factories, bounded logging and explicit finally paths; preserve frozen benchmark evidence and report residual limitations (#111, #112, #116, #117).

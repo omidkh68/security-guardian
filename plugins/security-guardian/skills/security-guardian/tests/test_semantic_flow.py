@@ -345,5 +345,63 @@ class SemanticFlowTests(unittest.TestCase):
         body='    try:\n        try:\n            return "fixed"\n        finally:\n            return "changed"\n    finally:\n        cur.execute(request.args["q"])\n'
         self.assertEqual(len(self.hits(self.run_scan(body))),1)
 
+
+    def test_flask_context_cached_connection_and_method_guard(self):
+        header = ('from flask import request as req, g as context\n'
+                  'import sqlite3 as storage\nPATH = "fixture.db"\n'
+                  'def open_db():\n'
+                  '    if "db" not in context:\n'
+                  '        context.db = storage.connect(PATH)\n'
+                  '        context.db.row_factory = storage.Row\n'
+                  '    return context.db\n')
+        prefix = 'def view():\n'
+        for query, count in [('req.form["name"]', 1),
+                             ('"SELECT ?", (req.form["name"],)', 0)]:
+            for call in ('db.execute(', 'open_db().execute('):
+                body = ('    if req.method == "POST":\n'
+                        '        db = open_db()\n'
+                        '        ' + call + query + ').fetchone()\n')
+                result = self.run_scan(body, header, prefix)
+                self.assertEqual(len(self.hits(result)), count)
+                self.assertEqual(result['summary']['python_sql_flow']['status'], 'PARTIAL')
+        result = self.run_scan('    open_db().execute(req.args["q"])\n', header, prefix)
+        self.assertEqual(len(self.hits(result)), 1)
+        self.assertEqual(self.hits(result)[0]['status'], 'HEURISTIC_REVIEW_ONLY')
+
+    def test_flask_context_factory_rejects_ambiguous_provenance(self):
+        header = ('from flask import request, g\nimport sqlite3\n'
+                  'def open_db():\n'
+                  '    if "db" not in g:\n'
+                  '        g.db = sqlite3.connect("fixture.db")\n'
+                  '    return g.db\n')
+        body = '    open_db().execute(request.args["q"])\n'
+        for bad in (
+            header.replace('from flask import request, g', 'from flask import request\nfrom elsewhere import g'),
+            header.replace('"db" not in g', '"other" not in g'),
+            header.replace('return g.db', 'return g.other'),
+            header.replace('sqlite3.connect("fixture.db")', 'unknown()'),
+            header.replace('    return g.db', '    else:\n        g.db = unknown()\n    return g.db'),
+            header + 'g.db = unknown()\n',
+            header + 'def replace():\n    g.db = unknown()\n',
+            header + 'def replace(g):\n    g.db = unknown()\n',
+            header + 'g = unknown()\n',
+            header + 'sqlite3.connect = unknown\n',
+            header + 'open_db = unknown\n',
+        ):
+            with self.subTest(header=bad):
+                self.assertFalse(self.hits(self.run_scan(body, bad, 'def view():\n')))
+        self.assertFalse(self.hits(self.run_scan(body, header, 'def view(open_db):\n')))
+        self.assertFalse(self.hits(self.run_scan(body, header, 'def view(g):\n')))
+
+    def test_request_method_guard_not_arbitrary_attribute(self):
+        for condition, count in [('request.method == "POST"', 1),
+                                 ('request.method in ("GET", "POST")', 1),
+                                 ('unknown.method == "POST"', 0),
+                                 ('request.unmodeled == "POST"', 0),
+                                 ('request.method == unknown()', 0)]:
+            result = self.run_scan('    if ' + condition + ':\n'
+                                   '        cur.execute(request.args["q"])\n')
+            self.assertEqual(len(self.hits(result)), count)
+
 if __name__=='__main__':
     unittest.main()
