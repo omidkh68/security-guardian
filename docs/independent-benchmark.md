@@ -42,3 +42,20 @@ No product code or ledger change. Roll back by reverting the PR; future benchmar
 ## Frozen manifest integrity (#96)
 
 Pin the original 27-case Git blob identity; current execution is explicitly a replay, not the frozen engine and not a fresh independent holdout. The optional regression gate requires all selected exposed labels, exact unique case identity, scope, coverage and observation/classification consistency. Historical reports stay unchanged; no runtime/agent evaluation claim. CI runs both Python and JS subsets; new tests reject altered manifest, duplicate/missing cases and wrong outcomes. CI pending.
+
+## Release evidence bundle (#37)
+
+Python 3.12 CI builds a versioned `benchmark-evidence.json` from the synthetic indicator baseline, full exposed 27-case semantic regression and seven existing external SQL reports. It verifies the exact checkout and engine/parser hashes where available, checks case identities and scope, recomputes denominators from validated rows, and records input report SHA-256 values. The separate isolated/contextual OWASP cohorts are matched on route bytes and labels by the existing SQL gate; author-labeled cohorts are explicitly exposed replays. No cross-cohort pooled accuracy is produced. The JSON artifact contains only structured aggregate evidence, hashes and public corpus classification, not raw source or customer data. CI retains it for seven days; use the matching run and commit for release review.
+
+```mermaid
+flowchart LR
+ A[Synthetic indicator pairs] --> D[Validate identities and labels]
+ B[Exposed semantic regression] --> D
+ C[External SQL replays] --> E[Validate matched input and coverage]
+ D --> F[Separate denominators]
+ E --> F
+ F --> G[Versioned evidence artifact]
+ H[Agent and blind holdout NOT_RUN] --> G
+```
+
+This is an evidence-integrity increment, not a newly independent benchmark. Fresh blind holdout, independent human adjudication, agent behavior and fix rates, time to first actionable finding and CodeQL/Semgrep comparisons remain NOT_RUN. The existing real framework verification fixtures are separate evidence, not agent fix rates. No release threshold is established. Offline tests reject stale engine hashes, missing or duplicate cases, scope failures and inconsistent labels, and preserve partial misses and undefined denominators. The CI artifact must be actually generated successfully before claiming this step passed.
