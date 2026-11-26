@@ -553,5 +553,57 @@ class SemanticFlowTests(unittest.TestCase):
             self.write('api/storage.py','import sqlite3\nsqlite3.connect=unknown\ndef lookup(q):\n'+body)
             self.assertFalse(self.hits(self.run_scan('    lookup(request.args["q"])\n',header,'def route():\n')))
 
+
+    def test_exception_handler_order_else_and_finally(self):
+        body=('    try:\n'
+              '        raise ValueError("fixture")\n'
+              '        cur.execute(request.args["unreachable"])\n'
+              '    except TypeError:\n'
+              '        cur.execute(request.args["wrong"])\n'
+              '    except (ValueError, LookupError) as error:\n'
+              '        cur.execute(request.args["handler"])\n'
+              '    else:\n'
+              '        cur.execute(request.args["else"])\n'
+              '    finally:\n'
+              '        cur.execute(request.args["cleanup"])\n'
+              '    cur.execute(request.args["after"])\n')
+        result=self.run_scan(body)
+        self.assertEqual([h['line'] for h in self.hits(result)],[12,16,17])
+        self.assertGreater(result['summary']['python_sql_flow']['exception_handler_paths'],0)
+        self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertFalse(self.hits(self.run_scan('    try:\n        raise ValueError("x")\n'
+            '    except ValueError:\n        cur.execute(request.args["q"])\n',
+            HEADER+'ValueError=unknown\n')))
+
+    def test_exception_rethrow_nested_cleanup_and_return(self):
+        body=('    try:\n        try:\n            raise KeyError("fixture")\n'
+              '        except LookupError:\n            raise\n'
+              '        finally:\n            cur.execute(request.args["cleanup"])\n'
+              '    except KeyError:\n        cur.execute(request.args["outer"])\n'
+              '    except ValueError:\n        cur.execute(request.args["wrong"])\n')
+        result=self.run_scan(body)
+        self.assertEqual([h['line'] for h in self.hits(result)],[12,14])
+        self.assertGreater(result['summary']['python_sql_flow']['exception_rethrow_paths'],0)
+        body=('    try:\n        try:\n            raise ValueError("fixture")\n'
+              '        finally:\n            return "fixed"\n'
+              '    except ValueError:\n        cur.execute(request.args["wrong"])\n'
+              '    cur.execute(request.args["unreachable"])\n')
+        self.assertFalse(self.hits(self.run_scan(body)))
+        body=('    value=request.args["q"]\n    try:\n        raise ValueError("fixed")\n'
+              '    except ValueError as value:\n        pass\n'
+              '    cur.execute(value)\n')
+        self.assertFalse(self.hits(self.run_scan(body)))
+
+    def test_sqlite_exception_possible_path_and_parameterized_negative(self):
+        prefix=('    try:\n        cur.execute("SELECT 1")\n'
+                '    except sqlite3.Error:\n')
+        result=self.run_scan(prefix+'        cur.execute(request.args["fallback"])\n')
+        self.assertEqual(len(self.hits(result)),1)
+        self.assertGreater(result['summary']['python_sql_flow']['sqlite_exception_paths'],0)
+        self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertFalse(self.hits(self.run_scan(prefix+'        cur.execute("SELECT ?",(request.args["fallback"],))\n')))
+        self.assertFalse(self.hits(self.run_scan(prefix.replace('sqlite3.Error','ValueError')+
+            '        cur.execute(request.args["fallback"])\n')))
+
 if __name__=='__main__':
     unittest.main()
