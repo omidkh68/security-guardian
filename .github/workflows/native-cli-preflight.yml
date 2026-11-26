@@ -1,0 +1,48 @@
+name: Native CLI installation preflight
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/native-cli-preflight.yml'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  native-cli-install:
+    name: Install smoke (${{ matrix.agent }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - agent: codex
+            package: '@openai/codex@0.169.0'
+          - agent: claude
+            package: '@anthropic-ai/claude-code@2.1.325'
+          - agent: gemini
+            package: '@google/gemini-cli@0.68.0'
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Install and inspect actual CLI (no credentials or model requests)
+        shell: bash
+        env:
+          AGENT: ${{ matrix.agent }}
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          set -euo pipefail
+          home="$(mktemp -d)"
+          trap 'rm -rf "$home"' EXIT
+          export HOME="$home"
+          export CI=true
+          export NPM_CONFIG_REGISTRY=https://registry.npmjs.org/
+          export NPM_CONFIG_FETCH_RETRIES=1
+          export NPM_CONFIG_FETCH_TIMEOUT=60000
+          unset OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY GOOGLE_API_KEY GH_TOKEN GITHUB_TOKEN NODE_AUTH_TOKEN
+          npm install --prefix "$home/tools" --no-audit --no-fund --save-exact "$PACKAGE"
+          cli="$home/tools/node_modules/.bin/$AGENT"
+          test -x "$cli"
+          timeout 60 "$cli" --version
+          timeout 60 "$cli" --help > "$home/help.txt"
+          test -s "$home/help.txt"
+          printf 'INSTALL_AND_HELP=PASS\nAUTHENTICATED_NATIVE_LOADER=NOT_RUN (no account or model call)\n'
