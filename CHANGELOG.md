@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Redesign management/technical PDF reports with visual dashboards, clickable section navigation and compact evidence cards without changing the privacy projection (#139).
 - Revalidate official pinned standards identifiers and publish synthetic-only management/technical PDF review artifacts in CI (#97, #98).
 - Require real NestJS guard/controller/HTTP owner and tenant state receipt fixture in isolated CI (#35).
 - Record scoped remediation approval, pre/post Git fingerprints and rollback review without modifying application source (#35).

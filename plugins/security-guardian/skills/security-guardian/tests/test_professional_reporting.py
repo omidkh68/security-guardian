@@ -128,6 +128,41 @@ class ProfessionalReportTests(unittest.TestCase):
             with self.assertRaises(ValueError):r.export_report(store,rd,run,format='json',output=store/'ledger.json')
             with self.assertRaises(ValueError):r.export_report(store,rd,dict(run,status='IN_PROGRESS'),format='json')
             self.assertEqual(original,{p:p.read_bytes() for p in original})
+    def test_visual_summary_uses_only_projected_snapshot_counts(self):
+        run,ledger,scan=fixture(125)
+        d=r.build_export(run,ledger,scan)
+        summary=r.visual_summary(d)
+        self.assertEqual(summary['total'],125)
+        self.assertEqual(sum(summary['severity'].values()),125)
+        self.assertEqual(sum(summary['status'].values()),125)
+        self.assertEqual(summary['residual'],d['counts']['residual_findings'])
+        self.assertEqual(len(summary['priorities']),5)
+        self.assertTrue(all(f['residual_risk'] for f in summary['priorities']))
+        self.assertNotIn(SECRET,json.dumps(summary))
+        empty=r.visual_summary(r.build_export(run,{'findings':{}},scan))
+        self.assertEqual(empty,{'severity':{},'status':{},'concentration':[],
+                                'priorities':[],'total':0,'residual':0})
+
+    @unittest.skipUnless(importlib.util.find_spec('reportlab') and importlib.util.find_spec('pypdf'),'optional PDF renderer/extractor')
+    def test_visual_navigation_and_zero_findings(self):
+        from pypdf import PdfReader
+        run,ledger,scan=fixture(0)
+        with tempfile.TemporaryDirectory() as tmp:
+            for view in ('management','technical'):
+                output=Path(tmp)/(view+'.pdf')
+                r.render_pdf(r.build_export(run,ledger,scan,view=view),output)
+                reader=PdfReader(output)
+                text='\n'.join(page.extract_text() or '' for page in reader.pages)
+                self.assertEqual(len(reader.outline),6)
+                self.assertIn('Severity distribution',text)
+                self.assertIn('Finding status',text)
+                self.assertIn('No findings recorded',text)
+                self.assertIn('Priority actions',text)
+                self.assertIn('Test record outcomes' if view=='technical' else 'Partial relationships',text)
+                self.assertNotIn(SECRET,text)
+                self.assertTrue(all((page.extract_text() or '').strip() for page in reader.pages))
+                self.assertGreaterEqual(len(reader.pages[0].get('/Annots',[])),6)
+
     def test_missing_renderer_does_not_leave_partial_artifact(self):
         run,ledger,scan=fixture()
         with tempfile.TemporaryDirectory() as tmp:
