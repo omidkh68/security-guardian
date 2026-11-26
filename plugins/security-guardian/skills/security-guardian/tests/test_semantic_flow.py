@@ -452,5 +452,50 @@ class SemanticFlowTests(unittest.TestCase):
         self.assertFalse(self.hits(self.run_scan(body, header, prefix.replace('    initialize()\n','    app=unknown\n'))))
         self.assertFalse(self.hits(self.run_scan(body.replace('connection.execute(data.get("name"))','connection.execute("SELECT ?", (data.get("name"),))'), header, prefix)))
 
+
+    def test_literal_replacement_helper_preserves_request_taint(self):
+        header = (HEADER+
+                  'def clean(value):\n'
+                  '    """Text normalization, not SQL safety."""\n'
+                  '    if not value:\n        return value\n'
+                  '    cleaned=value\n'
+                  '    for token in ("a", "b", "c"):\n'
+                  '        cleaned=cleaned.replace(token, "")\n'
+                  '    return cleaned\n')
+        for access in ('request.args["q"]', 'data.get("name", "")'):
+            setup = '    data=request.get_json() or {}\n' if access.startswith('data') else ''
+            body = setup+'    value=clean('+access+')\n'
+            result = self.run_scan(body+'    cur.execute("SELECT "+value)\n', header)
+            self.assertEqual(len(self.hits(result)), 1)
+            self.assertEqual(result['summary']['python_sql_flow']['status'], 'PARTIAL')
+            self.assertGreater(result['summary']['python_sql_flow']['literal_replacement_helpers'], 0)
+            self.assertFalse(self.hits(self.run_scan(body+'    cur.execute("SELECT ?", (value,))\n', header)))
+        self.assertFalse(self.hits(self.run_scan('    cur.execute(clean("constant"))\n', header)))
+
+    def test_literal_replacement_helper_rejects_unsupported_shapes(self):
+        helper = ('def clean(value):\n'
+                  '    cleaned=value\n'
+                  '    for token in ("a", "b"):\n'
+                  '        cleaned=cleaned.replace(token, "")\n'
+                  '    return cleaned\n')
+        body = '    cur.execute(clean(request.args["q"]))\n'
+        for bad in (
+            '@unknown\n'+helper,
+            helper.replace('("a", "b")', 'unknown()'),
+            helper.replace('("a", "b")', '("a",)*1000'),
+            helper.replace('replace(token, "")', 'replace(token, external)'),
+            helper.replace('replace(token, "")', 'replace(token, "", 1)'),
+            helper.replace('return cleaned', 'return unknown(cleaned)'),
+            helper.replace('    return cleaned', '        external(cleaned)\n    return cleaned'),
+            helper+'clean=unknown\n',
+            helper.replace('clean(value)', 'clean(value="constant")'),
+            helper.replace('for token in', 'for cleaned in'),
+        ):
+            with self.subTest(helper=bad):
+                result=self.run_scan(body, HEADER+bad)
+                self.assertFalse(self.hits(result))
+                self.assertEqual(result['summary']['python_sql_flow']['status'], 'PARTIAL')
+        self.assertFalse(self.hits(self.run_scan(body, HEADER+helper, PREFIX.replace('search()', 'search(clean)'))))
+
 if __name__=='__main__':
     unittest.main()
