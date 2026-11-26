@@ -37,6 +37,9 @@ def capture(root, files, *, prepare=False):
     paths=[':(literal)'+p for p in selected['files']]
     for path in paths:
         _git(root,'ls-files','--error-unmatch','--',path)
+        flags=_git(root,'ls-files','-v','--',path).splitlines()
+        if len(flags)!=1 or not flags[0].startswith(b'H '):
+            raise ValueError('Unsupported tracked-file index flags; review manually')
     if prepare and _git(root,'status','--porcelain=v1','-z','--untracked-files=all','--',*paths):
         raise ValueError('Approved paths overlap existing changes; obtain targeted review')
     head=_git(root,'rev-parse','HEAD').decode('ascii').strip()

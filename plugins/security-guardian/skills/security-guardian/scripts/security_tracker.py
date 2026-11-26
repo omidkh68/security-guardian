@@ -616,6 +616,7 @@ def prepare_fix(args):
         plan={'plan_id':'SGP-'+secrets.token_hex(8).upper(),'status':'PREPARED',
               'finding_id':args.finding_id,'scope_stamp':_finding_stamp(run['scope_resolution']),
               'finding_stamp':_finding_stamp(finding),'risk_class':args.risk,
+              'finding_title':finding['title'],'finding_location':finding['location'],
               'approver':args.approver,'approval_ref':args.approval_ref,
               'change_summary':args.change_summary,'rollback_plan':args.rollback_plan,
               'files':before['selected']['files'],'before':before,'prepared_at':now()}
@@ -662,6 +663,8 @@ def _validate_remediation_link(root,run,entry):
     if (not plan or plan['status']!='REVIEWED'
             or plan['scope_stamp']!=_finding_stamp(run.get('scope_resolution'))
             or fix.get('risk_class')!=plan['risk_class']
+            or fix.get('summary')!=plan['change_summary']
+            or entry['title']!=plan['finding_title'] or entry['location']!=plan['finding_location']
             or not isinstance(fix.get('files'),list) or any(not isinstance(p,str) for p in fix['files'])
             or sorted(fix['files'])!=plan['files']):
         raise ValueError('Declared high-risk or planned fix requires reviewed matching remediation plan')
@@ -686,6 +689,8 @@ def validate_execution_receipt(root, run, finding, receipt):
             or type(receipt.get('exit_code')) is not int or receipt['exit_code'] != 0
             or receipt.get('independently_verified_fix') is not False):
         raise ValueError('Ineligible or unrelated local execution receipt')
+    if receipt.get('command_contract')!=security_test_runner.command_contract(receipt['adapter'],receipt.get('test_file')):
+        raise ValueError('Local execution command identity is missing or inconsistent')
     counts = receipt.get('counts')
     keys = {'tests_run', 'failures', 'errors', 'skipped', 'expected_failures', 'unexpected_successes'}
     if (not isinstance(counts, dict) or set(counts) != keys

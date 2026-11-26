@@ -126,7 +126,7 @@ class TrackerExecutionTests(unittest.TestCase):
                        {'execution_result':None}, {'timeout_seconds':0},
                        {'timeout_seconds':61}, {'timeout_seconds':True}, {'timeout_seconds':1.5},
                        {'elapsed_ms':-1}, {'elapsed_ms':True}, {'elapsed_ms':None},
-                       {'output_bytes':0}):
+                       {'output_bytes':0}, {'command_contract':None}, {'command_contract':{'adapter':'node-test-v1'}}):
             with self.subTest(fields=fields):
                 index = json.loads(original)
                 run = next(x for x in index['runs'] if x['id'] == self.run_id)
@@ -160,7 +160,7 @@ class TrackerExecutionTests(unittest.TestCase):
         result = self.execute()
         index_path = self.root/'.security-guardian/index.json'
         original = index_path.read_text()
-        for field in ('execution_result','timeout_seconds','elapsed_ms'):
+        for field in ('execution_result','timeout_seconds','elapsed_ms','command_contract'):
             with self.subTest(field=field):
                 index = json.loads(original)
                 run = next(x for x in index['runs'] if x['id'] == self.run_id)

@@ -35,7 +35,7 @@ class NestReceiptTests(unittest.TestCase):
             return json.loads(cp.stdout) if expected==0 else None
         run=call('begin','--mode','verify','--profile','custom','--component','app')['run_id']
         finding={'control_id':'BIZ-01','finding_key':'actual-nest-http-fixture',
-                 'title':'Synthetic NestJS HTTP host and cache boundary','location':'app/api.mjs:1',
+                 'title':'Synthetic NestJS owner and tenant authorization boundary','location':'app/api.mjs:1',
                  'severity':'HIGH','status':'FIXED_UNVERIFIED','reason':'Disposable framework fixture',
                  'fix':{'summary':'Enforce tenant owner and field policy','files':['app/api.mjs']}}
         ident=call('record','--run',run,payload=finding)['finding_ids'][0]

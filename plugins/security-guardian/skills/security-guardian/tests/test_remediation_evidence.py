@@ -67,6 +67,14 @@ class RemediationTests(unittest.TestCase):
             'status':'FIXED_UNVERIFIED','fix':{'summary':'Restrict owner policy','risk_class':'HIGH',
              'files':['api/app.py'],'remediation_plan_id':plan}},expected=expected)
 
+    def test_audit_and_plan_do_not_edit_or_authorize(self):
+        before=self.git('diff','--binary','HEAD')
+        for mode in ('audit','plan'):
+            run=self.call('begin','--mode',mode,'--profile','custom','--component','api')['run_id']
+            self.prepare('--run',run,expected=2)
+        self.assertEqual(self.source.read_text(),self.original)
+        self.assertEqual(self.git('diff','--binary','HEAD'),before)
+
     def test_approval_scope_before_after_verify_and_finish(self):
         self.prepare('--approval-ref','',expected=2)
         self.prepare('--file','web/unstaged.py',expected=2)
@@ -86,6 +94,9 @@ class RemediationTests(unittest.TestCase):
         self.review(plan,expected=2)
         self.untracked.write_text('# preexisting untracked\n')
         self.assertEqual(self.review(plan)['status'],'REVIEWED')
+        self.source.write_text(self.safe+'# unreviewed change\n')
+        self.record_fixed(plan,expected=2)
+        self.source.write_text(self.safe)
         self.record_fixed(plan)
         passed=self.execute()
         self.assertEqual(passed['result'],'PASS')

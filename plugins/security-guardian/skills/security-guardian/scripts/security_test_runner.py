@@ -87,6 +87,17 @@ try {
 
 ADAPTERS=('python-unittest-v1','node-test-v1')
 
+def command_contract(adapter,test_file):
+    """Logical fixed argv identity, without private absolute paths or raw logs."""
+    if adapter not in ADAPTERS or not isinstance(test_file,str):
+        raise ValueError('Invalid command identity')
+    worker=NODE_WORKER if adapter=='node-test-v1' else WORKER
+    return {'adapter':adapter,'test_file':test_file,
+            'argv_contract':'node <fixed-worker.mjs> <selected-test>' if adapter=='node-test-v1'
+                            else 'python -I -B -c <fixed-worker> <root> <selected-test>',
+            'worker_sha256':hashlib.sha256(worker.encode('utf-8')).hexdigest()}
+
+
 def valid_test_file(path,adapter):
     if not isinstance(path,str):return False
     p=Path(path)
@@ -227,6 +238,7 @@ def run(args):
         else:
             root = Path(args.root).resolve(strict=True)
             receipt['fingerprint_before'] = fingerprint(root, args.file)
+            receipt['command_contract'] = command_contract(adapter,args.test_file)
             if adapter=='node-test-v1':
                 node,version=_node_runtime(root)
                 receipt['node_version']=version
