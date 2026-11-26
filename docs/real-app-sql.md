@@ -107,3 +107,18 @@ flowchart LR
 ```
 
 Tests cover request form/JSON source, literal loop, constant and parameterized negatives, unknown replacements, invalid loop shapes and shadowing. Run offline tests and `python scripts/benchmark_external_sql_boundaries.py`. #124 implementation results pending CI; rollback by reverting the bounded scanner change. Exposed cohort is regression, not fresh evaluation.
+
+## Bounded one-hop interprocedural sink evidence (v11, #111)
+
+PR #124 CI 45821821192: 164 scanner tests, 6 evaluator tests, 6 required checks; direct TP4 TN3 FP0 FN0, interprocedural TP0 TN5 FP0 FN2. v11 adds symbolic parameter-to-sink summaries and path-local substitution at direct call sites, within a selected component only. Direct from-imports, matching relative/script fallback without competing root module, and local calls; exact positional arity, no dynamic dispatch, default arguments, recursive expansion or return-value inference. Unknown calls stop a path. Bounded prefix slices and empty lists in caller analysis, exact SQLite Row assignment in callee paths. Preserve separate source and call locations and actual sink file/line; cap locations at 16, eligible source files and summaries at 128, call evidence at 256 per caller. All evidence remains heuristic and PARTIAL. No target code executed; no whole-program or exception reachability claim. Test positives and negatives for imports, shadowing, scope, receiver mutation and binding parameters. Results pending CI.
+
+```mermaid
+flowchart LR
+ A[Selected caller AST] --> B[Path local argument provenance]
+ C[Selected callee AST] --> D[Symbolic parameter to SQL sink]
+ B --> E[One hop substitution]
+ D --> E
+ E --> F[Sink plus source and call locations]
+```
+
+Run the offline suite and `python scripts/benchmark_external_sql_boundaries.py`. Revert the bounded scanner increment to roll back.

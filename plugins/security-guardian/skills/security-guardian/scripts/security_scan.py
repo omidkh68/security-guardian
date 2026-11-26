@@ -1157,10 +1157,11 @@ class _SqlFinally:
         self.normal_prefix=tuple(normal_prefix)
 
 
-def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bindings=()):
+def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bindings=(),
+                        initial_values=None, call_targets=None, call_hits=None, slice_limits=()):
     # Each pending path owns its bindings. Never join taint from one branch
     # with a receiver from another. Unmodeled paths terminate, visibly partial.
-    pending = [(tuple(fn.body), {}, {})]
+    pending = [(tuple(fn.body), dict(initial_values or {}), {})]
     shadowed=set(module_bindings)|_binding_names(fn)
     def leave(tail, values, receivers, raising=False):
         # Only explicit exits; unknown calls may still raise. For raises,
@@ -1224,6 +1225,13 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bind
                     receivers[('import',alias)]=a.name
                 partial=True
                 if not valid:break
+                continue
+            if (isinstance(stmt, ast.Assign) and len(stmt.targets) == 1
+                    and _attr(stmt.targets[0], 'row_factory') and isinstance(stmt.targets[0].value, ast.Name)
+                    and receivers.get(stmt.targets[0].value.id) == 'connection'
+                    and _attr(stmt.value, 'Row') and isinstance(stmt.value.value, ast.Name)
+                    and stmt.value.value.id in db_names):
+                partial = True
                 continue
             if isinstance(stmt,ast.Assign) and len(stmt.targets)==1 and isinstance(stmt.targets[0],ast.Subscript):
                 dst=stmt.targets[0]
@@ -1331,6 +1339,29 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bind
             # query sink, not taint propagation from database result rows.
             expression=value if target is not None else stmt.value if isinstance(stmt,(ast.Expr,ast.Return)) else None
             call=expression
+            if call_targets is not None and call_hits is not None:
+                # The summary describes a sink, not a return value or effects.
+                candidate = expression
+                if (isinstance(stmt, ast.Assign) and len(stmt.targets) == 1
+                        and isinstance(stmt.targets[0], (ast.Tuple, ast.List))
+                        and all(isinstance(n, ast.Name) for n in stmt.targets[0].elts)):
+                    candidate = stmt.value
+                if (isinstance(candidate, ast.Call) and isinstance(candidate.func, ast.Name)
+                        and candidate.func.id in call_targets and not candidate.keywords
+                        and not any(isinstance(a, ast.Starred) for a in candidate.args)):
+                    sink_path, arity, sinks = call_targets[candidate.func.id]
+                    if len(candidate.args) == arity:
+                        args = [_sql_value(a, values, receivers, request_names, db_names, helpers) for a in candidate.args]
+                        if all(ok for ok, _ in args):
+                            for line, used in sinks.items():
+                                lines = frozenset().union(*(args[i][1] for i in used))
+                                if lines:
+                                    if len(call_hits) >= 256:
+                                        stats['interprocedural_limited_calls'] += 1
+                                        return sources_by_sink, True
+                                    call_hits.append((sink_path, line, candidate.lineno, lines))
+                    partial = True
+                    break
             if (isinstance(call,ast.Call) and isinstance(call.func,ast.Attribute)
                     and call.func.attr in {'fetchall','fetchone'} and not call.args and not call.keywords):
                 call=call.func.value
@@ -1383,7 +1414,17 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bind
                     for k,(_,lines) in zip(value.keys,pairs):values[('dict',target,k.value)]=lines
                     values[target]=frozenset();receivers[target]='dictionary'
                     continue
-                known, lines = _sql_value(value, values, receivers, request_names, db_names, helpers)
+                if (call_targets is not None and isinstance(value, ast.Subscript)
+                        and isinstance(value.slice, ast.Slice) and value.slice.lower is None and value.slice.step is None
+                        and ((isinstance(value.slice.upper, ast.Constant) and type(value.slice.upper.value) is int
+                              and 0 < value.slice.upper.value <= 100000)
+                             or (isinstance(value.slice.upper, ast.Name) and value.slice.upper.id in slice_limits))):
+                    known, lines = _sql_value(value.value, values, receivers, request_names, db_names, helpers)
+                    partial = True
+                elif call_targets is not None and isinstance(value, ast.List) and not value.elts:
+                    known, lines = True, frozenset()
+                else:
+                    known, lines = _sql_value(value, values, receivers, request_names, db_names, helpers)
                 if not known:
                     partial = True
                     break
@@ -1527,6 +1568,147 @@ def python_sql_flow(content, sibling_exports=None, qualified_exports=None):
     return hits, stats
 
 
+def _sql_interprocedural(files, owner, stats):
+    """One-hop source-only direct-call sink summaries in a selected component."""
+    modules = {}
+    for path, content in sorted(files.items()):
+        try:
+            tree = ast.parse(content.removeprefix('\ufeff'))
+            if sum(1 for _ in ast.walk(tree)) > PY_SQL_MAX_NODES:
+                continue
+        except (SyntaxError, ValueError, RecursionError, MemoryError):
+            continue
+        bindings = Counter(name for n in tree.body for name in _module_bindings(n))
+        if any(isinstance(n, ast.ImportFrom) and any(a.name == '*' for a in n.names) for n in ast.walk(tree)):
+            continue
+        request = {a.asname or a.name for n in tree.body if isinstance(n, ast.ImportFrom)
+                   and n.level == 0 and n.module == 'flask' for a in n.names if a.name == 'request'}
+        db = {a.asname or a.name for n in tree.body if isinstance(n, ast.Import)
+              for a in n.names if a.name == 'sqlite3'}
+        watched = request | db
+        if (any(bindings[n] != 1 for n in watched)
+                or any(isinstance(n, ast.Attribute) and isinstance(n.ctx, (ast.Store, ast.Del))
+                       and _qualified_parts(n) and _qualified_parts(n)[0] in watched for n in ast.walk(tree))):
+            continue
+        global_writes = set().union(*(set(n.names) for n in ast.walk(tree) if isinstance(n, (ast.Global, ast.Nonlocal))))
+        if global_writes & watched:
+            continue
+        funcs = {n.name:n for n in tree.body if isinstance(n, ast.FunctionDef)
+                 and bindings[n.name] == 1 and n.name not in global_writes}
+        helpers = {}
+        for name, fn in funcs.items():
+            if _binding_names(fn) & watched:
+                continue
+            summary = (_helper_summary(fn) or _literal_replacement_summary(fn)
+                       or _connection_factory(fn, db, True)
+                       or _local_row_connection_factory(fn, db, set()))
+            if summary is not None:
+                helpers[name] = summary
+        limits = {n.targets[0].id for n in tree.body if isinstance(n, ast.Assign)
+                  and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name)
+                  and bindings[n.targets[0].id] == 1 and n.targets[0].id not in global_writes
+                  and isinstance(n.value, ast.Constant) and type(n.value.value) is int
+                  and 0 < n.value.value <= 100000}
+        modules[path] = (tree, bindings, request, db, funcs, helpers, limits, global_writes)
+    summaries = {}
+    def summarize(path, name):
+        key = (path, name)
+        if key in summaries:
+            return summaries[key]
+        if len(summaries) >= 128:
+            stats['interprocedural_limited_calls'] += 1
+            return None
+        summaries[key] = None
+        tree, bindings, request, db, funcs, helpers, limits, writes = modules[path]
+        fn = funcs.get(name)
+        if not fn or not db or fn.decorator_list or _binding_names(fn) & db:
+            return None
+        args = fn.args
+        params = [a.arg for a in [*args.posonlyargs, *args.args]]
+        if (not 1 <= len(params) <= 16 or args.defaults or args.kwonlyargs
+                or args.vararg or args.kwarg or getattr(fn, 'type_params', ())):
+            return None
+        local = {k:v for k,v in helpers.items() if k not in _binding_names(fn)}
+        seeded = {name:frozenset({i}) for i,name in enumerate(params)}
+        sinks, partial = _sql_function_paths(fn, Counter(), (), db, local, bindings, initial_values=seeded)
+        sinks = {line:used for line,used in sinks.items() if used and all(0 <= i < len(params) for i in used)}
+        if sinks:
+            summaries[key] = (path, len(params), sinks)
+            stats['interprocedural_summaries'] += 1
+        return summaries[key]
+    def resolve(path, imp):
+        if not imp.module or imp.level not in (0,1):
+            return None
+        parts = imp.module.split('.')
+        if not all(p.isidentifier() for p in parts):
+            return None
+        root = Path(path).parent if imp.level else Path(owner)
+        candidate = (root / Path(*parts)).as_posix() + '.py'
+        if candidate not in modules or candidate == path or candidate[:-3]+'/__init__.py' in files:
+            return None
+        return candidate
+    hits = defaultdict(lambda: (set(),set()))
+    for path, (tree, bindings, request, db, funcs, helpers, limits, writes) in sorted(modules.items()):
+        if not request:
+            continue
+        targets = {}
+        imports = []
+        for n in tree.body:
+            if isinstance(n, ast.ImportFrom):
+                imports.append((n, resolve(path,n)))
+            elif (isinstance(n, ast.Try) and not n.orelse and not n.finalbody and len(n.handlers)==1
+                  and _name(n.handlers[0].type,'ImportError') and n.handlers[0].name is None
+                  and len(n.body)==len(n.handlers[0].body)):
+                paired = []
+                for a,b in zip(n.body,n.handlers[0].body):
+                    if (not isinstance(a,ast.ImportFrom) or not isinstance(b,ast.ImportFrom)
+                            or a.level!=1 or b.level!=0 or not a.module or a.module!=b.module
+                            or [(x.name,x.asname) for x in a.names]!=[(x.name,x.asname) for x in b.names]):
+                        paired = []
+                        break
+                    dest = resolve(path,a)
+                    root_name = (Path(owner)/Path(*a.module.split('.'))).as_posix()+'.py'
+                    if not dest or (root_name in files and root_name!=dest):
+                        paired = []
+                        break
+                    paired.append((a,dest))
+                imports.extend(paired)
+        for n, dest in imports:
+            if not dest:
+                continue
+            for a in n.names:
+                alias = a.asname or a.name
+                if bindings[alias] == 1 and alias not in writes:
+                    summary = summarize(dest,a.name)
+                    if summary:
+                        targets[alias] = summary
+        for name in funcs:
+            summary = summarize(path,name)
+            if summary:
+                targets[name] = summary
+        if not targets:
+            continue
+        for fn in funcs.values():
+            bound = _binding_names(fn)
+            if bound & (request | db):
+                continue
+            local_targets = {k:v for k,v in targets.items() if k not in bound}
+            local_helpers = {k:v for k,v in helpers.items() if k not in bound}
+            calls = []
+            _sql_function_paths(fn, stats, request, db, local_helpers, bindings,
+                                call_targets=local_targets, call_hits=calls, slice_limits=limits-bound)
+            for sink_path, line, call_line, source_lines in calls:
+                src, via = hits[(sink_path,line)]
+                src.update((path,n) for n in source_lines)
+                via.add((path,call_line))
+    def locations(items):
+        return [{'path':p,'line':n} for p,n in sorted(items)[:16]]
+    return [{'path':path,'line':line,'source_lines':sorted({n for _,n in src})[:16],
+             'source_lines_truncated':len(src)>16, 'source_locations':locations(src),
+             'call_locations':locations(via), 'locations_truncated':len(src)>16 or len(via)>16}
+            for (path,line),(src,via) in sorted(hits.items())]
+
+
 def process(root:Path, profile=None, components=()):
     root=Path(root).resolve(strict=True)
     if components and profile is None:
@@ -1578,6 +1760,9 @@ def process(root:Path, profile=None, components=()):
     # No imports, target execution, dependency loading or path traversal.
     factory_cache={}
     factory_reads=0
+    inter_files=defaultdict(dict)
+    inter_file_count=0
+    direct_sql_entries={}
     evidence=[]
     control_evidence=defaultdict(list)
     signal_counts=Counter()
@@ -1644,6 +1829,11 @@ def process(root:Path, profile=None, components=()):
             coverage['inspected_files'] += 1
             if owner in python_sql_roots and p.suffix == '.py':
                 python_sql_stats['eligible_files'] += 1
+                if len(content.encode('utf-8'))<=PY_SQL_MAX_BYTES and inter_file_count<128:
+                    inter_files[owner][fn]=content
+                    inter_file_count+=1
+                else:
+                    python_sql_stats['interprocedural_limited_files']+=1
                 siblings={}
                 qualified={}
                 if len(content.encode('utf-8'))<=PY_SQL_MAX_BYTES:
@@ -1691,8 +1881,9 @@ def process(root:Path, profile=None, components=()):
                     entry = {'control_id':cid, 'signal':'Flask request value reaches SQLite SQL argument',
                              'path':fn, 'confidence':'medium', 'suggested_severity':'high',
                              'status':'HEURISTIC_REVIEW_ONLY', 'technique':'BOUNDED_AST_FLOW',
-                             'pack_id':PY_SQL_PACK, 'pack_version':10, 'rule_id':PY_SQL_RULE,
+                             'pack_id':PY_SQL_PACK, 'pack_version':11, 'rule_id':PY_SQL_RULE,
                              'control_mapping':'LEGACY_COMPATIBILITY', **hit}
+                    direct_sql_entries[(fn,hit['line'])]=entry
                     if len(evidence) < MAX_SIGNALS:
                         evidence.append(entry)
                     if len(control_evidence[cid]) < MAX_CONTROL_SIGNALS:
@@ -1755,6 +1946,26 @@ def process(root:Path, profile=None, components=()):
                                 control_evidence[cid].append(entry)
                         # A line may contain independent security signals. Do not
                         # discard later matching rules; each requires separate triage.
+    for owner, sources in sorted(inter_files.items()):
+        for hit in _sql_interprocedural(sources,owner,python_sql_stats):
+            python_sql_stats['interprocedural_matches']+=1
+            key=(hit['path'],hit['line'])
+            if key in direct_sql_entries:
+                entry=direct_sql_entries[key]
+                loc={(key[0],n) for n in entry['source_lines']} | {(x['path'],x['line']) for x in hit['source_locations']}
+                entry['source_locations']=[{'path':p,'line':n} for p,n in sorted(loc)[:16]]
+                entry['call_locations']=hit['call_locations']
+                entry['locations_truncated']=len(loc)>16 or hit['locations_truncated'] or entry['source_lines_truncated']
+                continue
+            python_sql_stats['matches']+=1
+            cid='API-07'
+            signal_counts[cid]+=1
+            entry={'control_id':cid,'signal':'Flask request value reaches SQLite SQL argument',
+                   'confidence':'medium','suggested_severity':'high','status':'HEURISTIC_REVIEW_ONLY',
+                   'technique':'BOUNDED_AST_FLOW','pack_id':PY_SQL_PACK,'pack_version':11,
+                   'rule_id':PY_SQL_RULE,'control_mapping':'LEGACY_COMPATIBILITY',**hit}
+            if len(evidence)<MAX_SIGNALS:evidence.append(entry)
+            if len(control_evidence[cid])<MAX_CONTROL_SIGNALS:control_evidence[cid].append(entry)
     if any(x.startswith('android/') or '/android/' in x for x in names) and 'Flutter' in stack:stack.add('Android target')
     if any(x.startswith('ios/') or '/ios/' in x for x in names) and 'Flutter' in stack:stack.add('iOS target')
     # Domain-level rule is only a starting heuristic; control-specific features filter applicability.
@@ -1888,13 +2099,13 @@ def process(root:Path, profile=None, components=()):
             'limitations': ['Text indicators only; no deployed proxy trust, route schema, handler or authorization proof.',
                             'Literal options and app/server receivers only; computed options and aliases need review.'],
         }
-        partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions','path_limited_functions')
+        partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions','path_limited_functions','interprocedural_limited_files','interprocedural_limited_calls')
         summary['python_sql_flow'] = {
-            'pack_id': PY_SQL_PACK, 'pack_version':10, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
+            'pack_id': PY_SQL_PACK, 'pack_version':11, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
             'selected_roots':sorted(python_sql_roots),
-            'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or python_sql_stats['cross_file_receiver_bindings'] or python_sql_stats['cross_file_request_wrappers'] or python_sql_stats['named_path_factory_candidates'] or python_sql_stats['flask_context_factories'] or python_sql_stats['local_row_connection_factories'] or python_sql_stats['literal_replacement_helpers'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
-            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings','cross_file_request_wrappers','try_normal_paths','explicit_finally_paths','builtin_print_paths','named_path_factory_candidates','flask_context_factories','http_method_guard_paths','local_row_connection_factories','json_request_maps','literal_replacement_helpers',*partial_keys)},
-            'limitations':['Bounded local paths, literal loops, dictionary/configuration slots, selected encoding transformations, bounded literal replacement helper summaries (not sanitizers), simple request-holder class summaries, request headers/cookies, one-hop query helpers, sibling and component-root qualified connection factories, nested route bodies, normal try paths and execute/fetch chains; no generic cross-module taint, dynamic import/dispatch, exception semantics or exploit analysis.',
+            'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or python_sql_stats['cross_file_receiver_bindings'] or python_sql_stats['cross_file_request_wrappers'] or python_sql_stats['named_path_factory_candidates'] or python_sql_stats['flask_context_factories'] or python_sql_stats['local_row_connection_factories'] or python_sql_stats['literal_replacement_helpers'] or python_sql_stats['interprocedural_summaries'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
+            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings','cross_file_request_wrappers','try_normal_paths','explicit_finally_paths','builtin_print_paths','named_path_factory_candidates','flask_context_factories','http_method_guard_paths','local_row_connection_factories','json_request_maps','literal_replacement_helpers','interprocedural_summaries','interprocedural_matches',*partial_keys)},
+            'limitations':['Bounded local paths, literal loops, dictionary/configuration slots, selected encoding transformations, bounded literal replacement helper summaries (not sanitizers), simple request-holder class summaries, request headers/cookies, one-hop query helpers, sibling and component-root qualified connection factories, nested route bodies, normal try paths and execute/fetch chains; one-hop selected-component direct-call sink summaries only; no generic cross-module taint, dynamic import/dispatch, exception semantics or exploit analysis.',
                            'Unmodeled statements and imports are not proof of safety; no target code is executed.'],
         }
     return {'summary':summary,'signals':evidence,'controls':result,
