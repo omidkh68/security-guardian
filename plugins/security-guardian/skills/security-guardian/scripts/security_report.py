@@ -112,6 +112,34 @@ def read_evidence(path):
     if path.is_symlink():raise ValueError('Refusing symlinked evidence file')
     return load_json(path)
 
+# Only scanner-owned reason labels may appear in a shareable report. Never
+# copy arbitrary keys, filenames, tool output or project-controlled prose.
+SKIP_REASONS=(
+    'excluded_directory','symlink_directory','depth_limit_directory','file_count_limit',
+    'symlink_or_nonfile','unsupported_file_type','excluded_sensitive_or_lockfile',
+    'unreadable_stat','oversized_file','unreadable_directory','outside_selected_scope',
+    'invalid_source_encoding','unreadable_source',
+)
+
+def coverage_gaps(coverage, signals):
+    skipped=coverage.get('skipped')
+    valid=isinstance(skipped,dict)
+    known={k:count(skipped.get(k,0)) if valid else None for k in SKIP_REASONS}
+    unknown=sum(1 for k in skipped if k not in SKIP_REASONS) if valid else None
+    complete=valid and unknown==0 and all(v is not None for v in known.values())
+    return {
+        'skip_reason_metadata':'RECORDED' if complete else 'PARTIAL_OR_UNRECORDED',
+        'skipped_file_or_directory_events':sum(known.values()) if complete else None,
+        'skipped_outside_scope':known['outside_selected_scope'],
+        'skipped_unreadable_or_invalid':sum(known[k] for k in ('unreadable_stat','unreadable_directory','invalid_source_encoding','unreadable_source'))
+            if all(known[k] is not None for k in ('unreadable_stat','unreadable_directory','invalid_source_encoding','unreadable_source')) else None,
+        'skipped_budget_limit':sum(known[k] for k in ('depth_limit_directory','file_count_limit','oversized_file'))
+            if all(known[k] is not None for k in ('depth_limit_directory','file_count_limit','oversized_file')) else None,
+        'signal_records_omitted_global':count(signals.get('omitted_global')),
+        'signal_records_omitted_per_control':count(signals.get('omitted_per_control')),
+        'optional_tool_execution_evidence':'NOT_AVAILABLE_FROM_SCANNER_SNAPSHOT',
+    }
+
 def build_export(run,ledger,scan,*,view='management',cumulative=False,private_details=False):
     """Project-controlled prose is excluded by construction unless explicitly private."""
     if view not in {'management','technical'}:raise ValueError('Unknown report view')
@@ -222,7 +250,8 @@ def build_export(run,ledger,scan,*,view='management',cumulative=False,private_de
                    'signals_truncated':signals.get('truncated') if type(signals.get('truncated')) is bool else None,
                    'python_ast_status':enum(obj(summary.get('python_sql_flow')).get('status'),('HEURISTIC_REVIEW_ONLY','PARTIAL','NOT_SELECTED','NOT_AVAILABLE')),
                    'controls_with_reviewed_findings':len(assessed),'applicable_controls':None,'assessed_controls':None,'verified_controls':None,
-                   'control_assessment_status':'NOT_AVAILABLE_FROM_TRACKER_SNAPSHOT'},
+                   'control_assessment_status':'NOT_AVAILABLE_FROM_TRACKER_SNAPSHOT',
+                   **coverage_gaps(coverage,signals)},
        'counts':{'findings':len(rows),'residual_findings':sum(severity.values()),'status':dict(sorted(statuses.items())),
                  'residual_severity':dict(sorted(severity.items())),'test_records':len(test_rows),'test_results':dict(sorted(results.items())),
                  'test_evidence_quality':dict(sorted(qualities.items()))},
@@ -232,6 +261,7 @@ def build_export(run,ledger,scan,*,view='management',cumulative=False,private_de
        'limitations':['No compliance or penetration test certification.','Counts are finding/test records, not passed controls or individual test cases.',
                       'A linked manual PASS is reported evidence, not independent execution attestation.',
                       'Unknown or unrecorded scope and coverage remain unknown. Optional tools not evidenced by the snapshot are not assumed to have run.',
+                      'Skipped counts are file or directory events, not a count of unique uninspected files. Global and per-control omissions can overlap; do not add them.',
                       'Recorded project reasons, commands, paths, raw evidence and logs are private by default; displayed reason and action are status-based guidance.',
                       'Crosswalk relationships are from the installed edition, not historical proof of compliance.',
                       'Review even structured summaries before sharing; finding IDs and risk counts can be sensitive.']}
