@@ -141,3 +141,15 @@ flowchart LR
 ```
 
 Tests: handler order, else/finally, nested rethrow, return override, exception binding cleanup, SQLite possible error and parameterized negatives. CI pending; revert bounded scanner change to roll back.
+
+## Post-v12 independent matched evaluation (#111)
+
+Freeze v12 at da83968 (main CI 45823249614 passed) before evaluation. Six external MIT teaching labs, seven matched positive and seven matched negative execute sites; explicit repository revisions, blob identities and route labels fixed before running. Compare frozen v10 and v12 and current on identical source-only inputs. Report imported receiver and local route boundaries separately, parsed-unit and historical no-candidate metrics, unlabeled candidates, partial coverage and timing. No cherry-picking based on execution outcomes; other routes are unlabeled. Source inspection is not blind validation, target applications and tests are never executed, no production accuracy claim. Two offline manifest/metrics tests; run `python scripts/benchmark_final_sql_holdout.py`. Results pending; no #111 closure until misses and acceptance reviewed. Benchmark-only rollback by revert.
+
+```mermaid
+flowchart LR
+ A[Independent author paired route labels] --> B[Pinned raw bytes and license]
+ B --> C[Frozen v10 and v12 and current]
+ C --> D[Paired sink outcomes]
+ C --> E[Partial and parse blocked evidence]
+```

@@ -62,6 +62,9 @@ jobs:
       - name: Measure pinned external SQL boundary cohort (report only)
         if: matrix.python-version == '3.12'
         run: python scripts/benchmark_external_sql_boundaries.py
+      - name: Measure post-v12 independently authored SQL pairs (report only)
+        if: matrix.python-version == '3.12'
+        run: python scripts/benchmark_final_sql_holdout.py
       - name: Verify no tracked secret-like files or generated reports
         run: |
           if git ls-files | grep -E '(^|/)(\.env(\.|$)|\.security-guardian/)|\.(pem|p12|pfx|key)$' ; then
