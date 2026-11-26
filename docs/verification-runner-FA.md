@@ -105,3 +105,16 @@ flowchart LR
  E --> F[Receipt سورس و Config و Finding]
  F --> G[رد شواهد منقضی یا نامرتبط]
 ```
+
+## گیت راستی‌آزمایی Runtime واقعی Flask (#35)
+
+مرحله اجباری Job موجود Python 3.12 در CI نسخه‌های صریحاً ثابت Flask، Jinja، Werkzeug و وابستگی‌های انتقالی را در محیط مجازی موقت نصب و سازگاری وابستگی‌ها را بررسی کرده و نمونه Receipt فریم‌ورک را اجرا می‌کند. تست آفلاین اصلی و نصب محصول بدون وابستگی جدید می‌مانند. Adapter مجاز Python موجود Routing واقعی Flask، Cookie نشست امضاشده، تولید HTML توسط Jinja، وضعیت SQLite در حافظه و Test Client فریم‌ورک (WSGI، نه انتقال شبکه) را آزمایش می‌کند. شش تست بدون تغییر شامل جداسازی Cache خصوصی، خروج و دسترسی ناشناس، Host معتبر، Forwarded Header، عملیات داده مالک/Tenant و موفقیت Cache عمومی هستند. پیش از اصلاح پنج شکست Assertion و یک کنترل مثبت؛ پس از اصلاح هر شش تست موفق. Receipt ناموفق رد می‌شود و Receipt موفق سورس، Manifest وابستگی و بایت‌های ثابت تست را به Finding متصل می‌کند. نسخه‌ها در تست بیرونی بررسی می‌شوند، نه اثبات رمزنگاری وابستگی؛ بدون ترافیک عملیاتی، اعتبارنامه یا تراکنش واقعی. خروج نشست Client را پاک می‌کند، نه ابطال Cookie سرقت‌شده. Runtime واقعی Angular/NestJS و پذیرش تأیید و Rollback باقی‌اند. اجرا: `python -m venv /tmp/sg-framework-fixture`، نصب `scripts/requirements-framework-fixture.txt` با Python همان محیط و اجرای `scripts/test_framework_verification.py -v`. شواهد CI در انتظار؛ بازگشت با Revert تغییر تست و CI.
+
+```mermaid
+flowchart LR
+ A[محیط جدا و نسخه ثابت Flask] --> B[Adapter مجاز Python]
+ B --> C[Routing و نشست امضاشده Flask]
+ C --> D[HTML توسط Jinja و وضعیت SQLite]
+ D --> E[Assertion ثابت قبل و بعد]
+ E --> F[Receipt و Finding و ورودی منتخب]
+```
