@@ -34,7 +34,7 @@ def load():
 
 def validate(d,control_ids,catalog_blob):
     if (type(d['schema_version']) is not int or d['schema_version']!=1
-            or type(d['crosswalk_version']) is not int or d['crosswalk_version']!=1
+            or type(d['crosswalk_version']) is not int or d['crosswalk_version']!=2
             or d['catalog_blob_sha']!=catalog_blob):
         raise ValueError('Catalog or crosswalk version mismatch')
     if d['review_status']!='AUTHOR_REVIEWED_NOT_INDEPENDENTLY_APPROVED':
