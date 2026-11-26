@@ -5,6 +5,8 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Preserve real Python unittest subtest failure-event counts and reject them for verified fixes instead of misclassifying them as blocked execution (#35).
+- Exercise real loopback HTTP owner/tenant authorization with before-failing and after-passing finding-bound receipts (#35).
 - Enforce exposed Python SQL regression outcomes in CI; retain isolated-context misses and bilingual bounded acceptance evidence (#111).
 - Extend Python SQL AST v13 with bounded seeded/Row factory summaries, receiver close invalidation and digest provenance (#111, #129).
 - Extend Python SQL AST v12 with bounded typed exception handlers, nested cleanup/rethrow and possible SQLite error paths (#111, #127).

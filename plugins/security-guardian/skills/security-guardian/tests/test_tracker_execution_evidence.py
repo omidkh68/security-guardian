@@ -325,5 +325,152 @@ class SecurityTests(unittest.TestCase):
         self.assertEqual(git('diff','--binary','--','web/other.py'),unstaged)
         self.assertEqual(file.read_text(),'unstaged user edit\n')
 
+
+    def test_real_loopback_http_authorization_receipt(self):
+        # Test only disposable synthetic state on a kernel-assigned loopback
+        # port. No dependencies, real credentials, external calls or services.
+        source = '''
+import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+SAFE = False
+IDENTITIES = {'fixture-a': ('a','alice'), 'fixture-c': ('a','carol'),
+              'fixture-b': ('b','bob')}
+
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+    def respond(self, status, body):
+        data = json.dumps(body).encode()
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def dispatch(self):
+        actor = IDENTITIES.get(self.headers.get('Authorization', '').removeprefix('Bearer '))
+        if actor is None:
+            return self.respond(401, {'error':'unauthenticated'})
+        key = self.path.removeprefix('/records/')
+        row = self.server.records.get(key)
+        tenant = actor[0] if SAFE else self.headers.get('X-Tenant', actor[0])
+        if row is None or row['tenant'] != tenant or (SAFE and row['owner'] != actor[1]):
+            return self.respond(404, {'error':'not found'})
+        if self.command == 'PATCH':
+            self.server.records[key]['value'] = 'updated'
+        if self.command == 'DELETE':
+            del self.server.records[key]
+            return self.respond(200, {'deleted':True})
+        return self.respond(200, row)
+
+    do_GET = do_PATCH = do_DELETE = dispatch
+
+def create_server():
+    server = HTTPServer(('127.0.0.1', 0), Handler)
+    server.records = {
+        'a1': {'tenant':'a','owner':'alice','value':'alice-private'},
+        'b1': {'tenant':'b','owner':'bob','value':'bob-private'},
+    }
+    return server
+'''
+        test = '''
+import json, threading, unittest
+from http.client import HTTPConnection
+from app import create_server
+
+class HTTPBoundaryTests(unittest.TestCase):
+    def setUp(self):
+        self.server = create_server()
+        self.addCleanup(self.server.server_close)
+        self.thread = threading.Thread(target=self.server.serve_forever,
+                                       kwargs={'poll_interval':0.01}, daemon=True)
+        self.thread.start()
+        self.addCleanup(self.thread.join, 2)
+        self.addCleanup(self.server.shutdown)
+
+    def request(self, method, record, token=None, tenant=None):
+        conn = HTTPConnection('127.0.0.1', self.server.server_port, timeout=2)
+        try:
+            headers = {}
+            if token is not None:
+                headers['Authorization'] = 'Bearer ' + token
+            if tenant is not None:
+                headers['X-Tenant'] = tenant
+            conn.request(method, '/records/' + record, headers=headers)
+            response = conn.getresponse()
+            return response.status, json.loads(response.read())
+        finally:
+            conn.close()
+
+    def test_denied_matrix_and_no_state_change(self):
+        for method in ('GET','PATCH','DELETE'):
+            for token, record, tenant, status in (
+                (None,'a1',None,401),
+                ('invalid','a1',None,401),
+                ('fixture-c','a1',None,404),
+                ('fixture-a','b1',None,404),
+                ('fixture-b','a1',None,404),
+                ('fixture-a','b1','b',404),
+                ('fixture-b','a1','a',404),
+                ('fixture-a','missing',None,404),
+            ):
+                with self.subTest(method=method, token=token, record=record, tenant=tenant):
+                    code, body = self.request(method,record,token,tenant)
+                    self.assertEqual(code,status)
+                    self.assertNotIn('value',body)
+        self.assertEqual(self.request('GET','a1','fixture-a'),
+                         (200,{'tenant':'a','owner':'alice','value':'alice-private'}))
+        self.assertEqual(self.request('GET','b1','fixture-b'),
+                         (200,{'tenant':'b','owner':'bob','value':'bob-private'}))
+
+    def test_owner_operations_remain_functional(self):
+        for token, record in (('fixture-a','a1'),('fixture-b','b1')):
+            self.assertEqual(self.request('GET',record,token)[0],200)
+            self.assertEqual(self.request('PATCH',record,token)[1]['value'],'updated')
+            self.assertEqual(self.request('GET',record,token)[1]['value'],'updated')
+            self.assertEqual(self.request('DELETE',record,token),(200,{'deleted':True}))
+            self.assertEqual(self.request('GET',record,token)[0],404)
+'''
+        src = self.api/'app.py'
+        fixture = self.api/'test_security.py'
+        src.write_text(source)
+        fixture.write_text(test)
+        test_bytes = fixture.read_bytes()
+        finding = {**self.finding, 'finding_key':'loopback-http-owner-boundary',
+                   'title':'Synthetic HTTP owner authorization boundary',
+                   'fix':{'summary':'Use authenticated tenant and owner, ignore tenant override',
+                          'files':['api/app.py']}}
+        ident = self.call('record','--run',self.run_id,payload=finding)['finding_ids'][0]
+        before = self.execute(finding=ident,extra=('--timeout','15'))
+        red = self.run_data()['tests'][-1]['execution_receipt']
+        self.assertEqual(before['result'],'FAIL', {k:red.get(k) for k in
+                         ('result','execution_result','exit_code','counts','elapsed_ms','output_bytes')})
+        self.assertEqual(red['counts']['tests_run'],2)
+        self.assertGreater(red['counts']['failures'],red['counts']['tests_run'])
+        self.assertEqual(red['counts']['errors'],0)
+        verification = {'executed':True,'result':'PASS','test_id':before['test_id'],
+                        'evidence':['loopback HTTP regression'],
+                        'security_assertion_review':'Reviewed HTTP denial, no mutation and owner success.'}
+        self.call('record','--run',self.run_id,payload={**finding,'id':ident,
+                  'status':'VERIFIED_FIXED','verification':verification},expected=2)
+        src.write_text(source.replace('SAFE = False','SAFE = True'))
+        after = self.execute(finding=ident,extra=('--timeout','15'))
+        self.assertEqual(after['result'],'PASS')
+        green = self.run_data()['tests'][-1]['execution_receipt']
+        self.assertEqual(green['counts']['tests_run'],2)
+        self.assertEqual(green['counts']['failures'],0)
+        self.assertEqual(green['counts']['errors'],0)
+        self.assertEqual(fixture.read_bytes(),test_bytes)
+        self.assertNotEqual(red['fingerprint_before']['digest'],green['fingerprint_before']['digest'])
+        self.assertEqual(green['fingerprint_before'],green['fingerprint_after'])
+        self.assertFalse(green['independently_verified_fix'])
+        self.call('record','--run',self.run_id,payload={**finding,'id':ident,
+                  'status':'VERIFIED_FIXED',
+                  'verification':{**verification,'test_id':after['test_id']}})
+        self.assertEqual((self.other/'other.py').read_text(),'pass\n')
+
+
 if __name__ == '__main__':
     unittest.main()

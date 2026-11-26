@@ -69,3 +69,24 @@ Before local execution and before accepting a PASS receipt, rediscover the compo
 ## CI deadline regression (#111 prerequisite / #35)
 
 Main CI run 45792838058 returned TIMEOUT instead of PASS in the Node receipt test with an explicit 5-second budget. The log does not establish whether the worker was slow or stuck. The Python CI matrix now explicitly selects Node 24 and records runtime versions. Functional receipt tests use the documented 15-second default; a separate intentionally slow Node fixture must return TIMEOUT under an explicit one-second deadline and its receipt must be rejected for VERIFIED_FIXED. There is no change to the production runner's deadline, maximum, result classification, or authorization. No automatic retry of passing assertions. Diagnostic messages contain only synthetic receipt metadata. CI evidence pending.
+
+## Loopback HTTP authorization acceptance fixture (#35)
+
+The Python adapter executes an unchanged test module against a disposable standard-library HTTP server bound exclusively to 127.0.0.1 on an OS-assigned port. Three synthetic identities span two tenants. GET/PATCH/DELETE requests cover missing/invalid credentials, same-tenant nonowner, cross-tenant access in both directions, forged tenant headers, nonexistent records, and successful owner operations. Denied requests must not disclose values or change state. The insecure fixture must fail assertions (not infrastructure errors); only the reviewed synthetic authorization policy changes, and the same tests must then pass. A failed receipt cannot establish VERIFIED_FIXED; the passing receipt binds the changed source digest and unchanged test input to the same finding, with explicit assertion review.
+
+```mermaid
+flowchart LR
+ A[Authorized local runner] --> B[Loopback HTTP fixture]
+ B --> C[Two tenants and three identities]
+ C --> D[Denial and state checks]
+ C --> E[Owner success checks]
+ D --> F[Before and after receipts]
+ E --> F
+ F --> G[Explicit finding review]
+```
+
+Run the existing offline unittest suite. No new runtime dependency or runner permission; rollback by reverting the fixture/docs increment. This exercises actual HTTP transport, not NestJS, Angular SSR, production authentication, a real database, or cryptographic credential validation. Fixture evidence does not certify arbitrary customer applications. CI evidence pending.
+
+### Python subtest outcome accounting (#35)
+
+CI #222 (45829434169) failed on all three Python versions because the HTTP matrix produced multiple failed `unittest.subTest()` events within one test method. `tests_run` counts started test methods; `failures` counts failure events and can legitimately exceed it. The adapter now preserves these counts and classifies exit 1 with failures as FAIL rather than BLOCKED. Malformed, negative/non-integer counts and inconsistent exit outcomes still fail closed; a PASS still requires nonzero tests and zero failure/error/skip/expected-failure/unexpected-success counts. Node's fixed worker retains its separate count validation. A focused regression checks three failed subtests in one method, successful subtests, bounded sanitized receipts and unchanged fingerprints; the HTTP fixture additionally requires multiple actual failure events. No assertion, test, permission or timeout removed. CI confirmation pending.
