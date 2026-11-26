@@ -138,3 +138,17 @@ A passing local receipt must also carry a matching PASS execution_result, exact 
 ## Actionable unverified finding and approval boundary (#35)
 
 New FIXED_UNVERIFIED records without a next action receive explicit guidance to run authorized finding-specific regression and review evidence or blocker; supplied actions are preserved. The controlled remediation workflow specifies approval scope, before/after fingerprints, private diff and rollback references. No patch execution or automatic approval by the tracker. NestJS fixture, machine-checkable approval/rollback evidence and end-to-end acceptance remain open. CI pending.
+
+## Remediation approval, diff and rollback receipts (#35)
+
+In an explicitly scoped `fix` run record a CONFIRMED_OPEN finding. Obtain specific owner approval, then run `security_tracker.py prepare-fix --run RUN --finding-id FINDING --file api/app.py --risk HIGH --approver owner --approval-ref approved-ticket --change-summary 'Scoped change' --rollback-plan 'Reverse reviewed patch'`. This records private pre-edit Git/selected-file evidence; it does not grant or execute a patch. Apply only the approved change after checking ownership. Run `review-fix --run RUN --plan-id PLAN` and include `risk_class`, exact `files`, and `remediation_plan_id` in the fix object. Before fixed status, the tracker requires the reviewed matching receipt and unchanged evidence. For rollback, manually reverse only the reviewed change and use `review-fix --rollback --run RUN --plan-id PLAN`; it checks the pre-edit state, never edits files. Reassess/reopen the finding. Existing unstructured manual records remain compatible and do not prove approval. All declared plans require approval metadata; the workflow must not omit required high-risk classification. The bounded local contract checks existing tracked files, no overlapping changes, HEAD, index, unrelated tracked and nonignored untracked contents; ignored files and hostile filesystem actors are outside scope. No cryptographic approval attestation, arbitrary patch execution or production action. Regression fixtures use a disposable Git checkout with staged, unstaged and untracked user edits and before/after security tests. CI pending.
+
+```mermaid
+flowchart LR
+ A[Explicit owner approval] --> B[Prepare private pre-edit receipt]
+ B --> C[Owner applies scoped patch]
+ C --> D[Review Git and file fingerprints]
+ D --> E[Authorized regression receipt]
+ E --> F[Explicit verified record]
+ D --> G[Manual rollback and pre-state check]
+```
