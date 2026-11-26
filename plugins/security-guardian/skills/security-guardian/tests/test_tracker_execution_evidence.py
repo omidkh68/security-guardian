@@ -472,5 +472,211 @@ class HTTPBoundaryTests(unittest.TestCase):
         self.assertEqual((self.other/'other.py').read_text(),'pass\n')
 
 
+
+    @unittest.skipUnless(shutil.which('node'), 'Node runtime unavailable')
+    def test_ssr_http_cache_and_proxy_boundary_receipts(self):
+        version = subprocess.check_output(['node','--version'],text=True).strip()
+        if not version.startswith(('v22.','v24.')):
+            self.skipTest('Node 22 or 24 required')
+        # Real HTTP response rendering, synthetic identities only. No browser,
+        # Angular dependency, external proxy or production traffic.
+        source = '''
+import {createServer} from 'node:http';
+import {readFileSync} from 'node:fs';
+const config = JSON.parse(readFileSync(new URL('./ssr-config.json', import.meta.url), 'utf8'));
+const SAFE = false;
+const users = new Map([['session-a','alice-private'], ['session-b','bob-private']]);
+export function makeServer() {
+    const cache = new Map();
+    return createServer((req, res) => {
+        const host = req.headers.host;
+        const canonical = SAFE ? config.host : (req.headers['x-forwarded-host'] || host);
+        const scheme = SAFE ? 'https' : (req.headers['x-forwarded-proto'] || 'https');
+        const send = (status, body, policy) => {
+            res.writeHead(status, {'content-type':'text/html; charset=utf-8',
+                                   'cache-control':policy});
+            res.end(body);
+        };
+        if (SAFE && host !== config.host)
+            return send(400, 'Invalid host', 'no-store');
+        if (req.url !== '/account' && req.url !== '/public')
+            return send(404, 'Not found', 'no-store');
+        const token = req.headers.authorization?.replace(/^Bearer /, '') ||
+                      req.headers.cookie?.match(/^sid=([a-z-]+)$/)?.[1];
+        const user = users.get(token);
+        if (SAFE && req.url === '/account' && !user)
+            return send(401, 'Sign in', 'private, no-store');
+        const publicRoute = req.url === '/public';
+        const cacheable = !SAFE || publicRoute;
+        const key = SAFE ? config.host + req.url : req.url;
+        if (cacheable && cache.has(key))
+            return send(200, cache.get(key), 'public, max-age=60');
+        const content = publicRoute ? 'Public page' : (user || 'Sign in');
+        const html = '<html><head><link rel="canonical" href="' +
+                     scheme + '://' + canonical + req.url +
+                     '"></head><body>' + content + '</body></html>';
+        if (cacheable) cache.set(key, html);
+        return send(200, html, cacheable ? 'public, max-age=60' : 'private, no-store');
+    });
+}
+'''
+        test = '''
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {request} from 'node:http';
+import {once} from 'node:events';
+import {makeServer} from './ssr.mjs';
+
+async function fixture(t) {
+    const server = makeServer();
+    server.listen(0, '127.0.0.1');
+    t.after(async () => {
+        const closed = once(server, 'close');
+        server.close();
+        server.closeAllConnections();
+        await closed;
+    });
+    await once(server, 'listening');
+    return (path, headers = {}) => new Promise((resolve, reject) => {
+        const req = request({hostname:'127.0.0.1', port:server.address().port,
+            path, headers:{host:'app.example.test', ...headers}, agent:false}, res => {
+            let body = '';
+            res.setEncoding('utf8');
+            res.on('data', chunk => body += chunk);
+            res.on('end', () => resolve({status:res.statusCode, headers:res.headers, body}));
+            res.on('error', reject);
+        });
+        req.setTimeout(2000, () => req.destroy(new Error('fixture timeout')));
+        req.on('error', reject);
+        req.end();
+    });
+}
+
+test('private HTML never crosses identities or survives logout', async t => {
+    const get = await fixture(t);
+    for (const [auth, own, other] of [
+        [{cookie:'sid=session-a'},'alice-private','bob-private'],
+        [{authorization:'Bearer session-b'},'bob-private','alice-private'],
+        [{authorization:'Bearer session-a'},'alice-private','bob-private'],
+    ]) {
+        const r = await get('/account', auth);
+        assert.equal(r.status, 200);
+        assert.ok(r.body.includes(own));
+        assert.ok(!r.body.includes(other));
+        assert.match(r.headers['cache-control'], /no-store/);
+        assert.ok(!r.headers['cache-control'].includes('public'));
+        assert.ok(!r.body.includes('session-a') && !r.body.includes('session-b'));
+    }
+    for (const auth of [{}, {cookie:'sid=invalid'}, {authorization:'Bearer invalid'}]) {
+        const r = await get('/account', auth);
+        assert.equal(r.status, 401);
+        assert.match(r.headers['cache-control'], /no-store/);
+        assert.ok(!r.body.includes('alice-private') && !r.body.includes('bob-private'));
+    }
+});
+
+test('untrusted Host cannot populate canonical HTML or shared cache', async t => {
+    const get = await fixture(t);
+    const r = await get('/public', {host:'invalid.example.test'});
+    assert.equal(r.status, 400);
+    assert.match(r.headers['cache-control'], /no-store/);
+    assert.ok(!r.body.includes('invalid.example.test'));
+    const next = await get('/public');
+    assert.equal(next.status, 200);
+    assert.ok(next.body.includes('https://app.example.test/public'));
+});
+
+test('forwarded host, scheme and tenant headers cannot alter trust', async t => {
+    const get = await fixture(t);
+    const r = await get('/account', {cookie:'sid=session-a',
+        'x-forwarded-host':'invalid.example.test', 'x-forwarded-proto':'http',
+        'x-tenant':'b', forwarded:'host=invalid.example.test;proto=http'});
+    assert.equal(r.status, 200);
+    assert.ok(r.body.includes('https://app.example.test/account'));
+    assert.ok(r.body.includes('alice-private'));
+    assert.ok(!r.body.includes('bob-private') && !r.body.includes('invalid.example.test'));
+    assert.ok(!r.body.includes('session-a'));
+});
+
+test('public caching still works without private data', async t => {
+    const get = await fixture(t);
+    const a = await get('/public', {cookie:'sid=session-a'});
+    const b = await get('/public', {authorization:'Bearer session-b'});
+    const anonymous = await get('/public');
+    for (const r of [a,b,anonymous]) {
+        assert.equal(r.status,200);
+        assert.match(r.headers['cache-control'], /public/);
+        assert.ok(!/alice-private|bob-private|session-[ab]/.test(r.body));
+        assert.equal(r.body,a.body);
+    }
+});
+'''
+        src = self.other/'ssr.mjs'
+        fixture = self.other/'ssr.test.mjs'
+        config = self.other/'ssr-config.json'
+        src.write_text(source)
+        fixture.write_text(test)
+        config.write_text('{"host":"app.example.test"}\n')
+        test_bytes = fixture.read_bytes()
+        config_bytes = config.read_bytes()
+        run = self.call('begin','--mode','verify','--profile','custom',
+                        '--component','web')['run_id']
+        finding = {'control_id':'ANG-06','finding_key':'synthetic-ssr-cache-boundary',
+                   'title':'Synthetic SSR host and private cache boundary',
+                   'location':'web/ssr.mjs:1','severity':'HIGH','status':'FIXED_UNVERIFIED',
+                   'reason':'Synthetic local SSR fixture',
+                   'fix':{'summary':'Enforce canonical host and prohibit private shared cache',
+                          'files':['web/ssr.mjs']}}
+        ident = self.call('record','--run',run,payload=finding)['finding_ids'][0]
+        cmd = ['run-test','--run',run,'--finding-id',ident,
+               '--adapter','node-test-v1','--test-file','web/ssr.test.mjs',
+               '--file','web/ssr.mjs','--file','web/ssr.test.mjs',
+               '--file','web/ssr-config.json','--timeout','15','--authorize-local-test']
+        def receipt():
+            index = json.loads((self.root/'.security-guardian/index.json').read_text())
+            return next(x for x in index['runs'] if x['id']==run)['tests'][-1]['execution_receipt']
+        before = self.call(*cmd)
+        red = receipt()
+        self.assertEqual(before['result'],'FAIL', {k:red.get(k) for k in
+                         ('result','counts','exit_code','elapsed_ms')})
+        self.assertEqual(red['counts']['tests_run'],4)
+        self.assertEqual(red['counts']['failures'],3)
+        self.assertEqual(red['counts']['errors'],0)
+        self.assertEqual(red['fingerprint_before'],red['fingerprint_after'])
+        verification = {'executed':True,'result':'PASS','test_id':before['test_id'],
+                        'evidence':['Local synthetic SSR HTTP regression'],
+                        'security_assertion_review':'Reviewed private cache, host, proxy and public HTML assertions.'}
+        self.call('record','--run',run,payload={**finding,'id':ident,
+                  'status':'VERIFIED_FIXED','verification':verification},expected=2)
+        src.write_text(source.replace('const SAFE = false','const SAFE = true'))
+        after = self.call(*cmd)
+        green = receipt()
+        self.assertEqual(after['result'],'PASS', {k:green.get(k) for k in
+                         ('result','counts','exit_code','elapsed_ms')})
+        self.assertEqual(green['counts']['tests_run'],4)
+        self.assertEqual(green['counts']['failures'],0)
+        self.assertEqual(green['counts']['errors'],0)
+        self.assertEqual(green['node_version'],version)
+        self.assertEqual(green['fingerprint_before'],green['fingerprint_after'])
+        self.assertNotEqual(red['fingerprint_before']['digest'],green['fingerprint_before']['digest'])
+        self.assertEqual(fixture.read_bytes(),test_bytes)
+        self.assertEqual(config.read_bytes(),config_bytes)
+        self.assertFalse(green['independently_verified_fix'])
+        # Config drift invalidates an otherwise passing receipt.
+        config.write_bytes(config_bytes+b'\n')
+        self.call('record','--run',run,payload={**finding,'id':ident,
+                  'status':'VERIFIED_FIXED',
+                  'verification':{**verification,'test_id':after['test_id']}},expected=2)
+        self.call(*cmd,'--file','api/app.py',expected=2)
+        refreshed = self.call(*cmd)
+        self.assertEqual(refreshed['result'],'PASS')
+        self.call('record','--run',run,payload={**finding,'id':ident,
+                  'status':'VERIFIED_FIXED',
+                  'verification':{**verification,'test_id':refreshed['test_id']}})
+        self.assertEqual(fixture.read_bytes(),test_bytes)
+        self.assertEqual((self.api/'app.py').read_text(),
+                         "def accepts_update(fields): return set(fields) <= {'display_name'}\n")
+
+
 if __name__ == '__main__':
     unittest.main()

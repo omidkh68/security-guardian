@@ -90,3 +90,18 @@ Run the existing offline unittest suite. No new runtime dependency or runner per
 ### Python subtest outcome accounting (#35)
 
 CI #222 (45829434169) failed on all three Python versions because the HTTP matrix produced multiple failed `unittest.subTest()` events within one test method. `tests_run` counts started test methods; `failures` counts failure events and can legitimately exceed it. The adapter now preserves these counts and classifies exit 1 with failures as FAIL rather than BLOCKED. Malformed, negative/non-integer counts and inconsistent exit outcomes still fail closed; a PASS still requires nonzero tests and zero failure/error/skip/expected-failure/unexpected-success counts. Node's fixed worker retains its separate count validation. A focused regression checks three failed subtests in one method, successful subtests, bounded sanitized receipts and unchanged fingerprints; the HTTP fixture additionally requires multiple actual failure events. No assertion, test, permission or timeout removed. CI confirmation pending.
+
+## SSR HTTP response and shared-cache fixture (ANG-06, #35)
+
+Node 22/24 adapter executes unchanged node:test assertions against a disposable loopback HTTP server rendering HTML. Two synthetic authenticated identities and anonymous requests exercise private cache isolation, invalid sessions, cookie/Authorization handling, logout-equivalent anonymous access, hostile Host/forwarded headers, canonical URL and public cache behavior. Three assertions must fail on the deliberately insecure fixture while the public-route control remains passing; after the bounded fixture policy change all four must pass. Failed and stale config-bound receipts cannot verify a fix; cross-component inputs rejected. The source, config and test are explicitly fingerprinted; no target project files or permissions changed. The fixture uses standard Node HTTP rendering, not Angular/React framework runtime, a deployed reverse proxy, browser cache or real session invalidation. Real framework integration and remediation approval/rollback evidence remain open. No external network or new dependencies. CI pending.
+
+```mermaid
+flowchart LR
+ A[Authorized Node adapter] --> B[Loopback HTML renderer]
+ B --> C[Private and public cache boundaries]
+ B --> D[Host and forwarded header trust]
+ C --> E[Unchanged red and green tests]
+ D --> E
+ E --> F[Source config and finding receipt]
+ F --> G[Reject stale or unrelated evidence]
+```
