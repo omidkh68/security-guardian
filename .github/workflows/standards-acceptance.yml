@@ -1,0 +1,112 @@
+name: Standards acceptance evidence
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/standards-acceptance.yml'
+      - 'scripts/standards_inventory.py'
+      - 'scripts/test_standards_batch.py'
+      - 'scripts/verify_sbom_preview.py'
+      - 'plugins/security-guardian/skills/security-guardian/**'
+      - 'package.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inventories-and-formats:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Inventory pinned publisher sources
+        run: |
+          set -euo pipefail
+          python scripts/standards_inventory.py > "$RUNNER_TEMP/standards-inventory.json"
+          python - "$RUNNER_TEMP/standards-inventory.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          for k,v in d['standards'].items():
+              print(k, {x:v[x] for x in ('total','partial','unmapped','crosswalk_ids_outside_inventory')})
+          print('WSTG publisher duplicate IDs:',d['standards']['WSTG']['publisher_duplicate_ids'])
+          PY
+      - name: Validate SARIF and CVSS against official schema and examples
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/sg-standards"
+          PY="$RUNNER_TEMP/sg-standards/bin/python"
+          "$PY" -m pip install 'cvss==3.6' 'jsonschema==4.25.1'
+          "$PY" - "$RUNNER_TEMP/sarif-schema.json" <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0,'scripts')
+          from verify_standards_sources import fetch,s
+          raw=fetch('https://raw.githubusercontent.com/oasis-tcs/sarif-spec/1742a253eb654bf8a4ed7c60eaef7412b2c23553/sarif-2.1/schema/sarif-schema-2.1.0.json',8_000_000)
+          assert s.git_blob(raw)=='0f58372b548f60c84d20fca77687435e71b3b3a3'
+          Path(sys.argv[1]).write_bytes(raw)
+          PY
+          SG_EXTERNAL_STANDARDS_TEST=1 SG_SARIF_SCHEMA="$RUNNER_TEMP/sarif-schema.json" "$PY" -m unittest discover -s scripts -p test_standards_batch.py -v
+      - name: Build exact private preview and validate SPDX and CycloneDX SBOMs
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/sg-preview"
+          mkdir -p "$dir"
+          npm pack --ignore-scripts --pack-destination "$dir" --json > "$dir/pack.json"
+          file="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))[0]["filename"])' "$dir/pack.json")"
+          mv "$dir/$file" "$dir/preview.tgz"
+          tar -xzf "$dir/preview.tgz" -C "$dir"
+          (
+            cd "$dir/package"
+            npm install --package-lock-only --ignore-scripts --offline --no-audit --no-fund
+            npm sbom --package-lock-only --sbom-format=spdx > "$dir/spdx-sbom.json"
+            npm sbom --package-lock-only --sbom-format=cyclonedx > "$dir/cyclonedx-sbom.json"
+          )
+          "$RUNNER_TEMP/sg-standards/bin/python" scripts/verify_sbom_preview.py "$dir" | tee "$dir/sbom-evidence.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: standards-preview-evidence
+          path: |
+            ${{ runner.temp }}/standards-inventory.json
+            ${{ runner.temp }}/sg-preview/preview.tgz
+            ${{ runner.temp }}/sg-preview/spdx-sbom.json
+            ${{ runner.temp }}/sg-preview/cyclonedx-sbom.json
+            ${{ runner.temp }}/sg-preview/sbom-evidence.json
+          if-no-files-found: error
+          retention-days: 7
+  scorecard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Run pinned OpenSSF Scorecard against base revision
+        env:
+          GITHUB_AUTH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl --fail --silent --show-error --location --max-time 90 -o scorecard.tar.gz https://github.com/ossf/scorecard/releases/download/v5.7.0/scorecard_5.7.0_linux_amd64.tar.gz
+          echo '3b08ec0a8681806c3e744ec9210742a502c7d66f06f25523b70f7128738235d3  scorecard.tar.gz' | sha256sum --check
+          tar -xzf scorecard.tar.gz scorecard
+          ./scorecard --repo="github.com/$REPOSITORY" --commit="$BASE_SHA" --format=json --show-details > scorecard.json
+          python - <<'PY'
+          import json,os
+          d=json.load(open('scorecard.json'))
+          assert d['repo']['commit']==os.environ['BASE_SHA']
+          assert d['checks']
+          for check in d['checks']: print(check['name'],check['score'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scorecard-base-revision
+          path: ${{ runner.temp }}/scorecard.json
+          if-no-files-found: error
+          retention-days: 7
