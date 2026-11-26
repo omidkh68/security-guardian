@@ -1,6 +1,6 @@
 """Prevent accidental drift between English and complete Persian README.
 
-Executable snippets and external/resource links are deliberately identical.
+Executable snippets and external links are identical; paired local guides may be localized.
 Mermaid labels are translated while its graph edges remain unchanged.
 This test skips in standalone Skill installations without the repository docs.
 """
@@ -43,7 +43,14 @@ class ReadmeParityTests(unittest.TestCase):
     def test_all_documentation_links_preserved(self):
         en_links = {link for link in LINK.findall(self.en) if not link.startswith('#')}
         fa_links = {link for link in LINK.findall(self.fa) if not link.startswith('#')}
-        self.assertTrue(en_links.issubset(fa_links), en_links - fa_links)
+        def counterpart(link):
+            if link.endswith('.md') and not link.startswith(('https://','http://','mailto:')):
+                paired=link[:-3]+'-FA.md'
+                if (ROOT / paired).is_file():
+                    return paired
+            return link
+        missing={link for link in en_links if link not in fa_links and counterpart(link) not in fa_links}
+        self.assertFalse(missing, missing)
         for link in en_links | fa_links:
             if (not link.startswith(('#','https://','http://','mailto:'))
                     and not link.startswith('data:')):
