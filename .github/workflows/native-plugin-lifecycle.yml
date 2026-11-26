@@ -1,0 +1,68 @@
+name: Native Claude plugin lifecycle
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/native-plugin-lifecycle.yml'
+      - '.claude-plugin/**'
+      - 'plugins/security-guardian/**'
+      - 'scripts/verify_plugin.sh'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  claude-plugin-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Validate and install local marketplace in disposable offline home
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d "$RUNNER_TEMP/sg-claude-XXXXXX")"
+          trap 'rm -rf -- "$root"' EXIT
+          mkdir -p "$root/home" "$root/config" "$root/app"
+          npm install --prefix "$root/tools" --no-audit --no-fund --save-exact @anthropic-ai/claude-code@2.1.325
+          cli="$root/tools/node_modules/.bin/claude"
+          test -x "$cli"
+          # Every CLI operation below has no outbound network, account or inherited credentials.
+          offline() {
+            sudo unshare --net -- setpriv --reuid "$(id -u)" --regid "$(id -g)" --clear-groups env -i PATH="$root/tools/node_modules/.bin:$PATH" HOME="$root/home" CLAUDE_CONFIG_DIR="$root/config" CI=true DISABLE_TELEMETRY=1 timeout 90 "$@"
+          }
+          offline "$cli" --version
+          offline bash "$GITHUB_WORKSPACE/scripts/verify_plugin.sh"
+          cd "$root/app"
+          printf 'export const example = 1;\n' > app.js
+          before="$(sha256sum app.js)"
+          plugin=security-guardian@security-guardian-marketplace
+          offline "$cli" plugin marketplace add "$GITHUB_WORKSPACE" --json > "$root/marketplace.json"
+          offline "$cli" plugin install "$plugin" --scope user --json > "$root/install.json"
+          offline "$cli" plugin list --json > "$root/list.json"
+          python3 - "$root" "$plugin" <<'PY'
+          import json, sys
+          from pathlib import Path
+          root=Path(sys.argv[1])
+          plugin=sys.argv[2]
+          for name in ('marketplace','install'):
+              assert json.loads((root/(name+'.json')).read_text().splitlines()[-1])['outcome']=='ok'
+          data=json.loads((root/'list.json').read_text())
+          assert plugin in json.dumps(data), 'Installed plugin missing from actual CLI listing'
+          PY
+          offline "$cli" plugin uninstall "$plugin" --scope user --json > "$root/uninstall.json"
+          offline "$cli" plugin list --json > "$root/after.json"
+          python3 - "$root" "$plugin" <<'PY'
+          import json,sys
+          from pathlib import Path
+          root=Path(sys.argv[1])
+          assert json.loads((root/'uninstall.json').read_text().splitlines()[-1])['outcome']=='ok'
+          assert sys.argv[2] not in json.dumps(json.loads((root/'after.json').read_text()))
+          PY
+          test "$(sha256sum app.js)" = "$before"
+          test ! -e .security-guardian
+          echo 'NATIVE_STATIC_VALIDATION_AND_LOCAL_MARKETPLACE_LIFECYCLE=PASS'
+          echo 'AUTHENTICATED_AUDIT_VERIFY_AND_MODEL_LOADER=NOT_RUN'
