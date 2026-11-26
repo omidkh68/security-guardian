@@ -42,3 +42,7 @@ flowchart TD
 ```
 
 Official references: [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html), [FIRST examples](https://www.first.org/cvss/v4.0/examples), [SPDX 2.3](https://spdx.github.io/spdx-spec/v2.3/), [CycloneDX 1.5](https://cyclonedx.org/docs/1.5/json/), [npm SBOM](https://docs.npmjs.com/cli/commands/npm-sbom/), [Scorecard v5.7.0](https://github.com/ossf/scorecard/releases/tag/v5.7.0), [artifact attestation verification](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations). The schema Git blobs and tool pins are in the implementation and workflow. No standards prose is bundled. Report actual run results; a workflow definition alone is not execution proof.
+
+## Preview provenance execution and action pins
+
+The provenance workflow also triggers on a change to its own file merged into main, with no PR execution or package publication. Verify the signed preview using the expected repository, signer workflow, main source ref and exact source digest; the signature result must be a nonempty JSON list. Both new standards workflows pin their actions to exact commits. This improves the new workflow supply chain only; the repository-wide Scorecard findings, including older unpinned actions, still require review. Do not claim a SLSA level or final release provenance.
