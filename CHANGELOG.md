@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Require real Angular platform-server SSR runtime receipt fixture in isolated CI (#35, ANG-06).
 - Require isolated real Flask/Jinja/SQLite framework receipt verification in Python 3.12 CI, without adding product dependencies (#35).
 - Add finding-bound Node SSR HTTP cache/host regression fixture with stale config and scope rejection (#35, ANG-06).
 - Preserve real Python unittest subtest failure-event counts and reject them for verified fixes instead of misclassifying them as blocked execution (#35).

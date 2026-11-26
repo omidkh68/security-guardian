@@ -118,3 +118,15 @@ flowchart LR
  D --> E[Unchanged red and green assertions]
  E --> F[Finding and selected input receipt]
 ```
+
+## Real Angular SSR runtime gate (#35, ANG-06)
+
+The required Python 3.12 CI step installs exact direct Angular 20.3.34 dependencies in a disposable directory, with lifecycle scripts disabled. The existing Node 24 adapter runs real Angular JIT standalone `renderApplication` with a separate `BootstrapContext` and request-specific injection provider, zoneless change detection, and loopback HTTP. Five tests cover parallel independent injectors and rendered HTML, private cache/anonymous isolation, Host validation, untrusted forwarded headers and public cache positive control. Expected before: three failed tests and two positive controls; after: five passing tests on unchanged fixture. Source, test, manifest and generated npm lockfile are fingerprinted; versions checked against direct dependency manifest. The lockfile is generated in CI rather than committed; transitive versions may change between runs, and no dependency attestation is claimed. Only disposable synthetic policy changes; no product dependency or permissions changed. This is the Angular platform-server runtime, not Angular CLI AOT, @angular/ssr routing, hydration, a production proxy or real authentication. Run the CI command with a fresh temporary directory; revert fixture/CI increment to roll back. NestJS and approval/rollback acceptance remain open. CI pending.
+
+```mermaid
+flowchart LR
+ A[Authorized Node adapter] --> B[Angular renderApplication]
+ B --> C[Separate BootstrapContext and DI]
+ C --> D[HTTP HTML cache and host checks]
+ D --> E[Before and after finding receipts]
+```

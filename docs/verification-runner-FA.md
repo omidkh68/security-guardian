@@ -118,3 +118,15 @@ flowchart LR
  D --> E[Assertion ثابت قبل و بعد]
  E --> F[Receipt و Finding و ورودی منتخب]
 ```
+
+## گیت Runtime واقعی Angular SSR (#35، ANG-06)
+
+مرحله اجباری Python 3.12 در CI وابستگی‌های مستقیم Angular 20.3.34 با نسخه دقیق را در مسیر موقت و با Lifecycle Script غیرفعال نصب می‌کند. Adapter موجود Node 24، `renderApplication` واقعی Standalone JIT انگولار را با `BootstrapContext` جدا و Provider تزریق مختص درخواست، Change Detection بدون Zone و HTTP روی Loopback اجرا می‌کند. پنج تست شامل Injector مستقل هم‌زمان و HTML واقعی، جداسازی Cache خصوصی و ناشناس، Host، Forwarded Header غیرقابل اعتماد و کنترل مثبت Cache عمومی است. هدف قبل: سه شکست و دو کنترل مثبت؛ بعد: پنج موفقیت با تست ثابت. سورس، تست، Manifest و Lockfile تولیدشده npm Fingerprint می‌شوند؛ نسخه مستقیم بررسی می‌شود. Lockfile در CI تولید می‌شود و در مخزن ثابت نشده؛ نسخه‌های انتقالی می‌توانند بین اجراها تغییر کنند و اثبات اصالت وابستگی ادعا نمی‌شود. فقط Policy نمونه موقت تغییر می‌کند؛ وابستگی یا مجوز محصول تغییر ندارد. این Runtime platform-server انگولار است، نه Angular CLI AOT، Routing کتابخانه @angular/ssr، Hydration، پراکسی عملیاتی یا احراز هویت واقعی. اجرای دستور CI در مسیر موقت تازه؛ بازگشت با Revert نمونه و CI. NestJS و پذیرش Approval/Rollback باقی‌اند. نتیجه CI در انتظار است.
+
+```mermaid
+flowchart LR
+ A[Adapter مجاز Node] --> B[Angular renderApplication]
+ B --> C[BootstrapContext و DI مستقل]
+ C --> D[کنترل HTTP HTML و Cache و Host]
+ D --> E[Receipt قبل و بعد و Finding]
+```
