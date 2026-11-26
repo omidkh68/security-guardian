@@ -1,6 +1,6 @@
 # ماتریس پوشش فناوری و قرارداد توسعه Pack
 
-Issue [#95](https://github.com/omidkh68/security-guardian/issues/95) · [English](framework-coverage.md) · نسخه ۱ Schema
+Issue [#95](https://github.com/omidkh68/security-guardian/issues/95) · [English](framework-coverage.md) · نسخه ۲ ماتریس · نسخه ۱ Schema
 
 شاخه توسعه دارای ۱۹ نشانه شناسایی Framework از Manifest است، نه تأیید نسخه نصب‌شده یا پشتیبانی کامل. فرمان فقط‌خواندنی نصب‌شده:
 
@@ -84,3 +84,15 @@ flowchart TD
 ## همگام‌سازی ماتریس #95
 
 نسخه Pack پایتون SQL مستقیماً از اسکنر (v13) خوانده می‌شود و تست Dispatch واقعی در محدوده دارد؛ هر دو Adapter مجاز Python و Node در فهرست‌اند و available_runner قبلی و NOT_RUN حفظ شده‌اند. این راستی‌آزمایی خودکار فریم‌ورک نیست. نمونه Flask/Angular شواهد جداگانه CI هستند، نه پوشش مشتری. CI در انتظار است.
+
+## شواهد صریح نسخه فناوری (#33)
+
+ماتریس نسخه ۲، فیلد `version_evidence` را به هر ردیف Framework و موجودی Component اضافه می‌کند. نسخه نصب‌شده هدف همواره `NOT_INSPECTED` و محدوده نسخه پشتیبانی‌شده `NOT_CERTIFIED` است. مقدار نمونه مرجع برای سایر فناوری‌ها null است. نسخه‌های ثابت زیر فقط وابستگی مستقیم نمونه‌های اجرایی متعلق به مخزن را نشان می‌دهند، نه محدوده نسخه آزموده‌شده یا نتیجه امنیت هدف.
+
+| فناوری | نسخه نمونه مرجع | سناریو |
+|---|---|---|
+| Angular | 20.3.34 | Angular SSR |
+| NestJS | 11.1.6 | NestJS HTTP |
+| Flask | 3.1.2 | Flask SQLite HTTP |
+
+موجودی حتی برای Component انتخاب‌شده، وضعیت نمونه مرجع را `NOT_RUN_BY_INVENTORY` و وضعیت راستی‌آزمایی هدف را `NOT_RUN` گزارش می‌کند. CI مخزن این مجموعه تست‌ها را جداگانه اجرا می‌کند؛ [CI شماره ۲۴۶ شاخه اصلی](https://github.com/omidkh68/security-guardian/actions/runs/45898734410) شاهد تاریخی برای همان نمونه‌ها است. تست رگرسیون تطابق Metadata با Manifest نمونه‌ها در Checkout کامل و عدم افشای رشته نسخه وابستگی هدف را بررسی می‌کند. این تغییر افزوده به Schema نسخه ۱ است و پوشش اسکنر را گسترش نمی‌دهد. ادعای تأیید نسخه فریم‌ورک، Benchmark مستقل یا اصلاح خودکار وجود ندارد.
