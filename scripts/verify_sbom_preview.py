@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import sys
 import tarfile
+from urllib.parse import unquote
 from verify_standards_sources import fetch,s
 
 SCHEMAS={
@@ -48,8 +49,8 @@ def main():
     if len(matches)!=1 or len(pkg)!=1 or matches[0]['SPDXID'] not in spdx.get('documentDescribes',[]):
         raise ValueError('SPDX preview package inventory mismatch')
     component=cdx['metadata']['component']
-    full_name=(component.get('group','')+'/'+component['name']).lstrip('/')
-    if name not in (component['name'],full_name) or component['version']!=version or cdx.get('components'):
+    # npm can use the extraction directory as the display name; purl binds the package identity.
+    if unquote(component.get('purl',''))!='pkg:npm/'+name+'@'+version or component['version']!=version or cdx.get('components'):
         raise ValueError('CycloneDX preview package inventory mismatch')
     print(json.dumps({'kind':'PRIVATE_PREVIEW_SBOM_EVIDENCE','package':name,'version':version,
                       'tarball_sha256':hashlib.sha256(archive.read_bytes()).hexdigest(),
