@@ -605,5 +605,61 @@ class SemanticFlowTests(unittest.TestCase):
         self.assertFalse(self.hits(self.run_scan(prefix.replace('sqlite3.Error','ValueError')+
             '        cur.execute(request.args["fallback"])\n')))
 
+
+    def test_imported_row_configured_connection_factory(self):
+        storage=('import sqlite3 as db\nPATH="fixture.db"\n'
+                 'def connect():\n    conn=db.connect(PATH)\n'
+                 '    conn.row_factory=db.Row\n    return conn\n')
+        self.write('api/storage.py',storage)
+        header='from flask import request\nfrom storage import connect\n'
+        prefix='def route():\n    db=connect()\n    cursor=db.cursor()\n'
+        body='    cursor.execute(request.args["q"])\n'
+        self.assertEqual(len(self.hits(self.run_scan(body,header,prefix))),1)
+        self.assertFalse(self.hits(self.run_scan('    cursor.execute("SELECT ?", (request.args["q"],))\n',header,prefix)))
+        self.write('api/storage.py',storage+'db.connect=unknown\n')
+        self.assertFalse(self.hits(self.run_scan(body,header,prefix)))
+
+    def test_sqlite_close_reopen_and_empty_list(self):
+        body=('    rows=cur.execute("SELECT 1").fetchall()\n'
+              '    print(rows)\n    conn.close()\n    result=[]\n'
+              '    conn=sqlite3.connect("fixture.db")\n    cur=conn.cursor()\n'
+              '    cur.execute(request.args["q"])\n')
+        result=self.run_scan(body)
+        self.assertEqual(len(self.hits(result)),1)
+        self.assertGreater(result['summary']['python_sql_flow']['sqlite_close_paths'],0)
+        self.assertFalse(self.hits(self.run_scan('    alias=cur\n    conn.close()\n    alias.execute(request.args["q"])\n')))
+        self.assertFalse(self.hits(self.run_scan(body.replace('cur.execute(request.args["q"])','cur.execute("SELECT ?",(request.args["q"],))'))))
+
+    def test_hash_digest_preserves_provenance_not_sanitizer(self):
+        header=HEADER+'import hashlib as crypto\n'
+        for algorithm in ('md5','sha256'):
+            body=('    name=request.args["name"]\n    value=request.args["value"]\n'
+                  '    digest=crypto.'+algorithm+'(value.encode()).hexdigest()\n')
+            result=self.run_scan(body+'    cur.execute(f"SELECT {name} {digest}")\n',header)
+            self.assertEqual(len(self.hits(result)),1)
+            self.assertEqual(self.hits(result)[0]['source_lines'],[7,8])
+            self.assertFalse(self.hits(self.run_scan(body+'    cur.execute("SELECT ?",(digest,))\n',header)))
+            self.assertFalse(self.hits(self.run_scan(body+'    cur.execute(name)\n',header+'crypto=unknown\n')))
+            self.assertFalse(self.hits(self.run_scan(body+'    cur.execute(name)\n',header+'crypto.'+algorithm+'=unknown\n')))
+
+    def test_seeded_connection_factory_bounded_literal_setup(self):
+        factory=('def seed():\n    conn=sqlite3.connect(":memory:")\n'
+                 '    conn.row_factory=sqlite3.Row\n'
+                 '    conn.execute("CREATE TABLE fixture(id INTEGER)")\n'
+                 '    conn.executemany("INSERT INTO fixture VALUES (?)", [(1,), (2,)])\n'
+                 '    return conn\n')
+        prefix='def route():\n    conn=seed()\n'
+        body='    conn.execute(request.args["q"])\n'
+        result=self.run_scan(body,HEADER+factory,prefix)
+        self.assertEqual(len(self.hits(result)),1)
+        self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertGreater(result['summary']['python_sql_flow']['seeded_connection_factories'],0)
+        self.assertFalse(self.hits(self.run_scan('    conn.execute("SELECT ?",(request.args["q"],))\n',HEADER+factory,prefix)))
+        for bad in (factory.replace('[(1,), (2,)]','unknown()'),
+                    factory.replace('conn.execute("CREATE TABLE fixture(id INTEGER)")','conn.execute(dynamic)'),
+                    factory.replace('    return conn','    conn.close()\n    return conn'),
+                    factory.replace('    return conn','    conn=unknown()\n    return conn')):
+            self.assertFalse(self.hits(self.run_scan(body,HEADER+bad,prefix)))
+
 if __name__=='__main__':
     unittest.main()
