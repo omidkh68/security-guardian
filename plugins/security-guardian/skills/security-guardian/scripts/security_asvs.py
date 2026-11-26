@@ -86,7 +86,10 @@ def inventory(data,raw):
         return {'requirements':len(subset),'partial':c['PARTIAL'],'unmapped':c['UNMAPPED']}
     return {'schema_version':1,'kind':'ASVS_REQUIREMENT_INVENTORY',
             'edition':VERSION,'source_revision':REVISION,'source_path':SOURCE_PATH,
-            'source_blob_sha':SOURCE_BLOB,'crosswalk_version':data['crosswalk_version'],
+            'source_blob_sha':SOURCE_BLOB,'publisher':'OWASP ASVS',
+            'source_license':'CC-BY-SA-4.0',
+            'source_license_url':'https://github.com/OWASP/ASVS/blob/'+REVISION+'/LICENSE.md',
+            'crosswalk_version':data['crosswalk_version'],
             'crosswalk_review_status':data['review_status'],'totals':counts(rows),
             'by_chapter':{c:counts([r for r in rows if r['chapter']==c])
                           for c in sorted({r['chapter'] for r in rows},key=lambda x:int(x[1:]))},
