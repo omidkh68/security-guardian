@@ -122,3 +122,22 @@ flowchart LR
 ```
 
 Run the offline suite and `python scripts/benchmark_external_sql_boundaries.py`. Revert the bounded scanner increment to roll back.
+
+## Bounded exception control flow (v12, #111)
+
+PR #126 CI 45822446274 and main CI 45822620489 succeeded; direct TP4 TN3 and interprocedural TP2 TN5, zero labeled FP/FN, all 14 PARTIAL. v12 uses internal continuation markers to dispatch known explicit builtin/SQLite raises to the first matching handler (including tuples and bare except), preserve nested finally, resume/rethrow and let abrupt completion in cleanup override the earlier exit. Else is only a normal-body continuation. Exception binding is cleared on handler exit. Known execute/fetch calls explore modeled possible SQLite error classes before assignment, not actual runtime failure probabilities. Shadowed/unknown exception class, arbitrary calls, exception causes and dynamic dispatch remain explicitly unmodeled; budgets retained. No proof of reachability, exploit or whole-program coverage.
+
+```mermaid
+flowchart LR
+ A[Try body] --> B[Normal path]
+ A --> C[Modeled exceptional path]
+ B --> D[Else]
+ C --> E[First matching handler]
+ C --> F[Uncaught exit]
+ D --> G[Finally]
+ E --> G
+ F --> G
+ G --> H[Continue or resume abrupt exit]
+```
+
+Tests: handler order, else/finally, nested rethrow, return override, exception binding cleanup, SQLite possible error and parameterized negatives. CI pending; revert bounded scanner change to roll back.

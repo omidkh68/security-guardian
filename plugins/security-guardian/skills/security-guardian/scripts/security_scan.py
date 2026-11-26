@@ -1149,12 +1149,65 @@ def _sql_condition(node, request_names=()):
     return False
 
 
+# Explicitly modeled class relationships, not runtime introspection.
+_SQL_EXCEPTION_PARENT = {
+    'BaseException': None, 'Exception': 'BaseException',
+    'ArithmeticError': 'Exception', 'ZeroDivisionError': 'ArithmeticError',
+    'LookupError': 'Exception', 'KeyError': 'LookupError', 'IndexError': 'LookupError',
+    'ValueError': 'Exception', 'TypeError': 'Exception', 'RuntimeError': 'Exception',
+    'OSError': 'Exception', 'ImportError': 'Exception', 'AssertionError': 'Exception',
+    'sqlite3.Warning': 'Exception', 'sqlite3.Error': 'Exception',
+    'sqlite3.InterfaceError': 'sqlite3.Error', 'sqlite3.DatabaseError': 'sqlite3.Error',
+    'sqlite3.DataError': 'sqlite3.DatabaseError', 'sqlite3.OperationalError': 'sqlite3.DatabaseError',
+    'sqlite3.IntegrityError': 'sqlite3.DatabaseError', 'sqlite3.InternalError': 'sqlite3.DatabaseError',
+    'sqlite3.ProgrammingError': 'sqlite3.DatabaseError', 'sqlite3.NotSupportedError': 'sqlite3.DatabaseError',
+}
+_SQLITE_EXECUTE_ERRORS = tuple(name for name in _SQL_EXCEPTION_PARENT
+    if name.startswith('sqlite3.') and name != 'sqlite3.Warning')
+
+
+def _sql_exception_type(node, shadowed, db_names):
+    if isinstance(node, ast.Name) and node.id not in shadowed and node.id in _SQL_EXCEPTION_PARENT:
+        return node.id
+    if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id in db_names:
+        name = 'sqlite3.' + node.attr
+        if name in _SQL_EXCEPTION_PARENT:
+            return name
+    return None
+
+
+def _sql_exception_matches(handler, exc, shadowed, db_names):
+    if handler is None:
+        return True
+    if isinstance(handler, ast.Tuple):
+        matches = [_sql_exception_matches(x, exc, shadowed, db_names) for x in handler.elts]
+        # Unknown tuple members could make evaluating the handler itself fail.
+        return None if None in matches else any(matches)
+    target = _sql_exception_type(handler, shadowed, db_names)
+    if not target or exc not in _SQL_EXCEPTION_PARENT:
+        return None
+    while exc:
+        if exc == target:
+            return True
+        exc = _SQL_EXCEPTION_PARENT[exc]
+    return False
+
+
 class _SqlFinally:
     """Internal continuation marker; never derived from executable code."""
-    def __init__(self, body, handlers=(), normal_prefix=()):
+    def __init__(self, body, handlers=(), normal_prefix=(), handler_name=None, active_exception=None):
         self.body=tuple(body)
         self.handlers=tuple(handlers)
         self.normal_prefix=tuple(normal_prefix)
+        self.handler_name=handler_name
+        self.active_exception=active_exception
+
+
+class _SqlResumeExit:
+    """Resume an abrupt completion after finally unless overridden there."""
+    def __init__(self, raising, exc):
+        self.raising=raising
+        self.exc=exc
 
 
 def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bindings=(),
@@ -1163,17 +1216,47 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bind
     # with a receiver from another. Unmodeled paths terminate, visibly partial.
     pending = [(tuple(fn.body), dict(initial_values or {}), {})]
     shadowed=set(module_bindings)|_binding_names(fn)
-    def leave(tail, values, receivers, raising=False):
-        # Only explicit exits; unknown calls may still raise. For raises,
-        # do not guess the effect of an intervening exception handler.
-        cleanup=[]
-        for part in tail:
-            if isinstance(part,_SqlFinally):
-                if raising and part.handlers:break
-                cleanup.append(_SqlFinally(part.body))
-        if cleanup:
-            stats['explicit_finally_paths']+=1
-            pending.append((tuple(cleanup),values.copy(),receivers.copy()))
+    def clear_handler(name, values, receivers):
+        if name is None:
+            return
+        values.pop(name, None)
+        receivers.pop(name, None)
+        for k in list(values):
+            if isinstance(k, tuple) and len(k)>1 and k[1]==name:
+                del values[k]
+        for k in list(receivers):
+            if isinstance(k, tuple) and k[0]=='import' and k[1].split('.')[0]==name:
+                del receivers[k]
+
+    def leave(tail, values, receivers, raising=False, exc=None):
+        # Skip normal statements, execute the nearest matching handler or
+        # cleanup, then resume the abrupt exit at the next outer boundary.
+        values, receivers = values.copy(), receivers.copy()
+        for offset, part in enumerate(tail):
+            if not isinstance(part, _SqlFinally):
+                continue
+            clear_handler(part.handler_name, values, receivers)
+            rest = tail[offset+1:]
+            if raising:
+                for handler in part.handlers:
+                    match = _sql_exception_matches(handler.type, exc, shadowed, db_names)
+                    if match is None:
+                        stats['unmodeled_exception_paths']+=1
+                        return False
+                    if match:
+                        if handler.name:
+                            clear_handler(handler.name, values, receivers)
+                            values[handler.name]=frozenset()
+                            receivers[handler.name]=None
+                        stats['exception_handler_paths']+=1
+                        pending.append((tuple(handler.body)+(_SqlFinally(part.body,
+                            handler_name=handler.name,active_exception=exc),)+rest,values,receivers))
+                        return True
+            if part.body:
+                stats['explicit_finally_paths']+=1
+                pending.append((part.body+(_SqlResumeExit(raising,exc),)+rest,values,receivers))
+                return True
+        return False
     sources_by_sink = defaultdict(set)
     partial = False
     paths, steps = 1, 0
@@ -1184,7 +1267,11 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bind
             if steps > PY_SQL_MAX_STEPS:
                 stats['path_limited_functions'] += 1
                 return sources_by_sink, True
+            if isinstance(stmt,_SqlResumeExit):
+                leave(statements[index+1:], values, receivers, stmt.raising, stmt.exc)
+                break
             if isinstance(stmt,_SqlFinally):
+                clear_handler(stmt.handler_name,values,receivers)
                 if stmt.normal_prefix:
                     pending.append((stmt.normal_prefix+(_SqlFinally(stmt.body),)+statements[index+1:],values.copy(),receivers.copy()))
                 else:
@@ -1193,14 +1280,36 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bind
             if isinstance(stmt, ast.Try):
                 partial=True
                 stats['try_normal_paths']+=1
-                # Keep a boundary marker instead of flattening finally into
-                # the normal tail. Explicit returns run finally before exit.
-                # Handlers and implicit exceptions remain unsupported.
+                # Retain handler boundaries; else belongs only to the
+                # normal body completion, not handler/return/raise paths.
                 pending.append((tuple(stmt.body)+(_SqlFinally(stmt.finalbody,stmt.handlers,stmt.orelse),)+statements[index+1:], values.copy(), receivers.copy()))
                 break
             if isinstance(stmt, ast.Raise):
                 partial=True
-                leave(statements[index+1:],values,receivers,raising=True)
+                tail=statements[index+1:]
+                exc=None
+                if stmt.exc is None:
+                    for marker in tail:
+                        if isinstance(marker,_SqlFinally) and marker.active_exception is not None:
+                            exc=marker.active_exception
+                            break
+                        if isinstance(marker,_SqlResumeExit) and marker.raising:
+                            exc=marker.exc
+                            break
+                    if exc is not None:
+                        stats['exception_rethrow_paths']+=1
+                elif isinstance(stmt.exc,ast.Call):
+                    if (not stmt.exc.keywords and len(stmt.exc.args)<=16
+                            and all(_sql_value(a,values,receivers,request_names,db_names,helpers)[0] for a in stmt.exc.args)):
+                        exc=_sql_exception_type(stmt.exc.func,shadowed,db_names)
+                else:
+                    exc=_sql_exception_type(stmt.exc,shadowed,db_names)
+                if stmt.cause is not None and not (isinstance(stmt.cause,ast.Constant) and stmt.cause.value is None):
+                    exc=None
+                if exc is None:
+                    stats['unmodeled_exception_paths']+=1
+                    exc='unknown'
+                leave(tail,values,receivers,raising=True,exc=exc)
                 break
             if (isinstance(stmt,ast.Expr) and isinstance(stmt.value,ast.Call)
                     and _name(stmt.value.func,'print') and 'print' not in shadowed
@@ -1372,6 +1481,19 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bind
                 if known and sources:sources_by_sink[call.lineno].update(sources)
                 if not known:
                     partial=True;break
+                # The known SQLite execute/fetch call may fail before its
+                # result assignment. Explore modeled DB exception classes
+                # only within an enclosing boundary, never infer certainty.
+                tail=statements[index+1:]
+                if any(isinstance(part,_SqlFinally) for part in tail):
+                    partial=True
+                    for exc in _SQLITE_EXECUTE_ERRORS:
+                        if paths>=PY_SQL_MAX_PATHS:
+                            stats['path_limited_functions']+=1
+                            break
+                        if leave(tail,values,receivers,raising=True,exc=exc):
+                            paths+=1
+                            stats['sqlite_exception_paths']+=1
                 if isinstance(stmt,ast.Return):
                     leave(statements[index+1:],values,receivers)
                     break
@@ -1881,7 +2003,7 @@ def process(root:Path, profile=None, components=()):
                     entry = {'control_id':cid, 'signal':'Flask request value reaches SQLite SQL argument',
                              'path':fn, 'confidence':'medium', 'suggested_severity':'high',
                              'status':'HEURISTIC_REVIEW_ONLY', 'technique':'BOUNDED_AST_FLOW',
-                             'pack_id':PY_SQL_PACK, 'pack_version':11, 'rule_id':PY_SQL_RULE,
+                             'pack_id':PY_SQL_PACK, 'pack_version':12, 'rule_id':PY_SQL_RULE,
                              'control_mapping':'LEGACY_COMPATIBILITY', **hit}
                     direct_sql_entries[(fn,hit['line'])]=entry
                     if len(evidence) < MAX_SIGNALS:
@@ -1962,7 +2084,7 @@ def process(root:Path, profile=None, components=()):
             signal_counts[cid]+=1
             entry={'control_id':cid,'signal':'Flask request value reaches SQLite SQL argument',
                    'confidence':'medium','suggested_severity':'high','status':'HEURISTIC_REVIEW_ONLY',
-                   'technique':'BOUNDED_AST_FLOW','pack_id':PY_SQL_PACK,'pack_version':11,
+                   'technique':'BOUNDED_AST_FLOW','pack_id':PY_SQL_PACK,'pack_version':12,
                    'rule_id':PY_SQL_RULE,'control_mapping':'LEGACY_COMPATIBILITY',**hit}
             if len(evidence)<MAX_SIGNALS:evidence.append(entry)
             if len(control_evidence[cid])<MAX_CONTROL_SIGNALS:control_evidence[cid].append(entry)
@@ -2099,13 +2221,13 @@ def process(root:Path, profile=None, components=()):
             'limitations': ['Text indicators only; no deployed proxy trust, route schema, handler or authorization proof.',
                             'Literal options and app/server receivers only; computed options and aliases need review.'],
         }
-        partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions','path_limited_functions','interprocedural_limited_files','interprocedural_limited_calls')
+        partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions','path_limited_functions','interprocedural_limited_files','interprocedural_limited_calls','unmodeled_exception_paths')
         summary['python_sql_flow'] = {
-            'pack_id': PY_SQL_PACK, 'pack_version':11, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
+            'pack_id': PY_SQL_PACK, 'pack_version':12, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
             'selected_roots':sorted(python_sql_roots),
             'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or python_sql_stats['cross_file_receiver_bindings'] or python_sql_stats['cross_file_request_wrappers'] or python_sql_stats['named_path_factory_candidates'] or python_sql_stats['flask_context_factories'] or python_sql_stats['local_row_connection_factories'] or python_sql_stats['literal_replacement_helpers'] or python_sql_stats['interprocedural_summaries'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
-            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings','cross_file_request_wrappers','try_normal_paths','explicit_finally_paths','builtin_print_paths','named_path_factory_candidates','flask_context_factories','http_method_guard_paths','local_row_connection_factories','json_request_maps','literal_replacement_helpers','interprocedural_summaries','interprocedural_matches',*partial_keys)},
-            'limitations':['Bounded local paths, literal loops, dictionary/configuration slots, selected encoding transformations, bounded literal replacement helper summaries (not sanitizers), simple request-holder class summaries, request headers/cookies, one-hop query helpers, sibling and component-root qualified connection factories, nested route bodies, normal try paths and execute/fetch chains; one-hop selected-component direct-call sink summaries only; no generic cross-module taint, dynamic import/dispatch, exception semantics or exploit analysis.',
+            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings','cross_file_request_wrappers','try_normal_paths','explicit_finally_paths','builtin_print_paths','named_path_factory_candidates','flask_context_factories','http_method_guard_paths','local_row_connection_factories','json_request_maps','literal_replacement_helpers','interprocedural_summaries','interprocedural_matches','exception_handler_paths','exception_rethrow_paths','sqlite_exception_paths',*partial_keys)},
+            'limitations':['Bounded local paths, literal loops, dictionary/configuration slots, selected encoding transformations, bounded literal replacement helper summaries (not sanitizers), simple request-holder class summaries, request headers/cookies, one-hop query helpers, sibling and component-root qualified connection factories, nested route bodies, bounded typed explicit raises and SQLite execute/fetch exception paths; one-hop selected-component direct-call sink summaries only; no generic cross-module taint, dynamic import/dispatch, arbitrary exception semantics or exploit analysis.',
                            'Unmodeled statements and imports are not proof of safety; no target code is executed.'],
         }
     return {'summary':summary,'signals':evidence,'controls':result,

@@ -467,4 +467,4 @@ Expansion #107: see [semantic coverage expansion](docs/semantic-expansion.md) fo
 
 Capability architecture index: [English](docs/architecture-index.md) · [فارسی](docs/architecture-index-FA.md).
 
-[Real application SQL analysis](docs/real-app-sql.md) ([فارسی](docs/real-app-sql-FA.md)): Python AST v11, bounded one-hop cross-module SQL sink evidence, bounded literal string replacement helpers (not sanitizers), BOM-aware source parsing, bounded JSON route flow and Flask context-cache factories and literal HTTP method guards, absolute-import and named-path factories, explicit finally paths and execute/fetch chains; external benchmark limitations remain explicit.
+[Real application SQL analysis](docs/real-app-sql.md) ([فارسی](docs/real-app-sql-FA.md)): Python AST v12, bounded typed exception/cleanup paths, bounded one-hop cross-module SQL sink evidence, bounded literal string replacement helpers (not sanitizers), BOM-aware source parsing, bounded JSON route flow and Flask context-cache factories and literal HTTP method guards, absolute-import and named-path factories, explicit finally paths and execute/fetch chains; external benchmark limitations remain explicit.
