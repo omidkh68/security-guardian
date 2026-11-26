@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'plugins/security-guardian/skills/security-guardian/scripts'))
 import security_standards as s
+import security_asvs as asvs
 
 CWE_URL='https://cwe.mitre.org/data/xml/cwec_v5.0.xml.zip'
 MAX_OWASP=8_000_000
@@ -78,6 +79,7 @@ def main():
     p.add_argument('--source-dir',type=Path)
     p.add_argument('--cwe-xml',type=Path)
     p.add_argument('--fetch-official',action='store_true',help='Explicit pinned public publisher source retrieval')
+    p.add_argument('--asvs-inventory-output',type=Path,help='Write separate pinned ASVS inventory after successful official validation')
     a=p.parse_args()
     if a.fetch_official and (a.source_dir or a.cwe_xml) or not a.fetch_official and not (a.source_dir and a.cwe_xml):
         p.error('Choose --fetch-official or both local artifact inputs')
@@ -91,6 +93,20 @@ def main():
         def read_artifact(name,path):
             with (a.source_dir/name/path).open('rb') as h:return h.read(MAX_OWASP+1)
         with a.cwe_xml.open('rb') as h:raw_cwe=h.read(MAX_CWE+1)
-    print(json.dumps(verify(data,read_artifact,raw_cwe),indent=2,sort_keys=True))
+    captured={}
+    def read_verified_artifact(name,path):
+        raw=read_artifact(name,path)
+        if name=='ASVS' and path==asvs.SOURCE_PATH:
+            captured['asvs']=raw
+        return raw
+    result=verify(data,read_verified_artifact,raw_cwe)
+    if a.asvs_inventory_output:
+        report=asvs.inventory(data,captured['asvs'])
+        # Exclusive creation prevents accidentally replacing an existing report.
+        with a.asvs_inventory_output.open('x',encoding='utf-8') as h:
+            json.dump(report,h,indent=2,sort_keys=True)
+            h.write('\n')
+        result['asvs_inventory_totals']=report['totals']
+    print(json.dumps(result,indent=2,sort_keys=True))
 
 if __name__=='__main__':main()

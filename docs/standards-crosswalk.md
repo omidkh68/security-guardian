@@ -61,3 +61,23 @@ Reject boolean/float schema versions, extra mapping claims and mixed source arti
 ## Official source revalidation gate (#97)
 
 17 pinned OWASP artifacts were separately re-read at their exact publisher revisions; 163 IDs and the recorded Git blob identities matched (147 ASVS, 4 WSTG, 8 MASVS, 2 MASTG, 2 MASWE). CI now runs `python scripts/verify_standards_sources.py --fetch-official` using bounded public retrieval, the pinned raw Git files and the official CWE 5.0 XML ZIP; checks all 171 IDs, artifact identity and exact CWE edition, emits the CWE XML SHA-256. No ZIP extraction to filesystem, no source redistribution or target code execution. Local input mode remains supported. Offline tests exercise archive edition and identifier rejection. CI result pending; semantic equivalence and independent human approval are not established.
+
+## Full ASVS requirement inventory (#149)
+
+The pinned OWASP ASVS 5.0.0 JSON at revision `180622b1329ee7ed349c9f5ce5e14fa91f42c359` (Git blob `16a314527781b79f2e499ac8f1e33eaf76234d22`) contains 345 leaf requirements in 17 chapters, including 70 level-1, 183 level-2 and 92 level-3 requirement labels (not cumulative level totals). Publisher license: [CC BY-SA 4.0](https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/LICENSE.md). The separate read-only inventory emits IDs, level labels, reverse control links, counts and gaps, not publisher requirement prose. Existing mapping baseline: 147 partially mapped and 198 unmapped; all applicability and verification states remain unknown/not verified. This is a complete identity inventory, not complete semantic mapping, runtime assessment, or compliance coverage.
+
+```bash
+python3 <skill-dir>/scripts/security_asvs.py --source /path/to/pinned-asvs.json
+python3 scripts/verify_standards_sources.py --fetch-official --asvs-inventory-output /tmp/asvs-inventory.json
+```
+
+```mermaid
+flowchart LR
+ A[Pinned publisher JSON] --> B[Blob and leaf identity validation]
+ C[Validated control crosswalk] --> D[Reverse mapping]
+ B --> D
+ D --> E[Partial and unmapped inventory]
+ E --> F[Separate applicability and verification NOT assessed]
+```
+
+CI retains the inventory generated from the verified publisher bytes. Five new tests cover exact identity, unknown states, source mutation, malformed identities and orphan links. The artifact and test results must be observed before claiming CI acceptance. Expansion of relevant relationships and independent semantic review remain open. No project read or write, source execution or automatic control verdict.
