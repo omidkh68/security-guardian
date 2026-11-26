@@ -51,11 +51,28 @@ class ASTContractTests(unittest.TestCase):
                 c.run_parser('../target.js',(Path('/trusted/node'),Path('/trusted/ts.js')),[],[])
             run.assert_not_called()
 
+    def test_shared_source_budget_and_duplicate_output_keys(self):
+        runtime=(Path('/trusted/node'),Path('/trusted/ts.js'))
+        with patch.object(c.subprocess,'run') as run:
+            for inputs,sizes in (([{'content':'x'*(c.MAX_BYTES+1)}],[1]),
+                                 ([{'content':'x'*c.MAX_BYTES}]*16,[1]*16),
+                                 ([{'content':'ok'}],[True]),([{'content':None}],[1])):
+                with self.assertRaises(ValueError):
+                    c.run_parser('js_dom_flow.mjs',runtime,inputs,sizes)
+            run.assert_not_called()
+        with patch.object(c.subprocess,'run',return_value=subprocess.CompletedProcess([],0,
+                '{"status":"INVALID","status":"OK","version":"5.9.3","results":[]}','')):
+            with self.assertRaises(ValueError):
+                c.run_parser('js_dom_flow.mjs',runtime,[],[])
+        malformed=row()
+        malformed['results'][0]['reason']=[]
+        with self.assertRaises(ValueError):c.validate_rows(malformed,[1])
+
     def test_malformed_output_fails_closed(self):
         for stdout in ('bad json',json.dumps(row([{'line':1,'source_lines':[9]}]))):
             with patch.object(c.subprocess,'run',return_value=subprocess.CompletedProcess([],0,stdout,'')):
                 with self.assertRaises(ValueError):
-                    c.run_parser('js_sql_flow.mjs',(Path('/trusted/node'),Path('/trusted/ts.js')),[{}],[2])
+                    c.run_parser('js_sql_flow.mjs',(Path('/trusted/node'),Path('/trusted/ts.js')),[{'content':'x'}],[2])
 
 if __name__=='__main__':
     unittest.main()

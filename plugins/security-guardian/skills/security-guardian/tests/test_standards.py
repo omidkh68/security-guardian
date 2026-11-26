@@ -65,6 +65,16 @@ class StandardsTests(unittest.TestCase):
         ref={'standard':'ASVS','id':'1.2.4','source_blob_sha':s.git_blob(raw)}
         s.verify_owasp_artifact([ref],raw)
         with self.assertRaises(ValueError):s.verify_owasp_artifact([{**ref,'id':'1.2.999'}],raw)
+    def test_reject_extra_mapping_claim_and_mixed_artifact(self):
+        for field in ('schema_version','crosswalk_version'):
+            d=copy.deepcopy(self.data);d[field]=True
+            with self.assertRaises(ValueError):s.validate(d,self.ids,self.blob)
+        d=copy.deepcopy(self.data);d['controls'][0]['compliance']='CERTIFIED'
+        with self.assertRaises(ValueError):s.validate(d,self.ids,self.blob)
+        raw=b'WSTG-INPV-05'
+        ref={'standard':'WSTG','id':'WSTG-v42-INPV-05','source_blob_sha':s.git_blob(raw),'source_path':'one.md'}
+        with self.assertRaises(ValueError):s.verify_owasp_artifact([ref,{**ref,'source_path':'two.md'}],raw)
+
     def test_duplicate_json(self):
         with self.assertRaises(ValueError):json.loads('{"id":1,"id":2}',object_pairs_hook=s.unique_object)
 if __name__=='__main__':unittest.main()

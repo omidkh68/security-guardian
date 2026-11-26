@@ -70,6 +70,23 @@ class ProfessionalReportTests(unittest.TestCase):
         run['tests']=[]
         row=next(x for x in r.build_export(run,ledger,scan)['findings'] if x['id']==f['id'])
         self.assertEqual(row['verification_evidence'],'PRIOR_OR_UNAVAILABLE_LINK')
+    def test_ambiguous_or_malformed_pass_never_links(self):
+        run,ledger,scan=fixture()
+        f=next(x for x in ledger['findings'].values() if x['status']=='VERIFIED_FIXED')
+        test=run['tests'][0];test['finding_ids']=[f['id']]
+        f['verification']={'test_id':test['test_id'],'executed':True,'result':'PASS'}
+        def evidence(tests):
+            run['tests']=tests
+            return next(x for x in r.build_export(run,ledger,scan)['findings'] if x['id']==f['id'])
+        self.assertEqual(evidence([test])['verification_evidence'],'LINKED_PASS_IN_SELECTED_RUN')
+        for tests in ([test,dict(test)], [{**test,'evidence_quality':'UNKNOWN'}],
+                      [{**test,'evidence_quality':'LOCAL_EXECUTION','execution_receipt':{'result':'FAIL'}}],
+                      [{**test,'execution_receipt':{'result':'PASS'}}]):
+            result=evidence(tests)
+            self.assertEqual(result['verification_evidence'],'PRIOR_OR_UNAVAILABLE_LINK')
+            self.assertIsNone(result['linked_test'])
+        self.assertEqual(evidence([{k:v for k,v in test.items() if k!='evidence_quality'}])['linked_test_quality'],'MANUAL_REPORTED')
+
     def test_historical_reexport_and_protected_outputs(self):
         run,ledger,scan=fixture()
         with tempfile.TemporaryDirectory() as tmp:

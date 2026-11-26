@@ -33,7 +33,9 @@ def load():
     return data
 
 def validate(d,control_ids,catalog_blob):
-    if d['schema_version']!=1 or d['crosswalk_version']!=1 or d['catalog_blob_sha']!=catalog_blob:
+    if (type(d['schema_version']) is not int or d['schema_version']!=1
+            or type(d['crosswalk_version']) is not int or d['crosswalk_version']!=1
+            or d['catalog_blob_sha']!=catalog_blob):
         raise ValueError('Catalog or crosswalk version mismatch')
     if d['review_status']!='AUTHOR_REVIEWED_NOT_INDEPENDENTLY_APPROVED':
         raise ValueError('Unexpected review claim')
@@ -65,6 +67,8 @@ def validate(d,control_ids,catalog_blob):
             if name in {'MASVS','MASTG','MASWE'} and Path(p).name!=ident+'.md':raise ValueError('Reference/path mismatch')
     seen=set();used=set()
     for row in d['controls']:
+        if set(row)!={'control_id','status','unmapped_reason','mappings'}:
+            raise ValueError('Unexpected control mapping fields')
         cid=row['control_id'];m=row['mappings']
         if cid not in control_ids or cid in seen:raise ValueError('Unknown or duplicate control')
         seen.add(cid)
@@ -83,6 +87,8 @@ def validate(d,control_ids,catalog_blob):
 def verify_owasp_artifact(refs,raw):
     """Recheck exact IDs in an independently obtained official Git blob."""
     if not refs or any(git_blob(raw)!=r['source_blob_sha'] for r in refs):raise ValueError('Official blob mismatch')
+    if len({(r['standard'],r.get('source_path')) for r in refs})!=1:
+        raise ValueError('Mixed official artifact identity')
     source=raw.decode('utf-8')
     if refs[0]['standard']=='ASVS':
         d=json.loads(source)

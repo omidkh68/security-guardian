@@ -38,3 +38,7 @@ python scripts/benchmark_semantic_context.py --fresh-flask
 ```
 
 The second command fetches only pinned public source artifacts and validates Git blob hashes; no code executes. CI runs both in Python 3.12. Previous baseline remains in #96 CI and comments. Current improvement is not a generic accuracy, compliance or runtime verification claim.
+
+## Current acceptance review (#107)
+
+CI #235 preserved SQL contextual metrics and runtime gates. The original exposed synthetic labels are now required regressions, including py-loop, dom-transform and sql-helper; no changes to scanner semantics or historical labels. New independent holdout work and missing-context residual risk remain #37/#105. CI for this increment pending.

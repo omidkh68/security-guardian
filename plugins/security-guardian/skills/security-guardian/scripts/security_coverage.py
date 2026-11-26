@@ -73,8 +73,8 @@ def framework_row(name):
              'Nuxt':'Explicit H3 HTML endpoint, not Vue template/hydration',
              'SvelteKit':'Explicit +server HTML endpoint, not page load/template'}[name])
     if name=='Flask':
-        ast(scan.PY_SQL_PACK,7,[(scan.PY_SQL_RULE,'API-07')],'security_scan.py',
-            'Flask request to SQLite SQL text; bounded route, loop, data-slot and source-only helper context',False)
+        ast(scan.PY_SQL_PACK,scan.PY_SQL_VERSION,[(scan.PY_SQL_RULE,'API-07')],'security_scan.py',
+            'Flask request to SQLite SQL text; bounded routes, data slots, receiver lifetime, modeled exceptions and one-hop same-component summaries',False)
     return {'framework':name,'role':role,'discovery':'MANIFEST_HINT',
             'heuristic_packs':h,'ast_packs':a,
             'legacy_indicators':'APPLICABILITY_FILTERED_REVIEW_ONLY',
@@ -85,6 +85,7 @@ def inventory():
             'frameworks':[framework_row(n) for n in sorted(FRAMEWORKS)],
             'runtime':{'automatic_framework_verification':False,
                        'available_runner':'python-unittest-v1',
+                       'available_runners':['python-unittest-v1','node-test-v1'],
                        'runner_condition':'Explicit authorization, selected finding and reviewed local test; no independent attestation',
                        'status':'NOT_RUN'},
             'semgrep':{'scope':'LEGACY_UNSCOPED_ONLY','status':'NOT_RUN'},

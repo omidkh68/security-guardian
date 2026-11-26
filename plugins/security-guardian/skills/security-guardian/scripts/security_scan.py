@@ -607,6 +607,7 @@ def preview_framework(root, framework):
 
 PY_SQL_RULE = 'PY.FLASK.SQL.REQUEST_FLOW'
 PY_SQL_PACK = 'python-sql-flow'
+PY_SQL_VERSION = 13
 PY_SQL_MAX_BYTES = 128_000
 PY_SQL_MAX_NODES = 10_000
 PY_SQL_MAX_PATHS = 64
@@ -2099,7 +2100,7 @@ def process(root:Path, profile=None, components=()):
                     entry = {'control_id':cid, 'signal':'Flask request value reaches SQLite SQL argument',
                              'path':fn, 'confidence':'medium', 'suggested_severity':'high',
                              'status':'HEURISTIC_REVIEW_ONLY', 'technique':'BOUNDED_AST_FLOW',
-                             'pack_id':PY_SQL_PACK, 'pack_version':13, 'rule_id':PY_SQL_RULE,
+                             'pack_id':PY_SQL_PACK, 'pack_version':PY_SQL_VERSION, 'rule_id':PY_SQL_RULE,
                              'control_mapping':'LEGACY_COMPATIBILITY', **hit}
                     direct_sql_entries[(fn,hit['line'])]=entry
                     if len(evidence) < MAX_SIGNALS:
@@ -2180,7 +2181,7 @@ def process(root:Path, profile=None, components=()):
             signal_counts[cid]+=1
             entry={'control_id':cid,'signal':'Flask request value reaches SQLite SQL argument',
                    'confidence':'medium','suggested_severity':'high','status':'HEURISTIC_REVIEW_ONLY',
-                   'technique':'BOUNDED_AST_FLOW','pack_id':PY_SQL_PACK,'pack_version':13,
+                   'technique':'BOUNDED_AST_FLOW','pack_id':PY_SQL_PACK,'pack_version':PY_SQL_VERSION,
                    'rule_id':PY_SQL_RULE,'control_mapping':'LEGACY_COMPATIBILITY',**hit}
             if len(evidence)<MAX_SIGNALS:evidence.append(entry)
             if len(control_evidence[cid])<MAX_CONTROL_SIGNALS:control_evidence[cid].append(entry)
@@ -2319,7 +2320,7 @@ def process(root:Path, profile=None, components=()):
         }
         partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions','path_limited_functions','interprocedural_limited_files','interprocedural_limited_calls','unmodeled_exception_paths')
         summary['python_sql_flow'] = {
-            'pack_id': PY_SQL_PACK, 'pack_version':13, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
+            'pack_id': PY_SQL_PACK, 'pack_version':PY_SQL_VERSION, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
             'selected_roots':sorted(python_sql_roots),
             'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or python_sql_stats['cross_file_receiver_bindings'] or python_sql_stats['cross_file_request_wrappers'] or python_sql_stats['named_path_factory_candidates'] or python_sql_stats['flask_context_factories'] or python_sql_stats['local_row_connection_factories'] or python_sql_stats['literal_replacement_helpers'] or python_sql_stats['interprocedural_summaries'] or python_sql_stats['seeded_connection_factories'] or python_sql_stats['hashlib_import_bindings'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
             **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings','cross_file_request_wrappers','try_normal_paths','explicit_finally_paths','builtin_print_paths','named_path_factory_candidates','flask_context_factories','http_method_guard_paths','local_row_connection_factories','json_request_maps','literal_replacement_helpers','interprocedural_summaries','interprocedural_matches','exception_handler_paths','exception_rethrow_paths','sqlite_exception_paths','sqlite_close_paths','seeded_connection_factories','hashlib_import_bindings',*partial_keys)},
