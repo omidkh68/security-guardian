@@ -55,6 +55,14 @@ flowchart LR
 - [pdf-reporting](pdf-reporting-FA.md)
 - [standards-crosswalk](standards-crosswalk-FA.md)
 
+## بنچمارک و شواهد پذیرش
+
+- [بنچمارک مستقل و شواهد انتشار](independent-benchmark-FA.md)
+- [بنچمارک نشانگرها](benchmark-FA.md)
+- [ماتریس راستی‌آزمایی و آداپتور اختیاری Semgrep](verification-matrix-FA.md)
+
+پروفایل ماندگار Agent (#32) همچنان در انتظار ادغام است و بخشی از main نیست.
+
 ## توزیع
 
 - [installation](installation-FA.md)

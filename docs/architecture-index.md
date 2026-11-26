@@ -55,6 +55,14 @@ flowchart LR
 - [pdf-reporting](pdf-reporting.md)
 - [standards-crosswalk](standards-crosswalk.md)
 
+## Benchmark and acceptance evidence
+
+- [Independent benchmark and release evidence](independent-benchmark.md)
+- [Indicator benchmark](benchmark.md)
+- [Verification matrix and optional Semgrep adapter](verification-matrix.md)
+
+Persistent native agent profiles (#32) remain a pending integration, not part of main.
+
 ## Distribution
 
 - [installation](installation.md)
