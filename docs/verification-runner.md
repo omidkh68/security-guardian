@@ -105,3 +105,16 @@ flowchart LR
  E --> F[Source config and finding receipt]
  F --> G[Reject stale or unrelated evidence]
 ```
+
+## Real Flask runtime verification gate (#35)
+
+A required step of the existing Python 3.12 CI job installs explicitly version-pinned Flask, Jinja, Werkzeug and transitive dependencies in a disposable virtual environment, validates dependencies and executes the framework receipt fixture. The core offline tests and product installation remain dependency-free. The existing authorized Python adapter exercises real Flask routing, signed session cookies, Jinja HTML rendering, SQLite in-memory state, and Flask's test client (WSGI, not network transport). Six unchanged tests cover private cache isolation, logout/anonymous access, trusted Host, forwarded headers, tenant/owner data operations and public-cache success. Before: five assertion failures and one positive control; after: six passing tests. Failed receipt rejected; passing receipt binds source, dependency manifest and unchanged test bytes to the finding. Versions are checked in the outer test, not cryptographic dependency attestation; no production traffic, real credentials or transactions. Logout clears the client session, not stolen-cookie revocation. Angular/NestJS runtime and approval/rollback acceptance remain open. Run `python -m venv /tmp/sg-framework-fixture`, install `scripts/requirements-framework-fixture.txt` using that interpreter, then run `scripts/test_framework_verification.py -v`. CI evidence pending; revert test/CI increment to roll back.
+
+```mermaid
+flowchart LR
+ A[Isolated pinned Flask environment] --> B[Authorized Python adapter]
+ B --> C[Flask routing and signed sessions]
+ C --> D[Jinja HTML and SQLite state]
+ D --> E[Unchanged red and green assertions]
+ E --> F[Finding and selected input receipt]
+```
