@@ -128,18 +128,29 @@ def build_export(run,ledger,scan,*,view='management',cumulative=False,private_de
         raise ValueError('Report evidence exceeds supported record bounds; no partial export written')
     test_rows=[]
     test_by_id={}
+    duplicate_test_ids=set()
     for n,t in enumerate(tests,1):
         t=obj(t)
         result=enum(t.get('result'),TEST_RESULTS)
-        quality=enum(t.get('evidence_quality'),QUALITIES)
-        if quality=='LOCAL_EXECUTION' and not isinstance(t.get('execution_receipt'),dict):quality='UNKNOWN'
+        quality=enum(t.get('evidence_quality','MANUAL_REPORTED'),QUALITIES)
+        receipt=t.get('execution_receipt')
+        if quality=='LOCAL_EXECUTION' and (not isinstance(receipt,dict) or
+                (result=='PASS' and (receipt.get('result')!='PASS' or receipt.get('execution_result')!='PASS'
+                                     or receipt.get('run_id')!=run['id'] or receipt.get('executed') is not True))):
+            quality='UNKNOWN'
+        if quality=='MANUAL_REPORTED' and 'execution_receipt' in t:quality='UNKNOWN'
         tid='T-'+str(n).zfill(4)
         test_rows.append({'ref':tid,'result':result,'evidence_quality':quality,'executed_recorded':t.get('executed') is True,
                           'evidence_items':number_of(t.get('evidence')),'reason_recorded':present(t.get('reason'))})
-        if isinstance(t.get('test_id'),str):test_by_id[t['test_id']]=(t,test_rows[-1])
+        if isinstance(t.get('test_id'),str):
+            if t['test_id'] in test_by_id:
+                duplicate_test_ids.add(t['test_id'])
+            test_by_id[t['test_id']]=(t,test_rows[-1])
         if private_details:
             test_rows[-1]['private_name']=safe_text(t.get('name'),500)
             test_rows[-1]['private_reason']=safe_text(t.get('reason'),2000)
+    for tid in duplicate_test_ids:
+        test_by_id.pop(tid,None)
     rows=[];ref_ids=set()
     for n,(key,f) in enumerate(sorted(findings.items()),1):
         f=obj(f);cid=f.get('control_id')
@@ -152,7 +163,7 @@ def build_export(run,ledger,scan,*,view='management',cumulative=False,private_de
         reason,action=STATUS_ACTIONS[status]
         v=obj(f.get('verification'))
         linked=test_by_id.get(v.get('test_id')) if isinstance(v.get('test_id'),str) else None
-        linked_ok=bool(linked and linked[0].get('result')=='PASS' and linked[0].get('executed') is True and key in seq(linked[0].get('finding_ids')) and seq(linked[0].get('evidence')) and v.get('executed') is True and v.get('result')=='PASS')
+        linked_ok=bool(linked and linked[1]['evidence_quality'] in {'MANUAL_REPORTED','LOCAL_EXECUTION'} and linked[0].get('result')=='PASS' and linked[0].get('executed') is True and key in seq(linked[0].get('finding_ids')) and seq(linked[0].get('evidence')) and v.get('executed') is True and v.get('result')=='PASS')
         evidence_status='LINKED_PASS_IN_SELECTED_RUN' if linked_ok else 'PRIOR_OR_UNAVAILABLE_LINK' if status=='VERIFIED_FIXED' else 'NO_LINKED_PASS_IN_SELECTED_RUN'
         links=cross.get(cid,{}).get('mappings',[])
         ref_ids.update(m['reference'] for m in links)

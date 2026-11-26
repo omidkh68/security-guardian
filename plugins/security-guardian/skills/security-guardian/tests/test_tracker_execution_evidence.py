@@ -64,6 +64,14 @@ class TrackerExecutionTests(unittest.TestCase):
         return next(x for x in json.loads((self.root/'.security-guardian/index.json').read_text())['runs']
                     if x['id']==self.run_id)
 
+    def test_fixed_unverified_always_has_next_action(self):
+        ledger=json.loads((self.root/'.security-guardian/ledger.json').read_text())
+        self.assertIn('finding-specific regression',ledger['findings'][self.ident]['next_action'])
+        self.call('record','--run',self.run_id,payload={**self.finding,'id':self.ident,
+                  'next_action':'Review authorized fixture with owner'})
+        ledger=json.loads((self.root/'.security-guardian/ledger.json').read_text())
+        self.assertEqual(ledger['findings'][self.ident]['next_action'],'Review authorized fixture with owner')
+
     def test_local_execution_requires_review_and_current_inputs(self):
         result=self.execute()
         self.assertEqual(result['result'],'PASS')

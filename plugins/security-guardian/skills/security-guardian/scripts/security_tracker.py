@@ -196,6 +196,8 @@ def validate_finding(obj):
         raise ValueError('VERIFIED_FIXED requires executed=true, result=PASS, evidence and test_id')
     if status in {'DEFERRED', 'BLOCKED', 'ACCEPTED_RISK'} and not str(row.get('next_action', '')).strip():
         raise ValueError(f'{status} requires next_action')
+    if status == 'FIXED_UNVERIFIED' and not str(row.get('next_action', '')).strip():
+        row['next_action'] = 'Run authorized finding-specific regression tests, review current evidence and record verification or blocker.'
     if status == 'ACCEPTED_RISK' and not str(row.get('approver', '')).strip():
         raise ValueError('Risk acceptance requires approver')
     category = row.get('finding_category')
