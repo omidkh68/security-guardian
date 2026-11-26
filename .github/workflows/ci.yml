@@ -60,7 +60,7 @@ jobs:
           python scripts/benchmark_scanner.py
           python scripts/benchmark_sql_flow.py
           python -m unittest discover -s scripts -p 'test_benchmark_*.py' -v
-          python scripts/benchmark_holdout.py --synthetic python
+          python scripts/benchmark_holdout.py --synthetic python --require-synthetic-regression
       - name: Measure external OWASP Python CWE-89 corpus (pinned, source-only)
         if: matrix.python-version == '3.12'
         run: |
@@ -141,7 +141,7 @@ jobs:
       - name: Test local CLI safety, upgrades and optional AST review
         run: |
           SG_TEST_TYPESCRIPT="$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js" npm test
-      - name: Measure post-freeze JS semantic holdout (report only)
-        run: python scripts/benchmark_holdout.py --synthetic js --typescript-module "$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js"
+      - name: Enforce exposed JS semantic regression labels (not independent accuracy)
+        run: python scripts/benchmark_holdout.py --synthetic js --require-synthetic-regression --typescript-module "$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js"
       - name: Verify exact tarball manifest and offline npx install-to-report
         run: node scripts/verify-npm-package.mjs

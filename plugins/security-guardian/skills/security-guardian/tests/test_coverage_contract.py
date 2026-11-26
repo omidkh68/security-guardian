@@ -76,6 +76,18 @@ class CoverageContractTests(unittest.TestCase):
             declared={q['rule_id'] for x in c.inventory()['frameworks'] for p in x['ast_packs'] if p['pack_id']==pid for q in p['rules']}
             self.assertEqual(declared,set(r.get('rule_ids',[r['rule_id']])))
 
+    def test_python_pack_matches_actual_dispatch_and_runtime_inventory(self):
+        self.write('flask/requirements.txt','Flask\n')
+        self.write('flask/app.py','from flask import request\nimport sqlite3\n')
+        report=scan.process(self.root,'custom',['flask'])
+        flow=report['summary']['python_sql_flow']
+        model=next(p for p in c.framework_row('Flask')['ast_packs'] if p['pack_id']==scan.PY_SQL_PACK)
+        self.assertEqual(model['pack_version'],flow['pack_version'])
+        self.assertEqual(model['pack_version'],scan.PY_SQL_VERSION)
+        from security_test_runner import ADAPTERS
+        self.assertEqual(c.inventory()['runtime']['available_runners'],list(ADAPTERS))
+        self.assertEqual(c.inventory()['runtime']['status'],'NOT_RUN')
+
     def test_scope_isolation_and_redaction(self):
         self.package('web','next','react')
         self.package('api','express','pg')

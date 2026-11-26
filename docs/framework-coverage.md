@@ -76,3 +76,7 @@ This inventory is additive; scanner and tracker formats, rule keys and default s
 
 
 Expansion #107: see [semantic coverage expansion](semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.
+
+## Synchronized inventory (#95)
+
+Python SQL pack version is sourced directly from the scanner (v13), with an actual scoped dispatch test; inventory lists both Python and Node authorized adapters, preserving legacy available_runner and NOT_RUN. This is not automatic framework verification. Flask/Angular fixtures are separate CI evidence, not customer coverage. CI pending.

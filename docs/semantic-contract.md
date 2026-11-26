@@ -54,3 +54,7 @@ The timeout unit test simulates a subprocess timeout without sleeping; CI also r
 
 
 Expansion #107: see [semantic coverage expansion](semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.
+
+## Shared parser contract hardening (#94)
+
+Validate input source and byte/line budgets inside the common parser boundary, reject duplicate JSON keys and malformed reason types. No expanded detection model; trusted external parser remains required, process is not a sandbox. Added offline negative tests; all existing optional real parser suites remain required. CI pending.

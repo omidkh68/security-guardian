@@ -37,7 +37,18 @@ def lines(value, limit, allow_empty=False):
         raise ValueError('Invalid evidence lines')
     return sorted(set(value))
 
+def unique_object(pairs):
+    result={}
+    for key,value in pairs:
+        if key in result:
+            raise ValueError('Duplicate parser JSON key')
+        result[key]=value
+    return result
+
+
 def validate_rows(data, sizes):
+    if len(sizes)>MAX_FILES or any(type(n) is not int or n<1 for n in sizes):
+        raise ValueError('Invalid parser line budget')
     if not isinstance(data,dict) or data.get('status')!='OK' or data.get('version')!=VERSION:
         raise ValueError('Parser unavailable')
     rows = data.get('results')
@@ -45,7 +56,8 @@ def validate_rows(data, sizes):
         raise ValueError('Invalid result count')
     for row, limit in zip(rows,sizes):
         if (not isinstance(row,dict) or type(row.get('parsed')) is not bool
-                or type(row.get('partial')) is not bool or row.get('reason') not in REASONS|{None}
+                or type(row.get('partial')) is not bool
+                or (row.get('reason') is not None and (not isinstance(row['reason'],str) or row['reason'] not in REASONS))
                 or not isinstance(row.get('hits'),list)):
             raise ValueError('Invalid parser result')
         if (not row['parsed'] and (not row['partial'] or row['hits'])) or (row['reason'] and not row['partial']):
@@ -61,6 +73,13 @@ def validate_rows(data, sizes):
 def run_parser(adapter, runtime, inputs, sizes):
     if adapter not in ADAPTERS or len(inputs)>MAX_FILES or len(inputs)!=len(sizes):
         raise ValueError('Invalid adapter input')
+    if any(not isinstance(x,dict) or not isinstance(x.get('content'),str) for x in inputs):
+        raise ValueError('Invalid parser source input')
+    lengths=[len(x['content'].encode('utf-8')) for x in inputs]
+    if any(n>MAX_BYTES for n in lengths) or sum(lengths)>MAX_BATCH_BYTES:
+        raise ValueError('Parser source budget exceeded')
+    if any(type(n) is not int or n<1 for n in sizes):
+        raise ValueError('Invalid parser line budget')
     node, compiler = runtime
     with tempfile.TemporaryDirectory(prefix='sg-js-parser-') as cwd:
         env = {'PATH':os.defpath,'LANG':'C.UTF-8','HOME':cwd}
@@ -70,7 +89,7 @@ def run_parser(adapter, runtime, inputs, sizes):
                  capture_output=True,timeout=TIMEOUT,cwd=cwd,env=env,check=False)
     if cp.returncode or len(cp.stdout)>2_000_000:
         raise ValueError('Parser unavailable')
-    return validate_rows(json.loads(cp.stdout),sizes)
+    return validate_rows(json.loads(cp.stdout,object_pairs_hook=unique_object),sizes)
 
 def unique_hits(hits):
     """Stable exact-evidence dedup; never join independent branch/route contexts."""
