@@ -35,3 +35,14 @@ flowchart LR
  D[Explicit exit] --> E[Pending finally] --> C
  E --> F[PARTIAL exception semantics]
 ```
+
+## Independent matched route pairs (#111)
+
+Two external MIT teaching labs (JimProKing/sql-injection-lab and MariamKhubashvilii/break-it-fix-it), pinned revisions and blob identities, four positive and four negative SQL sinks. Compare frozen v6, frozen v7 and current scanner using identical source bytes and scope. Each application version is scanned separately. Author-described matched routes only; other sinks are unlabeled. No target code/tests executed, no production accuracy claim. Results pending CI; retain partial misses. This is a report-only increment, not #111 acceptance.
+
+```mermaid
+flowchart LR
+ A[Pinned source and author labels] --> B[Identity and license check] --> C[Frozen and current scanners] --> D[Candidate overlap and partial coverage]
+```
+
+Run: `python scripts/benchmark_independent_sql.py`. Rollback: revert this benchmark-only change; scanner behavior is unchanged.
