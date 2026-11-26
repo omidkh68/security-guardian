@@ -72,3 +72,7 @@ flowchart LR
 ```
 
 Visual review refinement: compact grouped metadata, intact ordinary finding cards (oversize prose still splits), management advisory mapping counts and technical test/evidence bars. The CI-only artifact fixture uses explicitly synthetic severity/control variation and a visible demonstration notice; the existing homogeneous regression fixture remains unchanged. No new runtime dependency or user-supplied branding input.
+
+## Coverage evidence in every report format (#36)
+
+The report projection exposes recorded counts of skipped file or directory events, out-of-scope skips, unreadable/invalid source events, budget-related skips, and globally/per-control omitted signal records. Only fixed scanner-owned reason identifiers are accepted; arbitrary reason keys and project prose remain private. Missing or malformed counts remain null, and unknown reason keys cause PARTIAL_OR_UNRECORDED metadata with no total. An explicitly recorded empty skip dictionary means zero events. Global and per-control omission counts can overlap; never add them or interpret directory events as unique file counts. Optional tool execution evidence is explicitly NOT_AVAILABLE_FROM_SCANNER_SNAPSHOT, not a claim that a tool ran or was unavailable. JSON, Markdown and both PDF views use the same additive projection. No control assessment or compliance percentage is inferred.
