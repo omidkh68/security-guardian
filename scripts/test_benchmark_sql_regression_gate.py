@@ -23,6 +23,14 @@ class SqlRegressionGateTests(unittest.TestCase):
         with self.assertRaises(ValueError):check_rows([row(False,False)],1,0)
         with self.assertRaises(ValueError):require_kind({"schema_version":2,"kind":"x"},"x")
 
+    def test_legacy_report_level_coverage(self):
+        r=row(True,True)
+        del r["coverage_status"]
+        self.assertEqual(check_rows([r],1,0,report_coverage="PARTIAL")["partial_cases"],1)
+        with self.assertRaises(ValueError):check_rows([r],1,0)
+        with self.assertRaises(ValueError):check_rows([r],1,0,report_coverage="VERIFIED_PASS")
+        with self.assertRaises(ValueError):check_rows([row(True,True)],1,0,report_coverage="HEURISTIC_REVIEW_ONLY")
+
     def test_parse_blocked_units_cannot_pass(self):
         unit={"cases":[row(False,False)],"parse_blocked_cases":0,"parsed_unit_metrics":{},
               "parsed_files":1,"eligible_files":1}
