@@ -467,3 +467,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 [تحلیل SQL برنامه واقعی](docs/real-app-sql-FA.md) ([English](docs/real-app-sql.md)): AST پایتون نسخه ۱۳، Factory محدود Seed و Row، بستن گیرنده و منشأ Digest، مسیر محدود استثنا و Cleanup، شواهد محدود یک‌مرحله‌ای SQL بین ماژول‌ها، خلاصه محدود جایگزینی رشته (نه Sanitizer)، Parser آگاه از BOM و جریان محدود JSON، Factory محدود Cache در Context فلاسک و شرط ثابت روش HTTP، Factory با Import مطلق و مسیر نام‌دار، مسیر finally صریح و زنجیره execute/fetch؛ محدودیت ارزیابی خارجی صریح است.
 
 ماتریس پوشش از نسخه مشترک Pack پایتون SQL با اسکنر استفاده می‌کند؛ Runner محلی مجاز Python/Node همچنان از راستی‌آزمایی کل فریم‌ورک جداست. [پوشش فریم‌ورک](docs/framework-coverage-FA.md) و [قرارداد معنایی](docs/semantic-contract-FA.md) را ببینید.
+
+برای اصلاح محلی با تأیید صریح، `prepare-fix` و `review-fix` شواهد Git قبل/بعد در محدوده را نگه می‌دارند؛ این فرمان‌ها سورس برنامه را تغییر نمی‌دهند. [Verification Runner](docs/verification-runner-FA.md).

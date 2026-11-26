@@ -134,10 +134,24 @@ def build_export(run,ledger,scan,*,view='management',cumulative=False,private_de
         result=enum(t.get('result'),TEST_RESULTS)
         quality=enum(t.get('evidence_quality','MANUAL_REPORTED'),QUALITIES)
         receipt=t.get('execution_receipt')
-        if quality=='LOCAL_EXECUTION' and (not isinstance(receipt,dict) or
-                (result=='PASS' and (receipt.get('result')!='PASS' or receipt.get('execution_result')!='PASS'
-                                     or receipt.get('run_id')!=run['id'] or receipt.get('executed') is not True))):
-            quality='UNKNOWN'
+        if quality=='LOCAL_EXECUTION':
+            if not isinstance(receipt,dict):
+                quality='UNKNOWN'
+            elif result=='PASS':
+                counts=receipt.get('counts')
+                keys={'tests_run','failures','errors','skipped','expected_failures','unexpected_successes'}
+                if (receipt.get('result')!='PASS' or receipt.get('execution_result')!='PASS'
+                        or receipt.get('run_id')!=run['id'] or receipt.get('executed') is not True
+                        or receipt.get('finding_id') not in seq(t.get('finding_ids'))
+                        or receipt.get('adapter') not in {'python-unittest-v1','node-test-v1'}
+                        or receipt.get('adapter')!=t.get('command_or_method')
+                        or type(receipt.get('schema_version')) is not int or receipt['schema_version']!=1
+                        or type(receipt.get('exit_code')) is not int or receipt['exit_code']!=0
+                        or receipt.get('independently_verified_fix') is not False
+                        or not isinstance(counts,dict) or set(counts)!=keys
+                        or any(type(n) is not int for n in counts.values())
+                        or counts['tests_run']<=0 or any(counts[k]!=0 for k in keys-{'tests_run'})):
+                    quality='UNKNOWN'
         if quality=='MANUAL_REPORTED' and 'execution_receipt' in t:quality='UNKNOWN'
         tid='T-'+str(n).zfill(4)
         test_rows.append({'ref':tid,'result':result,'evidence_quality':quality,'executed_recorded':t.get('executed') is True,
@@ -164,6 +178,8 @@ def build_export(run,ledger,scan,*,view='management',cumulative=False,private_de
         v=obj(f.get('verification'))
         linked=test_by_id.get(v.get('test_id')) if isinstance(v.get('test_id'),str) else None
         linked_ok=bool(linked and linked[1]['evidence_quality'] in {'MANUAL_REPORTED','LOCAL_EXECUTION'} and linked[0].get('result')=='PASS' and linked[0].get('executed') is True and key in seq(linked[0].get('finding_ids')) and seq(linked[0].get('evidence')) and v.get('executed') is True and v.get('result')=='PASS')
+        if linked_ok and linked[1]['evidence_quality']=='LOCAL_EXECUTION':
+            linked_ok=linked[0]['execution_receipt']['finding_id']==key
         evidence_status='LINKED_PASS_IN_SELECTED_RUN' if linked_ok else 'PRIOR_OR_UNAVAILABLE_LINK' if status=='VERIFIED_FIXED' else 'NO_LINKED_PASS_IN_SELECTED_RUN'
         links=cross.get(cid,{}).get('mappings',[])
         ref_ids.update(m['reference'] for m in links)

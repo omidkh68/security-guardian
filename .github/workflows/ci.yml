@@ -55,6 +55,29 @@ jobs:
           cp scripts/fixtures/angular-ssr/package.json "$ROOT/app/package.json"
           npm install --prefix "$ROOT/app" --ignore-scripts --no-audit --no-fund --package-lock=true
           python scripts/test_angular_ssr_verification.py "$ROOT" -v
+      - name: Verify real NestJS HTTP runtime receipts in isolated fixture environment
+        if: matrix.python-version == '3.12'
+        run: |
+          set -euo pipefail
+          ROOT="$(mktemp -d "$RUNNER_TEMP/sg-nest-XXXXXX")"
+          trap 'rm -rf -- "$ROOT"' EXIT
+          mkdir "$ROOT/app"
+          cp scripts/fixtures/nest-http/package.json "$ROOT/app/package.json"
+          npm install --prefix "$ROOT/app" --ignore-scripts --no-audit --no-fund --package-lock=true
+          python scripts/test_nest_http_verification.py "$ROOT" -v
+      - name: Revalidate exact pinned official standards references
+        if: matrix.python-version == '3.12'
+        run: python scripts/verify_standards_sources.py --fetch-official
+      - name: Render synthetic management and technical PDF review artifacts
+        if: matrix.python-version == '3.12'
+        run: python scripts/export_synthetic_review_reports.py "$RUNNER_TEMP/sg-pdf-review"
+      - uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.12'
+        with:
+          name: synthetic-pdf-review
+          path: ${{ runner.temp }}/sg-pdf-review/*.pdf
+          if-no-files-found: error
+          retention-days: 7
       - name: Measure synthetic indicator benchmark (report only; scope and completeness gate)
         run: |
           python scripts/benchmark_scanner.py

@@ -5,6 +5,9 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Revalidate official pinned standards identifiers and publish synthetic-only management/technical PDF review artifacts in CI (#97, #98).
+- Require real NestJS guard/controller/HTTP owner and tenant state receipt fixture in isolated CI (#35).
+- Record scoped remediation approval, pre/post Git fingerprints and rollback review without modifying application source (#35).
 - Harden previously closed acceptance: immutable exposed benchmark labels, shared parser input validation, synchronized coverage versions, strict standards artifact grouping, unambiguous report evidence links and actionable fixed-unverified records (#107, #96, #94, #95, #97, #98, #35).
 - Enforce matched OWASP route identities, source hashes, labels and complete parsing across isolated/contextual SQL regression evidence (#111).
 - Reject inconsistent or malformed stored execution receipts, unknown evidence quality and mismatched adapter metadata (#58, #35).

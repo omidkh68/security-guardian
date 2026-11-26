@@ -138,3 +138,25 @@ A passing local receipt must also carry a matching PASS execution_result, exact 
 ## Actionable unverified finding and approval boundary (#35)
 
 New FIXED_UNVERIFIED records without a next action receive explicit guidance to run authorized finding-specific regression and review evidence or blocker; supplied actions are preserved. The controlled remediation workflow specifies approval scope, before/after fingerprints, private diff and rollback references. No patch execution or automatic approval by the tracker. NestJS fixture, machine-checkable approval/rollback evidence and end-to-end acceptance remain open. CI pending.
+
+## Remediation approval, diff and rollback receipts (#35)
+
+In an explicitly scoped `fix` run record a CONFIRMED_OPEN finding. Obtain specific owner approval, then run `security_tracker.py prepare-fix --run RUN --finding-id FINDING --file api/app.py --risk HIGH --approver owner --approval-ref approved-ticket --change-summary 'Scoped change' --rollback-plan 'Reverse reviewed patch'`. This records private pre-edit Git/selected-file evidence; it does not grant or execute a patch. Apply only the approved change after checking ownership. Run `review-fix --run RUN --plan-id PLAN` and include `risk_class`, exact `files`, and `remediation_plan_id` in the fix object. Before fixed status, the tracker requires the reviewed matching receipt and unchanged evidence. For rollback, manually reverse only the reviewed change and use `review-fix --rollback --run RUN --plan-id PLAN`; it checks the pre-edit state, never edits files. Reassess/reopen the finding. Existing unstructured manual records remain compatible and do not prove approval. All declared plans require approval metadata; the workflow must not omit required high-risk classification. The bounded local contract checks existing tracked files, no overlapping changes, HEAD, index, unrelated tracked and nonignored untracked contents; ignored files and hostile filesystem actors are outside scope. No cryptographic approval attestation, arbitrary patch execution or production action. Regression fixtures use a disposable Git checkout with staged, unstaged and untracked user edits and before/after security tests. CI pending.
+
+```mermaid
+flowchart LR
+ A[Explicit owner approval] --> B[Prepare private pre-edit receipt]
+ B --> C[Owner applies scoped patch]
+ C --> D[Review Git and file fingerprints]
+ D --> E[Authorized regression receipt]
+ E --> F[Explicit verified record]
+ D --> G[Manual rollback and pre-state check]
+```
+
+## Real NestJS HTTP runtime gate (#35)
+
+The isolated required Python 3.12 CI step installs exact direct NestJS 11.1.6 dependencies with scripts disabled and executes real NestFactory, controller decorators, injected service, guard and Express HTTP transport on loopback via the existing Node adapter. Five unchanged tests: guard denies missing/invalid sessions, owner/tenant read/update/delete policy, privileged field rejection, valid owner state transitions and concurrent independent request identities. Expected two failures and three positives before, five passes after. Source/test/manifest/generated lockfile bound to receipt, no target dependency or production service. Synthetic credentials and in-memory data; explicit field policy, not a claim of ValidationPipe/ORM/database coverage. Direct versions pinned; transitive lock generated per run. CI pending.
+
+New local receipts include the fixed logical argv contract, selected test identity and SHA-256 of the exact adapter worker. Missing or inconsistent command identity requires a fresh run; finalized historical records are not rewritten. Approval review also rejects assume-unchanged/skip-worktree index flags and changed finding title/location or approved summary. Audit/plan and stale reviewed-patch regressions exercise these constraints.
+
+A successful rollback review of an active fixed finding now explicitly transitions it to NEEDS_REVIEW and clears current fix/verification metadata while preserving history; it never leaves a known rolled-back fix marked verified. The end-to-end fixture also exports a finalized JSON report and checks linked local evidence and absence of approval identifiers.
