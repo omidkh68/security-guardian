@@ -96,9 +96,18 @@ class StandardsBatchTests(unittest.TestCase):
             subprocess.run([sys.executable,'-m','sarif','csv','-o',str(dest),str(source)],check=True,timeout=30)
             with dest.open(encoding='utf-8-sig',newline='') as h:rows=list(csv.DictReader(h))
             self.assertEqual(len(rows),2)
-            contents=[' '.join(str(v) for v in row.values()) for row in rows]
-            self.assertTrue(any('src/candidate.ts' in x and 'CANDIDATE' in x for x in contents))
-            self.assertTrue(any('src/confirmed.ts' in x and 'CONFIRMED_OPEN' in x for x in contents))
+            # Diagnostics contain only our synthetic fixture; compare the documented
+            # consumer columns rather than relying on arbitrary CSV serialization.
+            print('SYNTHETIC_SARIF_CONSUMER_ROWS='+json.dumps(rows,sort_keys=True))
+            by_path={row['Location'].replace(chr(92),'/').removeprefix('./'):row for row in rows}
+            self.assertEqual(set(by_path),{'src/candidate.ts','src/confirmed.ts'})
+            for path,line,status,level in (('src/candidate.ts',7,'CANDIDATE','warning'),
+                                           ('src/confirmed.ts',11,'CONFIRMED_OPEN','error')):
+                row=by_path[path]
+                self.assertEqual(int(row['Line']),line)
+                self.assertEqual(row['Code'],'API-07')
+                self.assertEqual(row['Severity'],level)
+                self.assertIn(status,row['Description'])
             print('SARIF_CONSUMER_CSV=PASS rows=2')
 
     def test_cvss_vector_validation(self):
