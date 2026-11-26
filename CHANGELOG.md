@@ -5,6 +5,10 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Publish separate benchmark evidence JSON in CI with exact input hashes, reconstructed denominators and no pooled accuracy (#37, PR #145).
+- Expose coverage gaps and unknown tool evidence in the shared privacy-safe PDF/JSON/Markdown projection (#36, PR #144).
+- Reject malformed Semgrep output, out-of-root paths and silent coverage caps; report PARTIAL explicitly (#34, PR #143).
+- Add framework coverage matrix v2 with exact reference fixture versions and uncertified target version status (#33, PR #142).
 - Redesign management/technical PDF reports with visual dashboards, clickable section navigation and compact evidence cards without changing the privacy projection (#139).
 - Revalidate official pinned standards identifiers and publish synthetic-only management/technical PDF review artifacts in CI (#97, #98).
 - Require real NestJS guard/controller/HTTP owner and tenant state receipt fixture in isolated CI (#35).
