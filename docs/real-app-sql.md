@@ -169,3 +169,32 @@ flowchart LR
 ```
 
 Run offline tests and `python scripts/benchmark_final_sql_holdout.py`; prior frozen evidence retained. New tests cover mutations, dynamic seed setup, stale receiver alias, parameterized negatives and digest provenance. Implementation CI pending; revert this bounded scanner increment for rollback. New cohort becomes regression evidence after tuning.
+
+## #111 bounded acceptance evidence (v13)
+
+The acceptance is for the explicitly bounded Python Flask/SQLite candidate engine, not universal static detection or production verification. The following results were independently retrieved from CI logs and the source-only benchmark fixtures were never executed.
+
+| Cohort | Current TP | TN | FP | FN | Evidence |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Original isolated OWASP (helpers omitted) | 0 | 11 | 0 | 5 | 16/16 PARTIAL; preserved limitation |
+| OWASP contextual | 5 | 11 | 0 | 0 | CI 45824199394 |
+| EyalSec paired | 1 | 1 | 0 | 0 | CI 45824199394 |
+| BackdoorAli lab | 2 | 5 | 0 | 0 | CI 45824199394 |
+| Matched route pairs | 4 | 4 | 0 | 0 | CI 45824199394 |
+| Boundary direct | 4 | 3 | 0 | 0 | CI 45824199394 |
+| Boundary interprocedural | 2 | 5 | 0 | 0 | CI 45824199394 |
+| Post-v12 matched pairs | 7 | 7 | 0 | 0 | CI 45824199394 |
+
+Frozen post-v12 baseline 45823731266 was TP2 TN7 FP0 FN5. v13 corrected all five exposed misses; the cohort is now regression evidence, not an untouched holdout. All contextual/external cases remain PARTIAL and the isolated five misses are deliberately retained as misses, never reported as successful detection. Do not pool overlapping cohorts into a production accuracy claim. Original labels and pinned source identities retained. PR #129 exact-head CI 45824199394 (174 scanner and 8 evaluator tests, six checks), main merge c349b99 CI 45824445580 six checks. Earlier PRs #112, #117, #120–#124, #126–#129 and linked CI runs preserve development history.
+
+Acceptance cross-check: same-module named/Row/context/seed factories and bounded imported receiver evidence; normal and modeled exception paths and execute/fetch chains; generalized positive/negative tests; one-hop source/call/sink provenance; externally authored frozen cohorts with fixed labels, meaningful positive/negative denominators, identical inputs/config and documented partial misses; paired EN/FA architecture and tests; six checks and main evidence. The new CI regression gate rejects labeled FP/FN in exposed contextual cohorts, denominator/schema drift and incomplete parsing; isolated context limitation remains explicitly separate. Run the offline tests and gate on the JSON reports created by CI. No independent human reviewer or runtime exploit verification is claimed. Arbitrary dynamic dispatch, missing source context, multi-hop flow and arbitrary exceptions are outside the bounded model. The release decision, broader benchmark and residual-risk review remain #105/#37, not a silent assertion of safety. No release is created here.
+
+```mermaid
+flowchart LR
+ A[Immutable external source and labels] --> B[Current candidate reports]
+ B --> C[Known regression outcomes]
+ B --> D[Isolated context limitation]
+ C --> E[Required CI gate]
+ D --> E
+ E --> F[Release review separate]
+```
