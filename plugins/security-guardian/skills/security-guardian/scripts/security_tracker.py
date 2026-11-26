@@ -645,6 +645,16 @@ def review_fix(args):
         plan['status']='ROLLED_BACK' if args.rollback else 'REVIEWED'
         plan['rollback' if args.rollback else 'after']=after
         plan['reviewed_at']=now()
+        if args.rollback and finding['status'] in {'FIXED_UNVERIFIED','VERIFIED_FIXED'}:
+            # A checked rollback invalidates the active fixed status. Preserve
+            # prior evidence in history and require new security review.
+            entry={**finding,'status':'NEEDS_REVIEW',
+                   'reason':'Reviewed patch returned to its approved pre-edit state.',
+                   'next_action':'Reassess the finding and obtain fresh scoped security evidence.',
+                   'fix':{},'verification':{}}
+            apply_event(ledger,entry,run)
+            append_event(rdir/'events.jsonl',{'at':now(),'type':'FINDING_REVIEWED',
+                         'id':entry['id'],'status':entry['status'],'reason':entry['reason']})
         append_event(rdir/'events.jsonl',{'at':now(),'type':'REMEDIATION_'+plan['status'],'plan_id':plan['plan_id']})
         save_state(store,index,ledger)
         snapshot(store,rdir,run,ledger,read_json(rdir/'scanner.json'))

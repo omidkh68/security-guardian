@@ -87,6 +87,26 @@ class ProfessionalReportTests(unittest.TestCase):
             self.assertIsNone(result['linked_test'])
         self.assertEqual(evidence([{k:v for k,v in test.items() if k!='evidence_quality'}])['linked_test_quality'],'MANUAL_REPORTED')
 
+    def test_local_pass_receipt_must_match_exact_finding_and_counts(self):
+        run,ledger,scan=fixture()
+        f=next(x for x in ledger['findings'].values() if x['status']=='VERIFIED_FIXED')
+        test=run['tests'][0]
+        test.update(evidence_quality='LOCAL_EXECUTION',command_or_method='python-unittest-v1',finding_ids=[f['id']])
+        f['verification']={'test_id':test['test_id'],'executed':True,'result':'PASS'}
+        receipt={'schema_version':1,'run_id':run['id'],'finding_id':f['id'],
+                 'adapter':'python-unittest-v1','result':'PASS','execution_result':'PASS',
+                 'executed':True,'exit_code':0,'independently_verified_fix':False,
+                 'counts':{'tests_run':1,'failures':0,'errors':0,'skipped':0,
+                           'expected_failures':0,'unexpected_successes':0}}
+        test['execution_receipt']=receipt
+        def row():
+            return next(x for x in r.build_export(run,ledger,scan)['findings'] if x['id']==f['id'])
+        self.assertEqual(row()['linked_test_quality'],'LOCAL_EXECUTION')
+        for bad in ({'finding_id':'SG-API-07-000000000099'},{'counts':{'tests_run':0}},
+                    {'exit_code':1},{'adapter':'node-test-v1'},{'schema_version':True}):
+            test['execution_receipt']={**receipt,**bad}
+            self.assertEqual(row()['verification_evidence'],'PRIOR_OR_UNAVAILABLE_LINK')
+
     def test_historical_reexport_and_protected_outputs(self):
         run,ledger,scan=fixture()
         with tempfile.TemporaryDirectory() as tmp:

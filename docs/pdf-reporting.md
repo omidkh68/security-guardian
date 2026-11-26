@@ -54,3 +54,5 @@ Duplicate test IDs cannot support a linked PASS. Unknown or inconsistent local/m
 ## Synthetic visual-review artifacts (#98)
 
 The required Python 3.12 CI step renders the existing wholly synthetic 125-finding fixture in both management and technical PDF views, asserts every finding ID is present, pagination and absence of private canary in text and metadata, and uploads only these synthetic PDFs as `synthetic-pdf-review` with seven-day retention. No customer data, private ledger or logs are uploaded. CI output is automated content evidence, not independent human typography or disclosure approval. Visual review of the artifacts remains a distinct recorded task. CI pending.
+
+A local PASS link additionally requires exact archived receipt finding, run, adapter, exit, boolean execution status and passing counts consistency. This is an archived consistency check, not live source freshness verification. Negative tests reject mismatched or malformed receipts.

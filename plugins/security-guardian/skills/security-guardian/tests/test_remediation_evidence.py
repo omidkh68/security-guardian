@@ -108,6 +108,15 @@ class RemediationTests(unittest.TestCase):
         self.call('record','--run',self.run,payload=fixed)
         self.call('finish','--run',self.run,'--result','COMPLETED')
         self.review(plan,expected=2)
+        report=subprocess.run([sys.executable,str(SCRIPT.with_name('security_report.py')),
+            '--root',str(self.root),'--run',self.run,'--format','json'],capture_output=True,text=True,timeout=20)
+        self.assertEqual(report.returncode,0,report.stderr)
+        exported=Path(json.loads(report.stdout)['output']).read_text()
+        row=next(x for x in json.loads(exported)['findings'] if x['id']==self.ident)
+        self.assertEqual(row['status'],'VERIFIED_FIXED')
+        self.assertEqual(row['linked_test_quality'],'LOCAL_EXECUTION')
+        self.assertNotIn('fixture-approval-1',exported)
+        self.assertNotIn('fixture-owner',exported)
         run=next(x for x in json.loads((self.root/'.security-guardian/index.json').read_text())['runs'] if x['id']==self.run)
         self.assertEqual(run['remediation_plans'][0]['status'],'REVIEWED')
         self.assertNotEqual(run['remediation_plans'][0]['before']['selected']['digest'],
@@ -122,10 +131,15 @@ class RemediationTests(unittest.TestCase):
         plan=self.prepare()['plan_id']
         self.source.write_text(self.safe)
         self.review(plan)
+        self.record_fixed(plan)
         self.review(plan,'--rollback',expected=2)
         self.assertEqual(self.source.read_text(),self.safe)
         self.source.write_text(self.original)
         self.assertEqual(self.review(plan,'--rollback')['status'],'ROLLED_BACK')
+        finding=json.loads((self.root/'.security-guardian/ledger.json').read_text())['findings'][self.ident]
+        self.assertEqual(finding['status'],'NEEDS_REVIEW')
+        self.assertEqual(finding['verification'],{})
+        self.assertTrue(finding['next_action'])
         self.record_fixed(plan,expected=2)
 
 if __name__=='__main__':
