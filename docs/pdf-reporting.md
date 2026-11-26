@@ -50,3 +50,7 @@ Up to 5000 findings and 5000 test records; larger inputs fail explicitly rather 
 ## Unambiguous evidence links (#98)
 
 Duplicate test IDs cannot support a linked PASS. Unknown or inconsistent local/manual receipt quality cannot be linked as eligible evidence; historical manual records remain labeled MANUAL_REPORTED. Ledger status and privacy projection are unchanged. Test regressions cover ambiguous and malformed records; actual PDF pagination and extraction remain in CI. Visual human review remains separate. CI pending.
+
+## Synthetic visual-review artifacts (#98)
+
+The required Python 3.12 CI step renders the existing wholly synthetic 125-finding fixture in both management and technical PDF views, asserts every finding ID is present, pagination and absence of private canary in text and metadata, and uploads only these synthetic PDFs as `synthetic-pdf-review` with seven-day retention. No customer data, private ledger or logs are uploaded. CI output is automated content evidence, not independent human typography or disclosure approval. Visual review of the artifacts remains a distinct recorded task. CI pending.
