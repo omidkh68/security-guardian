@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 
 
-def check_rows(rows, positive, negative, *, isolated=False):
+def check_rows(rows, positive, negative, *, isolated=False, report_coverage=None):
     if not isinstance(rows,list) or len(rows)!=positive+negative:
         raise ValueError("Unexpected case count")
     counts=Counter()
@@ -15,7 +15,9 @@ def check_rows(rows, positive, negative, *, isolated=False):
         expected,observed=row["expected"],row["observed"]
         if type(expected) is not bool or type(observed) is not bool:
             raise ValueError("Invalid label or observation")
-        status=row["coverage_status"]
+        status=row.get("coverage_status",report_coverage)
+        if report_coverage is not None and status!=report_coverage:
+            raise ValueError("Inconsistent report coverage")
         if status not in {"PARTIAL","HEURISTIC_REVIEW_ONLY"}:
             raise ValueError("Invalid candidate coverage status")
         classification=("tp" if observed else "fn") if expected else ("fp" if observed else "tn")
@@ -74,7 +76,7 @@ def validate(reports):
     c=context(reports["external_lab"],"FROZEN_EXTERNAL_FLASK_SQLITE_LAB")["current"]
     if c["parsed_files"]!=c["eligible_files"]:
         raise ValueError("Lab parsing incomplete")
-    result["external_lab"]=check_rows(c["cases"],2,5)
+    result["external_lab"]=check_rows(c["cases"],2,5,report_coverage=c["coverage_status"])
     p=reports["route_pairs"]
     require_kind(p,"EXTERNAL_MATCHED_SQL_ROUTE_PAIRS")
     result["matched_routes"]=check_rows(unit_rows(p["results"]["current"]),4,4)
