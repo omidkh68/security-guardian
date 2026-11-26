@@ -474,7 +474,7 @@ def record(args):
             if e['status'] == 'VERIFIED_FIXED':
                 verification = e['verification']
                 test = test_by_id.get(verification['test_id'])
-                if (test is None or test['result'] != 'PASS' or not test['executed'] or
+                if (test is None or test['result'] != 'PASS' or test.get('executed') is not True or
                         e['id'] not in test.get('finding_ids', []) or not test.get('evidence')):
                     raise ValueError('VERIFIED_FIXED requires linked PASS test evidence from this run and finding ID')
                 tested_sha = test.get('git_commit')
@@ -483,12 +483,19 @@ def record(args):
                     raise ValueError('Git HEAD changed after linked PASS test; rerun verification')
                 verification['git_commit'] = tested_sha
                 quality = test.get('evidence_quality', 'MANUAL_REPORTED')
+                if quality not in ('LOCAL_EXECUTION', 'MANUAL_REPORTED'):
+                    raise ValueError('Unknown stored evidence quality')
+                if quality == 'MANUAL_REPORTED' and 'execution_receipt' in test:
+                    raise ValueError('Manual evidence must not contain a local execution receipt')
                 if quality == 'LOCAL_EXECUTION':
+                    receipt = test.get('execution_receipt')
+                    if not isinstance(receipt, dict) or test.get('command_or_method') != receipt.get('adapter'):
+                        raise ValueError('Local test command and execution receipt must agree')
                     review = verification.get('security_assertion_review')
                     if not isinstance(review, str) or not 10 <= len(review.strip()) <= 2000:
                         raise ValueError('Local execution requires explicit security assertion review')
                     existing = ledger['findings'].get(e['id'])
-                    validate_execution_receipt(root, run, existing, test['execution_receipt'])
+                    validate_execution_receipt(root, run, existing, receipt)
                     if any(e[k] != existing[k] for k in ('location', 'title', 'fix')):
                         raise ValueError('Finding title, location or fix changed after execution; rerun')
                 verification['evidence_quality'] = quality
@@ -567,11 +574,13 @@ def validate_execution_receipt(root, run, finding, receipt):
     """Validate a directly collected receipt; not cryptographic attestation."""
     if not isinstance(receipt, dict) or not finding:
         raise ValueError('Missing local execution evidence')
-    if (receipt.get('schema_version') != 1 or receipt.get('adapter') not in security_test_runner.ADAPTERS
+    if (type(receipt.get('schema_version')) is not int or receipt['schema_version'] != 1
+            or receipt.get('adapter') not in security_test_runner.ADAPTERS
             or receipt.get('run_id') != run['id'] or receipt.get('finding_id') != finding['id']
             or receipt.get('finding_stamp') != _finding_stamp(finding)
             or receipt.get('scope_stamp') != _finding_stamp(run.get('scope_resolution'))
-            or receipt.get('result') != 'PASS' or receipt.get('executed') is not True
+            or receipt.get('result') != 'PASS' or receipt.get('execution_result') != 'PASS'
+            or receipt.get('executed') is not True
             or type(receipt.get('exit_code')) is not int or receipt['exit_code'] != 0
             or receipt.get('independently_verified_fix') is not False):
         raise ValueError('Ineligible or unrelated local execution receipt')
@@ -598,12 +607,18 @@ def validate_execution_receipt(root, run, finding, receipt):
             or not isinstance(receipt.get('output_sha256'), str)
             or not re.fullmatch(r'[0-9a-f]{64}', receipt['output_sha256'])
             or type(receipt.get('output_bytes')) is not int
-            or not 0 <= receipt['output_bytes'] <= security_test_runner.MAX_OUTPUT):
+            or not 1 <= receipt['output_bytes'] <= security_test_runner.MAX_OUTPUT
+            or type(receipt.get('timeout_seconds')) is not int
+            or not 1 <= receipt['timeout_seconds'] <= security_test_runner.MAX_TIMEOUT
+            or type(receipt.get('elapsed_ms')) is not int or receipt['elapsed_ms'] < 0):
         raise ValueError('Invalid local execution metadata')
-    if receipt['adapter']=='node-test-v1' and not re.fullmatch(r'v(?:22|24)\.\d+\.\d+',str(receipt.get('node_version',''))):
+    if receipt['adapter']=='node-test-v1' and (not isinstance(receipt.get('node_version'), str)
+            or not re.fullmatch(r'v(?:22|24)\.\d+\.\d+',receipt['node_version'])):
         raise ValueError('Invalid Node execution version')
     current = _selected_inputs(root, run, finding, files, receipt.get('test_file'),receipt['adapter'])
-    if before != after or after != current:
+    # Canonical JSON comparison also rejects bool/float aliases of integer
+    # fields, which ordinary Python dict equality would accept.
+    if dump(before) != dump(current) or dump(after) != dump(current):
         raise ValueError('Local execution evidence is stale; rerun verification')
 
 
