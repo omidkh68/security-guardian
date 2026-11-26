@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Read-only inventory and bounded Markdown link/fence audit for human docs."""
 import json
-from pathlib import Path, PurePosixPath
 import posixpath
 import re
 import subprocess
@@ -11,7 +10,6 @@ from validate_package import ROOT, is_human_documentation
 
 FENCE=re.compile(r'^ {0,3}(`{3,}|~{3,})(.*)$')
 LINK=re.compile(r'(?<!!)\]\((<[^>\n]+>|[^\s()]+)(?:\s+["\'][^\n]*["\'])?\)')
-ISSUE=re.compile(r'https://github\.com/omidkh68/security-guardian/(issues|pull)/(\d+)')
 
 
 def inspect(path,text,tracked):
