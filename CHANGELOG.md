@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Extend Python SQL AST v13 with bounded seeded/Row factory summaries, receiver close invalidation and digest provenance (#111, #129).
 - Extend Python SQL AST v12 with bounded typed exception handlers, nested cleanup/rethrow and possible SQLite error paths (#111, #127).
 - Extend Python SQL AST v11 with selected-component one-hop direct-call sink summaries and separate source/call locations (#111, #126).
 - Extend Python SQL AST v10 with bounded literal replacement helper summaries that retain request provenance without treating blacklists as SQL sanitizers (#111, #124).

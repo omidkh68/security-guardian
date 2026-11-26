@@ -729,6 +729,14 @@ def _sql_value(node, values, receivers, request_names, db_names, helpers):
                 section,option=(a.value for a in node.args)
                 key=('config',node.func.value.id,section,option.lower())
                 return key in values,values.get(key,empty)
+        if (_attr(node.func,'hexdigest') and not node.args and isinstance(node.func.value,ast.Call)):
+            digest_call=node.func.value
+            member=_imported_member(digest_call.func,receivers)
+            if (member in {('hashlib',n) for n in ('md5','sha1','sha224','sha256','sha384','sha512')}
+                    and len(digest_call.args)==1 and not digest_call.keywords
+                    and not isinstance(digest_call.args[0],ast.Starred)):
+                # Preserve provenance rather than certify a digest as SQL-safe.
+                return _sql_value(digest_call.args[0],values,receivers,request_names,db_names,helpers)
         imported=_imported_member(node.func,receivers)
         if imported in {('base64','b64encode'),('base64','b64decode'),('urllib.parse','unquote_plus'),('urllib.parse','unquote')} and len(node.args)==1:
             return _sql_value(node.args[0],values,receivers,request_names,db_names,helpers)
@@ -919,6 +927,71 @@ def _local_row_connection_factory(fn, db_names, os_names):
     return (0, (), 'connection')
 
 
+def _bounded_seed_literal(node, depth=0):
+    if depth>4:
+        return False
+    if isinstance(node,ast.Constant):
+        return type(node.value) in (int,float,bool,type(None)) or isinstance(node.value,str) and len(node.value)<=1024
+    return (isinstance(node,(ast.List,ast.Tuple)) and len(node.elts)<=32
+            and all(_bounded_seed_literal(x,depth+1) for x in node.elts))
+
+
+def _seeded_connection_factory(fn, db_names):
+    """Exact local connection with bounded literal seed calls before return."""
+    args=fn.args
+    if (fn.decorator_list or args.args or args.posonlyargs or args.kwonlyargs or args.vararg
+            or args.kwarg or args.defaults or getattr(fn,'type_params',())
+            or _binding_names(fn)&db_names):
+        return None
+    body=fn.body
+    if body and isinstance(body[0],ast.Expr) and isinstance(body[0].value,ast.Constant) and isinstance(body[0].value.value,str):
+        body=body[1:]
+    if not 3<=len(body)<=7 or not isinstance(body[-1],ast.Return):
+        return None
+    init=body[0]
+    if (not isinstance(init,ast.Assign) or len(init.targets)!=1 or not isinstance(init.targets[0],ast.Name)
+            or not isinstance(init.value,ast.Call)):
+        return None
+    name,call=init.targets[0].id,init.value
+    if (not _attr(call.func,'connect') or not isinstance(call.func.value,ast.Name)
+            or call.func.value.id not in db_names or call.keywords or len(call.args)!=1
+            or not isinstance(call.args[0],ast.Constant) or not isinstance(call.args[0].value,str)
+            or not _name(body[-1].value,name)):
+        return None
+    setup=body[1:-1]
+    if setup and isinstance(setup[0],ast.Assign):
+        st=setup[0]
+        if (len(st.targets)!=1 or not _attr(st.targets[0],'row_factory') or not _name(st.targets[0].value,name)
+                or not _attr(st.value,'Row') or not _name(st.value.value,call.func.value.id)):
+            return None
+        setup=setup[1:]
+    if not 1<=len(setup)<=4:
+        return None
+    for st in setup:
+        if not isinstance(st,ast.Expr) or not isinstance(st.value,ast.Call):
+            return None
+        c=st.value
+        if (not isinstance(c.func,ast.Attribute) or not _name(c.func.value,name) or c.keywords
+                or c.func.attr not in {'execute','executemany'} or len(c.args)!={'execute':1,'executemany':2}[c.func.attr]
+                or not isinstance(c.args[0],ast.Constant) or not isinstance(c.args[0].value,str)
+                or len(c.args[0].value)>4096 or not all(_bounded_seed_literal(a) for a in c.args[1:])):
+            return None
+    return (0, (), 'connection')
+
+
+def _hashlib_imports(tree, bindings):
+    names={a.asname or a.name for n in tree.body if isinstance(n,ast.Import)
+           for a in n.names if a.name=='hashlib' and bindings[a.asname or a.name]==1}
+    for n in ast.walk(tree):
+        if isinstance(n,(ast.Global,ast.Nonlocal)):
+            names.difference_update(n.names)
+        elif isinstance(n,ast.Attribute) and isinstance(n.ctx,(ast.Store,ast.Del)):
+            parts=_qualified_parts(n)
+            if parts:
+                names.discard(parts[0])
+    return names
+
+
 def _flask_context_factory(fn, db_names, context_names, tree):
     """Bounded source-only Flask.g lazy SQLite cache, not runtime provenance."""
     args = fn.args
@@ -1006,7 +1079,7 @@ def _connection_exports(content):
         bindings=Counter(name for n in tree.body for name in _module_bindings(n))
         if not names or any(bindings[name]!=1 for name in names):return {}
         return {n.name:summary for n in tree.body if isinstance(n,ast.FunctionDef)
-                and bindings[n.name]==1 and (summary:=_connection_factory(n,names))}
+                and bindings[n.name]==1 and (summary:=(_connection_factory(n,names) or _local_row_connection_factory(n,names,set()) or _seeded_connection_factory(n,names)))}
     except (SyntaxError,RecursionError,MemoryError,ValueError):return {}
 
 
@@ -1062,7 +1135,7 @@ def _qualified_connection_exports(content):
                 if parts and parts[0] in names:return {}
             if isinstance(n,(ast.Global,ast.Nonlocal)) and set(n.names)&names:return {}
         result={n.name:summary for n in tree.body if isinstance(n,ast.FunctionDef) and bindings[n.name]==1
-                and not (_binding_names(n)&names) and (summary:=_connection_factory(n,names,True))}
+                and not (_binding_names(n)&names) and (summary:=(_connection_factory(n,names,True) or _local_row_connection_factory(n,names,set()) or _seeded_connection_factory(n,names)))}
         for n in tree.body:
             if isinstance(n,ast.ClassDef) and bindings[n.name]==1:
                 summary=_request_wrapper_summary(n)
@@ -1211,10 +1284,10 @@ class _SqlResumeExit:
 
 
 def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bindings=(),
-                        initial_values=None, call_targets=None, call_hits=None, slice_limits=()):
+                        initial_values=None, call_targets=None, call_hits=None, slice_limits=(), hash_names=()):
     # Each pending path owns its bindings. Never join taint from one branch
     # with a receiver from another. Unmodeled paths terminate, visibly partial.
-    pending = [(tuple(fn.body), dict(initial_values or {}), {})]
+    pending = [(tuple(fn.body), dict(initial_values or {}), {('import',n):'hashlib' for n in hash_names})]
     shadowed=set(module_bindings)|_binding_names(fn)
     def clear_handler(name, values, receivers):
         if name is None:
@@ -1351,6 +1424,17 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bind
                 if not known or sum(isinstance(k,tuple) and k[:2]==('dict',dst.value.id) for k in values)>=32:
                     partial=True;break
                 values[('dict',dst.value.id,dst.slice.value)]=lines
+                continue
+            if (isinstance(stmt,ast.Expr) and isinstance(stmt.value,ast.Call) and _attr(stmt.value.func,'close')
+                    and isinstance(stmt.value.func.value,ast.Name) and not stmt.value.args and not stmt.value.keywords
+                    and receivers.get(stmt.value.func.value.id) in {'connection','cursor'}):
+                # Without alias identity, conservatively invalidate every live
+                # SQLite receiver; explicit new connection can establish it again.
+                for key in list(receivers):
+                    if receivers[key] in ('connection','cursor'):
+                        receivers[key]=None
+                partial=True
+                stats['sqlite_close_paths']+=1
                 continue
             if isinstance(stmt,ast.Expr) and isinstance(stmt.value,ast.Call) and isinstance(stmt.value.func,ast.Attribute):
                 call=stmt.value;obj=call.func.value
@@ -1543,7 +1627,7 @@ def _sql_function_paths(fn, stats, request_names, db_names, helpers, module_bind
                              or (isinstance(value.slice.upper, ast.Name) and value.slice.upper.id in slice_limits))):
                     known, lines = _sql_value(value.value, values, receivers, request_names, db_names, helpers)
                     partial = True
-                elif call_targets is not None and isinstance(value, ast.List) and not value.elts:
+                elif isinstance(value, ast.List) and not value.elts:
                     known, lines = True, frozenset()
                 else:
                     known, lines = _sql_value(value, values, receivers, request_names, db_names, helpers)
@@ -1621,7 +1705,9 @@ def python_sql_flow(content, sibling_exports=None, qualified_exports=None):
     context_names = {name for name in context_names if bindings[name] == 1}
     context_helpers = set()
     row_helpers = set()
+    seeded_helpers = set()
     replacement_helpers = set()
+    hash_names = _hashlib_imports(tree,bindings)
     flask_names = {a.asname or a.name for n in tree.body if isinstance(n, ast.ImportFrom)
                    and n.level == 0 and n.module == 'flask' for a in n.names if a.name == 'Flask'
                    and bindings[a.asname or a.name] == 1}
@@ -1646,6 +1732,10 @@ def python_sql_flow(content, sibling_exports=None, qualified_exports=None):
                 if summary is not None:
                     row_helpers.add(n.name)
             if summary is None:
+                summary = _seeded_connection_factory(n,db_names)
+                if summary is not None:
+                    seeded_helpers.add(n.name)
+            if summary is None:
                 summary = _flask_context_factory(n, db_names, context_names, tree)
                 if summary is not None:
                     context_helpers.add(n.name)
@@ -1654,8 +1744,10 @@ def python_sql_flow(content, sibling_exports=None, qualified_exports=None):
     stats['recognized_helpers'] += len(helpers)
     stats['flask_context_factories'] += len(context_helpers)
     stats['local_row_connection_factories'] += len(row_helpers)
+    stats['seeded_connection_factories'] += len(seeded_helpers)
+    stats['hashlib_import_bindings'] += len(hash_names)
     stats['literal_replacement_helpers'] += len(replacement_helpers)
-    stats['named_path_factory_candidates'] += sum(isinstance(n,ast.FunctionDef) and n.name in helpers and helpers[n.name]==(0,(), 'connection') and n.name not in context_helpers | row_helpers and _connection_factory(n,db_names) is None for n in tree.body)
+    stats['named_path_factory_candidates'] += sum(isinstance(n,ast.FunctionDef) and n.name in helpers and helpers[n.name]==(0,(), 'connection') and n.name not in context_helpers | row_helpers | seeded_helpers and _connection_factory(n,db_names) is None for n in tree.body)
     stats['unmodeled_module_statements'] += sum(not isinstance(n, (ast.Import, ast.ImportFrom, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and not (isinstance(n, ast.Expr) and isinstance(n.value, ast.Constant)) for n in tree.body)
     # Nested functions/classes and async functions are outside the model.
     functions = [n for n in tree.body if isinstance(n, ast.FunctionDef)]
@@ -1677,7 +1769,8 @@ def python_sql_flow(content, sibling_exports=None, qualified_exports=None):
             local_helpers = {name: summary for name, summary in helpers.items() if name not in local_bindings
                              and not (name in context_helpers and local_bindings & context_names)
                              and not (name in row_helpers and local_bindings & os_names)}
-            sources_by_sink, partial = _sql_function_paths(fn, stats, request_names, db_names, local_helpers, bindings)
+            sources_by_sink, partial = _sql_function_paths(fn, stats, request_names, db_names, local_helpers, bindings,
+                                                          hash_names=hash_names-local_bindings)
             for line, source_set in sorted(sources_by_sink.items()):
                 sources = sorted(source_set)
                 hits.append({'line':line,'source_lines':sources[:16],
@@ -1723,7 +1816,8 @@ def _sql_interprocedural(files, owner, stats):
                 continue
             summary = (_helper_summary(fn) or _literal_replacement_summary(fn)
                        or _connection_factory(fn, db, True)
-                       or _local_row_connection_factory(fn, db, set()))
+                       or _local_row_connection_factory(fn, db, set())
+                       or _seeded_connection_factory(fn, db))
             if summary is not None:
                 helpers[name] = summary
         limits = {n.targets[0].id for n in tree.body if isinstance(n, ast.Assign)
@@ -1752,7 +1846,8 @@ def _sql_interprocedural(files, owner, stats):
             return None
         local = {k:v for k,v in helpers.items() if k not in _binding_names(fn)}
         seeded = {name:frozenset({i}) for i,name in enumerate(params)}
-        sinks, partial = _sql_function_paths(fn, Counter(), (), db, local, bindings, initial_values=seeded)
+        sinks, partial = _sql_function_paths(fn, Counter(), (), db, local, bindings, initial_values=seeded,
+                                             hash_names=_hashlib_imports(tree,bindings)-_binding_names(fn))
         sinks = {line:used for line,used in sinks.items() if used and all(0 <= i < len(params) for i in used)}
         if sinks:
             summaries[key] = (path, len(params), sinks)
@@ -1818,7 +1913,8 @@ def _sql_interprocedural(files, owner, stats):
             local_helpers = {k:v for k,v in helpers.items() if k not in bound}
             calls = []
             _sql_function_paths(fn, stats, request, db, local_helpers, bindings,
-                                call_targets=local_targets, call_hits=calls, slice_limits=limits-bound)
+                                call_targets=local_targets, call_hits=calls, slice_limits=limits-bound,
+                                hash_names=_hashlib_imports(tree,bindings)-bound)
             for sink_path, line, call_line, source_lines in calls:
                 src, via = hits[(sink_path,line)]
                 src.update((path,n) for n in source_lines)
@@ -2003,7 +2099,7 @@ def process(root:Path, profile=None, components=()):
                     entry = {'control_id':cid, 'signal':'Flask request value reaches SQLite SQL argument',
                              'path':fn, 'confidence':'medium', 'suggested_severity':'high',
                              'status':'HEURISTIC_REVIEW_ONLY', 'technique':'BOUNDED_AST_FLOW',
-                             'pack_id':PY_SQL_PACK, 'pack_version':12, 'rule_id':PY_SQL_RULE,
+                             'pack_id':PY_SQL_PACK, 'pack_version':13, 'rule_id':PY_SQL_RULE,
                              'control_mapping':'LEGACY_COMPATIBILITY', **hit}
                     direct_sql_entries[(fn,hit['line'])]=entry
                     if len(evidence) < MAX_SIGNALS:
@@ -2084,7 +2180,7 @@ def process(root:Path, profile=None, components=()):
             signal_counts[cid]+=1
             entry={'control_id':cid,'signal':'Flask request value reaches SQLite SQL argument',
                    'confidence':'medium','suggested_severity':'high','status':'HEURISTIC_REVIEW_ONLY',
-                   'technique':'BOUNDED_AST_FLOW','pack_id':PY_SQL_PACK,'pack_version':12,
+                   'technique':'BOUNDED_AST_FLOW','pack_id':PY_SQL_PACK,'pack_version':13,
                    'rule_id':PY_SQL_RULE,'control_mapping':'LEGACY_COMPATIBILITY',**hit}
             if len(evidence)<MAX_SIGNALS:evidence.append(entry)
             if len(control_evidence[cid])<MAX_CONTROL_SIGNALS:control_evidence[cid].append(entry)
@@ -2223,10 +2319,10 @@ def process(root:Path, profile=None, components=()):
         }
         partial_keys = ('parse_errors','size_limited_files','complexity_limited_files','unmodeled_import_files','unmodeled_module_statements','unsupported_functions','complexity_limited_functions','path_limited_functions','interprocedural_limited_files','interprocedural_limited_calls','unmodeled_exception_paths')
         summary['python_sql_flow'] = {
-            'pack_id': PY_SQL_PACK, 'pack_version':12, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
+            'pack_id': PY_SQL_PACK, 'pack_version':13, 'rule_id':PY_SQL_RULE, 'legacy_control_id':'API-07',
             'selected_roots':sorted(python_sql_roots),
-            'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or python_sql_stats['cross_file_receiver_bindings'] or python_sql_stats['cross_file_request_wrappers'] or python_sql_stats['named_path_factory_candidates'] or python_sql_stats['flask_context_factories'] or python_sql_stats['local_row_connection_factories'] or python_sql_stats['literal_replacement_helpers'] or python_sql_stats['interprocedural_summaries'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
-            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings','cross_file_request_wrappers','try_normal_paths','explicit_finally_paths','builtin_print_paths','named_path_factory_candidates','flask_context_factories','http_method_guard_paths','local_row_connection_factories','json_request_maps','literal_replacement_helpers','interprocedural_summaries','interprocedural_matches','exception_handler_paths','exception_rethrow_paths','sqlite_exception_paths',*partial_keys)},
+            'status': ('NOT_SELECTED' if not python_sql_roots else 'PARTIAL' if coverage['truncated'] or signal_coverage['truncated'] or python_sql_stats['cross_file_receiver_bindings'] or python_sql_stats['cross_file_request_wrappers'] or python_sql_stats['named_path_factory_candidates'] or python_sql_stats['flask_context_factories'] or python_sql_stats['local_row_connection_factories'] or python_sql_stats['literal_replacement_helpers'] or python_sql_stats['interprocedural_summaries'] or python_sql_stats['seeded_connection_factories'] or python_sql_stats['hashlib_import_bindings'] or any(python_sql_stats[k] for k in partial_keys) else 'HEURISTIC_REVIEW_ONLY'),
+            **{k:python_sql_stats[k] for k in ('eligible_files','parsed_files','analyzed_functions','matches','recognized_helpers','resolved_import_aliases','context_manager_paths','literal_loop_paths','nested_route_functions','cross_file_receiver_bindings','cross_file_request_wrappers','try_normal_paths','explicit_finally_paths','builtin_print_paths','named_path_factory_candidates','flask_context_factories','http_method_guard_paths','local_row_connection_factories','json_request_maps','literal_replacement_helpers','interprocedural_summaries','interprocedural_matches','exception_handler_paths','exception_rethrow_paths','sqlite_exception_paths','sqlite_close_paths','seeded_connection_factories','hashlib_import_bindings',*partial_keys)},
             'limitations':['Bounded local paths, literal loops, dictionary/configuration slots, selected encoding transformations, bounded literal replacement helper summaries (not sanitizers), simple request-holder class summaries, request headers/cookies, one-hop query helpers, sibling and component-root qualified connection factories, nested route bodies, bounded typed explicit raises and SQLite execute/fetch exception paths; one-hop selected-component direct-call sink summaries only; no generic cross-module taint, dynamic import/dispatch, arbitrary exception semantics or exploit analysis.',
                            'Unmodeled statements and imports are not proof of safety; no target code is executed.'],
         }
