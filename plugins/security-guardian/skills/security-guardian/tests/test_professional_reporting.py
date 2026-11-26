@@ -49,6 +49,40 @@ class ProfessionalReportTests(unittest.TestCase):
             self.assertTrue(f['reason'] and f['next_action'] and f['verification_condition'])
             self.assertEqual(f['standard_verification'],'NOT_VERIFIED')
         self.assertIn('ASVS:1.2.4',d['standards']['references'])
+    def test_coverage_gap_counts_and_unknown_metadata(self):
+        run,ledger,scan=fixture()
+        coverage=scan['summary']['scan_coverage']
+        signals=scan['summary']['signal_coverage']
+        coverage['skipped']={'outside_selected_scope':7,'unreadable_source':2,
+                             'oversized_file':3,'excluded_directory':4}
+        signals.update(omitted_global=5,omitted_per_control=8)
+        for view in ('management','technical'):
+            d=r.build_export(run,ledger,scan,view=view)
+            result=d['coverage']
+            self.assertEqual(result['skip_reason_metadata'],'RECORDED')
+            self.assertEqual(result['skipped_file_or_directory_events'],16)
+            self.assertEqual(result['skipped_outside_scope'],7)
+            self.assertEqual(result['skipped_unreadable_or_invalid'],2)
+            self.assertEqual(result['skipped_budget_limit'],3)
+            self.assertEqual(result['signal_records_omitted_global'],5)
+            self.assertEqual(result['signal_records_omitted_per_control'],8)
+            self.assertEqual(result['optional_tool_execution_evidence'],'NOT_AVAILABLE_FROM_SCANNER_SNAPSHOT')
+            self.assertIn('skipped\\_outside\\_scope: 7',r.markdown(d))
+        coverage['skipped']={SECRET:1,'unreadable_source':True}
+        signals['omitted_global']=-1
+        d=r.build_export(run,ledger,scan)
+        self.assertEqual(d['coverage']['skip_reason_metadata'],'PARTIAL_OR_UNRECORDED')
+        self.assertIsNone(d['coverage']['skipped_file_or_directory_events'])
+        self.assertIsNone(d['coverage']['skipped_unreadable_or_invalid'])
+        self.assertIsNone(d['coverage']['signal_records_omitted_global'])
+        self.assertNotIn(SECRET,json.dumps(d))
+        del coverage['skipped']
+        result=r.build_export(run,ledger,scan)['coverage']
+        self.assertIsNone(result['skipped_outside_scope'])
+        self.assertIsNone(result['skipped_budget_limit'])
+        coverage['skipped']={}
+        self.assertEqual(r.build_export(run,ledger,scan)['coverage']['skipped_file_or_directory_events'],0)
+
     def test_privacy_and_views(self):
         run,ledger,scan=fixture()
         for view in ('management','technical'):
