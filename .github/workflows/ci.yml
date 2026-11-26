@@ -46,25 +46,39 @@ jobs:
         if: matrix.python-version == '3.12'
         run: |
           set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/sg-sql-regression"
           git init --bare "$RUNNER_TEMP/sg-owasp-benchmark"
           git -C "$RUNNER_TEMP/sg-owasp-benchmark" fetch --depth=1 --no-tags https://github.com/OWASP-Benchmark/BenchmarkPython.git f1291485808b66e20ddb6b01b10dc71b3df8c8ba
-          python scripts/benchmark_holdout.py --external-git "$RUNNER_TEMP/sg-owasp-benchmark"
-          python scripts/benchmark_semantic_context.py --external-git "$RUNNER_TEMP/sg-owasp-benchmark"
+          python scripts/benchmark_holdout.py --external-git "$RUNNER_TEMP/sg-owasp-benchmark" | tee "$RUNNER_TEMP/sg-sql-regression/isolated.json"
+          python scripts/benchmark_semantic_context.py --external-git "$RUNNER_TEMP/sg-owasp-benchmark" | tee "$RUNNER_TEMP/sg-sql-regression/contextual.json"
       - name: Measure fresh externally labeled Flask SQLite pair (source-only)
         if: matrix.python-version == '3.12'
-        run: python scripts/benchmark_semantic_context.py --fresh-flask
+        run: |
+          set -euo pipefail
+          python scripts/benchmark_semantic_context.py --fresh-flask | tee "$RUNNER_TEMP/sg-sql-regression/fresh_pair.json"
       - name: Measure pinned external author-labeled Flask SQLite lab (report only)
         if: matrix.python-version == '3.12'
-        run: python scripts/benchmark_semantic_context.py --external-lab
+        run: |
+          set -euo pipefail
+          python scripts/benchmark_semantic_context.py --external-lab | tee "$RUNNER_TEMP/sg-sql-regression/external_lab.json"
       - name: Measure new pinned external SQL route pairs (report only)
         if: matrix.python-version == '3.12'
-        run: python scripts/benchmark_independent_sql.py
+        run: |
+          set -euo pipefail
+          python scripts/benchmark_independent_sql.py | tee "$RUNNER_TEMP/sg-sql-regression/route_pairs.json"
       - name: Measure pinned external SQL boundary cohort (report only)
         if: matrix.python-version == '3.12'
-        run: python scripts/benchmark_external_sql_boundaries.py
+        run: |
+          set -euo pipefail
+          python scripts/benchmark_external_sql_boundaries.py | tee "$RUNNER_TEMP/sg-sql-regression/boundary.json"
       - name: Measure post-v12 independently authored SQL pairs (report only)
         if: matrix.python-version == '3.12'
-        run: python scripts/benchmark_final_sql_holdout.py
+        run: |
+          set -euo pipefail
+          python scripts/benchmark_final_sql_holdout.py | tee "$RUNNER_TEMP/sg-sql-regression/post_v12.json"
+      - name: Enforce exposed Python SQL regression outcomes and preserve isolated limitations
+        if: matrix.python-version == '3.12'
+        run: python scripts/check_sql_regressions.py "$RUNNER_TEMP/sg-sql-regression"
       - name: Verify no tracked secret-like files or generated reports
         run: |
           if git ls-files | grep -E '(^|/)(\.env(\.|$)|\.security-guardian/)|\.(pem|p12|pfx|key)$' ; then
