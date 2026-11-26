@@ -5,6 +5,7 @@ import subprocess
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'scripts' / 'security_tracker.py'
@@ -40,7 +41,7 @@ class TrackerExecutionTests(unittest.TestCase):
     def call(self,*args,payload=None,expected=0):
         cp = subprocess.run([sys.executable,str(SCRIPT),*args,'--root',str(self.root)],
                             input=json.dumps(payload) if payload is not None else None,
-                            capture_output=True,text=True,timeout=20)
+                            capture_output=True,text=True,timeout=40)
         self.assertEqual(cp.returncode,expected,cp.stderr)
         return json.loads(cp.stdout) if cp.returncode == 0 else cp
 
@@ -141,10 +142,15 @@ class TrackerExecutionTests(unittest.TestCase):
         good='import test from "node:test";import assert from "node:assert/strict";import {allowed} from "./guard.mjs";test("owner",()=>assert.equal(allowed("a","a"),true));test("other",()=>assert.equal(allowed("b","a"),false));'
         (self.root/fixture).write_text(good)
         cmd=['run-test','--run',self.run_id,'--finding-id',self.ident,'--adapter','node-test-v1','--test-file',fixture,
-             '--file',fixture,'--file','api/guard.mjs','--file','api/app.py','--timeout','5','--authorize-local-test']
+             '--file',fixture,'--file','api/guard.mjs','--file','api/app.py',
+             '--timeout','15','--authorize-local-test']
+        # The default production deadline is 15s. This is a functional receipt
+        # test, not a five-second performance assertion on a shared CI host.
         result=self.call(*cmd)
-        self.assertEqual(result['result'],'PASS')
         receipt=self.run_data()['tests'][-1]['execution_receipt']
+        self.assertEqual(result['result'],'PASS', {k:receipt.get(k) for k in
+                         ('result','elapsed_ms','timeout_seconds','exit_code','node_version','counts','output_bytes')})
+        self.assertEqual(receipt['timeout_seconds'],15)
         self.assertEqual(receipt['adapter'],'node-test-v1')
         self.assertEqual(receipt['node_version'],version)
         self.assertEqual(receipt['counts']['tests_run'],2)
@@ -164,6 +170,29 @@ class TrackerExecutionTests(unittest.TestCase):
         (self.root/fixture).write_text(good)
         result=self.call(*cmd)
         self.verified(result['test_id'],review='Reviewed selected owner and nonowner assertions')
+
+    @unittest.skipUnless(shutil.which('node'), 'Node runtime unavailable')
+    def test_node_adapter_timeout_never_verifies(self):
+        version=subprocess.check_output(['node','--version'],text=True).strip()
+        if not version.startswith(('v22.','v24.')):self.skipTest('Node 22 or 24 required')
+        fixture='api/deadline.test.mjs'
+        (self.root/fixture).write_text(
+            'import test from "node:test";import {writeFileSync} from "node:fs";'
+            'test("deadline",async()=>{await new Promise(r=>setTimeout(r,30000));'
+            'writeFileSync("deadline-finished","unexpected");});')
+        cmd=['run-test','--run',self.run_id,'--finding-id',self.ident,
+             '--adapter','node-test-v1','--test-file',fixture,'--file',fixture,
+             '--file','api/app.py','--timeout','1','--authorize-local-test']
+        started=time.monotonic()
+        result=self.call(*cmd)
+        receipt=self.run_data()['tests'][-1]['execution_receipt']
+        self.assertEqual(result['result'],'TIMEOUT')
+        self.assertEqual(receipt['timeout_seconds'],1)
+        self.assertTrue(receipt['executed'])
+        self.assertIsNone(receipt['counts'])
+        self.assertLess(time.monotonic()-started,15)
+        self.assertFalse((self.root/'deadline-finished').exists())
+        self.verified(result['test_id'],review='Timeout is not passing evidence',expected=2)
 
 
     def test_before_after_tenant_state_and_race_evidence(self):

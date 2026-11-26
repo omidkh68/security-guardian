@@ -21,6 +21,13 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Record test runtime versions
+        run: |
+          python --version
+          node --version
       - name: Validate catalog, plugin metadata, scripts, layouts and documentation pairs
         env:
           SG_DOC_BASE: ${{ github.event.pull_request.base.sha }}
