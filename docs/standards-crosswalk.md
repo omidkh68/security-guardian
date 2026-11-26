@@ -81,3 +81,9 @@ flowchart LR
 ```
 
 CI retains the inventory generated from the verified publisher bytes. Five new tests cover exact identity, unknown states, source mutation, malformed identities and orphan links. The artifact and test results must be observed before claiming CI acceptance. Expansion of relevant relationships and independent semantic review remain open. No project read or write, source execution or automatic control verdict.
+
+## Batch acceptance workstreams (#149–160)
+
+The separate [ASVS inventory](#full-asvs-requirement-inventory-149) is merged; #149 still requires meaningful mapping expansion, applicability and verification evidence and independent semantic review. No relationship is automatically added from matching names. The new repository-only `scripts/standards_inventory.py` retrieves pinned public WSTG 4.2 checklist JSON, MASVS 2.1.0 control files, MASTG 2.0.0 test/test-beta file identities, MASWE 1.0.0 weakness file identities and CWE 5.0 Weakness XML. It reports reverse mapping and gaps without source prose. Direct tree inspection found 24 MASVS controls, 292 MASTG test paths, 78 MASWE weakness paths, and 98 WSTG checklist entries / 97 unique identifiers. The publisher checklist duplicates WSTG-INPV-13; a removed Buffer Overflow page and a Format String Injection page share it. Keep the conflict explicit; checklist inventory is not exhaustive verification of all test pages. MASTG lifecycle, platform applicability and actual test execution remain unverified. CWE XML edition and SHA-256 are recorded; categories/views are excluded. No auto-mapping, certification or project assessment.
+
+See [release interoperability evidence](standards-acceptance.md) for SARIF, CVSS, SBOM, Scorecard and preview provenance. Full #105 remains BLOCKED.
