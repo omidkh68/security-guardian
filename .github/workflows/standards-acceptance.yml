@@ -16,13 +16,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
       - name: Inventory pinned publisher sources
@@ -68,7 +68,7 @@ jobs:
             npm sbom --package-lock-only --sbom-format=cyclonedx > "$dir/cyclonedx-sbom.json"
           )
           "$RUNNER_TEMP/sg-standards/bin/python" scripts/verify_sbom_preview.py "$dir" | tee "$dir/sbom-evidence.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: standards-preview-evidence
           path: |
@@ -104,7 +104,7 @@ jobs:
           assert d['checks']
           for check in d['checks']: print(check['name'],check['score'])
           PY
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: scorecard-base-revision
           path: ${{ runner.temp }}/scorecard.json
