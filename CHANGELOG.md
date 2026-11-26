@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Extend Python SQL AST v10 with bounded literal replacement helper summaries that retain request provenance without treating blacklists as SQL sanitizers (#111, #124).
 - Extend Python SQL AST v9 with leading UTF-8 BOM parsing, bounded JSON request maps, local row factories and local Flask app factories; separate parse-blocked evaluation (#111, #122, #123).
 - Add pinned independent matched Flask route pairs and bounded Python SQL AST v8 context-cache factories and literal method guards; retain the failed baseline and PARTIAL limitations (#111, #120, #121).
 - Add structured PDF/JSON/Markdown management and technical reporting with residual risk and privacy boundaries (#98, #109).
