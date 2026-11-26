@@ -36,7 +36,7 @@ jobs:
           PACKAGE: ${{ matrix.package }}
         run: |
           set -euo pipefail
-          home="$(mktemp -d)"
+          home="$(mktemp -d "$RUNNER_TEMP/sg-native-XXXXXX")"
           trap 'rm -rf "$home"' EXIT
           export HOME="$home"
           export CI=true
@@ -55,7 +55,7 @@ jobs:
             # Inspect the actual model-visible input without sending a model request.
             # A separate network namespace prevents accidental outbound calls.
             fixture="$home/fixture"
-            mkdir -p "$fixture"
+            mkdir -p "$fixture" "$home/codex"
             git init -q "$fixture"
             printf '{"dependencies":{"express":"1"}}\n' > "$fixture/package.json"
             printf '# Team rules\nSG_NATIVE_SYNTHETIC_ROOT_MARKER\n' > "$fixture/AGENTS.md"
