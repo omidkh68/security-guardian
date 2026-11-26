@@ -50,3 +50,13 @@ The provenance workflow also triggers on a change to its own file merged into ma
 ## Repository workflow hardening (#159)
 
 The follow-up pins all existing main workflow Action references to exact commit SHAs, disables checkout credential persistence, and separates release verification (read-only) from the release creation job (contents: write, no checkout). The required CI runs a bounded textual workflow baseline check and regression tests. This check covers the repository's current YAML formatting; it is not a general YAML security analyzer, dependency-integrity guarantee or substitute for Scorecard. The earlier Scorecard results are historical; rerun against the merged revision before claiming improvement. Private vulnerability reporting, actual review practices, dependency findings and release acceptance remain separate. No release or npm publication is performed.
+
+## Opt-in SARIF locations and expanded CVSS tests (#155–156)
+
+The default SARIF output remains location-free. For explicitly reviewed disclosure, pass `--reviewed-locations locations.json` alongside `--source report.json`. The sidecar binds the SHA-256 of the exact source bytes and supplies only selected finding IDs, relative ASCII paths and positive line numbers. It rejects traversal, absolute paths, URI escapes, hidden path segments, selected secret-related names/extensions, stale digests and closed/unknown finding IDs. These are syntax checks, not proof of safe disclosure: paths may still identify a private project. No target file is opened or checked, and user-supplied locations are not independent evidence. Review before sharing; no automatic upload or GitHub code-scanning compatibility claim.
+
+```json
+{"schema_version":1,"source_sha256":"<64 lowercase hex digits of report.json SHA-256>","locations":{"SG-API-07-123456789ABC":{"path":"src/demo.ts","line":7}}}
+```
+
+Optional CI validates both projections against the pinned OASIS schema and runs the actual Microsoft [sarif-tools 3.0.0](https://pypi.org/project/sarif-tools/3.0.0/) CSV consumer against synthetic data, checking the two records and their distinct statuses and paths. This does not test every consumer. The CVSS test suite now contains twelve vectors, eleven from [FIRST examples, document v1.9](https://www.first.org/cvss/v4.0/examples) and one synthetic zero-impact vector; Base, Threat, Environmental and combined cases are represented. The optional pinned calculator, explicit vector policy and evidence limits are unchanged. A curated reference set is not exhaustive validation. CI results must be observed before claiming these tests passed.
