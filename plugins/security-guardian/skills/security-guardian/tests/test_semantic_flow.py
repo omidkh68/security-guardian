@@ -403,5 +403,54 @@ class SemanticFlowTests(unittest.TestCase):
                                    '        cur.execute(request.args["q"])\n')
             self.assertEqual(len(self.hits(result)), count)
 
+
+    def test_utf8_bom_preserves_source_and_sink_lines(self):
+        result = self.run_scan('    cur.execute(request.args["q"])\n',
+                               header='\ufeff'+HEADER)
+        self.assertEqual([(x['line'], x['source_lines']) for x in self.hits(result)], [(6, [6])])
+        self.assertEqual(result['summary']['python_sql_flow']['parsed_files'], 1)
+        self.assertEqual(result['summary']['python_sql_flow']['parse_errors'], 0)
+        self.assertFalse(self.hits(self.run_scan('    cur.execute(request.args["q"])\n',
+                                                header='\ufeff\ufeff'+HEADER)))
+
+    def test_json_request_mapping_candidates(self):
+        for source in ('request.get_json()', 'request.get_json() or {}'):
+            for access in ('data.get("name", "")', 'data["name"]'):
+                body = '    data = '+source+'\n    value = '+access+'\n'
+                result = self.run_scan(body+'    cur.execute("SELECT "+value)\n')
+                self.assertEqual(len(self.hits(result)), 1)
+                self.assertEqual(result['summary']['python_sql_flow']['status'], 'PARTIAL')
+                self.assertFalse(self.hits(self.run_scan(body+'    cur.execute("SELECT ?", (value,))\n')))
+        for source in ('unknown.get_json()', 'request.get_json(force=True)', 'request.get_json() or unknown()'):
+            self.assertFalse(self.hits(self.run_scan('    data = '+source+'\n    cur.execute(data.get("name"))\n')))
+        self.assertFalse(self.hits(self.run_scan('    data=request.get_json() or {}\n    data={}\n    cur.execute(data.get("name"))\n')))
+        self.assertFalse(self.hits(self.run_scan('    data=request.get_json() or {}\n    data["name"]="fixed"\n    cur.execute(data["name"])\n')))
+
+    def test_local_row_factory_and_flask_app_factory_routes(self):
+        header = ('from flask import Flask as App, request\nimport sqlite3 as db\nimport os as paths\n'
+                  'def connect():\n'
+                  '    filename=paths.path.join(paths.path.dirname(__file__), "fixture.db")\n'
+                  '    connection=db.connect(filename)\n'
+                  '    connection.row_factory=db.Row\n'
+                  '    return connection\n'
+                  'def initialize():\n    pass\n')
+        prefix = ('def create_app():\n    app=App(__name__)\n    initialize()\n'
+                  '    @app.route("/items", methods=["POST"])\n    def items():\n')
+        body = ('        data=request.get_json() or {}\n'
+                '        connection=connect()\n'
+                '        connection.execute(data.get("name"))\n'
+                '    return app\n')
+        result = self.run_scan(body, header, prefix)
+        self.assertEqual(len(self.hits(result)), 1)
+        self.assertEqual(result['summary']['python_sql_flow']['status'], 'PARTIAL')
+        for bad in (header.replace('connection.row_factory=db.Row', 'connection.row_factory=unknown'),
+                    header.replace('return connection', 'return unknown'),
+                    header.replace('import os as paths', 'import unknown as paths'),
+                    header+'App=unknown\n', header+'paths=unknown\n'):
+            self.assertFalse(self.hits(self.run_scan(body, bad, prefix)))
+        self.assertFalse(self.hits(self.run_scan(body, header, prefix.replace('initialize()', 'initialize(app)'))))
+        self.assertFalse(self.hits(self.run_scan(body, header, prefix.replace('    initialize()\n','    app=unknown\n'))))
+        self.assertFalse(self.hits(self.run_scan(body.replace('connection.execute(data.get("name"))','connection.execute("SELECT ?", (data.get("name"),))'), header, prefix)))
+
 if __name__=='__main__':
     unittest.main()
