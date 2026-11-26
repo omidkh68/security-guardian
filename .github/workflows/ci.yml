@@ -26,7 +26,9 @@ jobs:
         with:
           node-version: '24'
       - name: Enforce repository workflow hardening baseline
-        run: python scripts/check_workflow_hardening.py
+        run: |
+          python scripts/check_workflow_hardening.py
+          python -m unittest discover -s scripts -p test_workflow_hardening.py -v
       - name: Record test runtime versions
         run: |
           python --version
