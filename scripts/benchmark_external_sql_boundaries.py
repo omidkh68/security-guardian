@@ -140,6 +140,8 @@ def evaluate(unit, sources, engine):
             "partial_cases": sum(x["coverage_status"] == "PARTIAL" for x in rows),
             "eligible_files": flow["eligible_files"], "parsed_files": flow["parsed_files"],
             "parse_errors": flow["parse_errors"], "elapsed_seconds": elapsed,
+            "parse_blocked_cases": len(rows) if flow["parsed_files"] != flow["eligible_files"] else 0,
+            "parsed_unit_metrics": score(Counter(x["classification"] for x in rows)) if flow["parsed_files"] == flow["eligible_files"] else None,
             "unlabeled_candidates": [{"path": p, "line": line} for p, line in sorted(actual - known)]}
 
 def frozen(commit, units):
@@ -167,9 +169,14 @@ def main():
         totals[name] = {boundary: score(Counter(row["classification"]
             for report in reports if report["boundary"] == boundary for row in report["cases"]))
             for boundary in ("DIRECT_ROUTE", "INTERPROCEDURAL")}
+    parsed_totals = {name: {boundary: {
+        "parse_blocked_cases": sum(report["parse_blocked_cases"] for report in reports if report["boundary"] == boundary),
+        "metrics": score(Counter(row["classification"] for report in reports if report["boundary"] == boundary and report["parsed_unit_metrics"] is not None for row in report["cases"]))
+        if any(report["boundary"] == boundary and report["parsed_unit_metrics"] is not None for report in reports) else None}
+        for boundary in ("DIRECT_ROUTE", "INTERPROCEDURAL")} for name, reports in versions.items()}
     print(json.dumps({"schema_version": 1, "kind": "EXTERNAL_SQL_BOUNDARY_COHORT",
         "frozen_v7": PRIOR, "frozen_v8": FROZEN, "engine_sha256": digest(SKILL / "scripts/security_scan.py"),
-        "cohorts": COHORTS, "results": versions, "totals_by_boundary": totals,
+        "cohorts": COHORTS, "results": versions, "totals_by_boundary": totals, "parsed_unit_totals_by_boundary": parsed_totals,
         "limitations": ["14 distinct source/sink sites: 6 positive, 8 negative; no pooling across boundary types.",
             "Externally authored teaching labs, not production application accuracy or statistically representative.",
             "Labels fixed before evaluation; previous source inspection does not constitute a blind review.",

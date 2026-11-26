@@ -26,6 +26,8 @@ class BoundaryTests(unittest.TestCase):
         self.assertEqual(result["metrics"]["tn"], 1)
         self.assertEqual(result["partial_cases"], 2)
         self.assertEqual(result["parse_errors"], 1)
+        self.assertEqual(result["parse_blocked_cases"], 2)
+        self.assertIsNone(result["parsed_unit_metrics"])
         self.assertEqual(result["unlabeled_candidates"], [{"path": "app/a.py", "line": 2}])
 
     def test_wrong_selection_rejected(self):
