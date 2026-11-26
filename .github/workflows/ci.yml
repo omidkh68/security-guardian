@@ -121,6 +121,23 @@ jobs:
       - name: Enforce exposed Python SQL regression outcomes and preserve isolated limitations
         if: matrix.python-version == '3.12'
         run: python scripts/check_sql_regressions.py "$RUNNER_TEMP/sg-sql-regression"
+      - name: Build separated benchmark release evidence (no pooled accuracy)
+        if: matrix.python-version == '3.12'
+        run: |
+          set -euo pipefail
+          REPORTS="$RUNNER_TEMP/sg-sql-regression"
+          npm install --prefix "$RUNNER_TEMP/sg-evidence-typescript" --no-save --ignore-scripts --no-audit --no-fund typescript@5.9.3
+          PARSER="$RUNNER_TEMP/sg-evidence-typescript/node_modules/typescript/lib/typescript.js"
+          python scripts/benchmark_scanner.py > "$REPORTS/indicator.json"
+          python scripts/benchmark_holdout.py --synthetic all --require-synthetic-regression --typescript-module "$PARSER" > "$REPORTS/semantic.json"
+          python scripts/benchmark_release_evidence.py --reports "$REPORTS" --typescript-module "$PARSER" | tee "$RUNNER_TEMP/benchmark-evidence.json"
+      - uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.12'
+        with:
+          name: benchmark-evidence
+          path: ${{ runner.temp }}/benchmark-evidence.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Verify no tracked secret-like files or generated reports
         run: |
           if git ls-files | grep -E '(^|/)(\.env(\.|$)|\.security-guardian/)|\.(pem|p12|pfx|key)$' ; then
