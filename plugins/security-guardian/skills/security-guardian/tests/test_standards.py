@@ -58,8 +58,8 @@ class StandardsTests(unittest.TestCase):
             with self.subTest(mode=mode),self.assertRaises(ValueError):s.validate(d,self.ids,self.blob)
     def test_mobile_versions(self):
         r=s.report(self.data,['MOB-02','MOB-03'])
-        self.assertEqual({x['standard'] for x in r['references'].values()},{'MASVS','MASTG','MASWE'})
-        self.assertEqual({x['version'] for x in r['references'].values()},{'2.1.0','2.0.0','1.0.0'})
+        self.assertEqual({x['standard'] for x in r['references'].values()},{'MASVS','MASTG','MASWE','CWE'})
+        self.assertEqual({x['version'] for x in r['references'].values()},{'2.1.0','2.0.0','1.0.0','5.0'})
     def test_unmapped(self):
         r=s.report(self.data,['GOV-01'])
         self.assertEqual(r['controls'][0]['status'],'UNMAPPED')
