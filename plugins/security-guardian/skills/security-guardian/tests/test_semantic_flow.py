@@ -497,5 +497,61 @@ class SemanticFlowTests(unittest.TestCase):
                 self.assertEqual(result['summary']['python_sql_flow']['status'], 'PARTIAL')
         self.assertFalse(self.hits(self.run_scan(body, HEADER+helper, PREFIX.replace('search()', 'search(clean)'))))
 
+
+    def test_cross_module_sql_sink_and_source_locations(self):
+        self.write('api/storage.py', 'import sqlite3\n'
+                   'def connect():\n    db=sqlite3.connect("fixture.db")\n'
+                   '    db.row_factory=sqlite3.Row\n    return db\n'
+                   'def lookup(query):\n    db=connect()\n    cursor=db.cursor()\n'
+                   '    try:\n        cursor.execute(query)\n    finally:\n        db.close()\n')
+        header='from flask import request\nfrom storage import lookup as find\n'
+        result=self.run_scan('    q=request.args["name"]\n    rows=find(q)\n',header,'def route():\n')
+        hits=self.hits(result)
+        self.assertEqual(len(hits),1)
+        self.assertEqual((hits[0]['path'],hits[0]['line']),('api/storage.py',10))
+        self.assertEqual(hits[0]['source_locations'],[{'path':'api/routes.py','line':4}])
+        self.assertEqual(hits[0]['call_locations'],[{'path':'api/routes.py','line':5}])
+        self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertEqual(result['summary']['python_sql_flow']['interprocedural_matches'],1)
+        self.assertFalse(self.hits(self.run_scan('    rows=find("constant")\n',header,'def route():\n')))
+        self.assertFalse(self.hits(self.run_scan('    q=request.args["name"]\n    rows=find(q)\n',header,'def route(find):\n')))
+        self.assertFalse(self.hits(self.run_scan('    q=request.args["name"]\n    rows=find(q)\n',header+'find=unknown\n','def route():\n')))
+        self.write('api/storage.py','import sqlite3\ndef lookup(query):\n    db=sqlite3.connect("fixture.db")\n    db.execute("SELECT ?",(query,))\n')
+        self.assertFalse(self.hits(self.run_scan('    rows=find(request.args["name"])\n',header,'def route():\n')))
+
+    def test_one_hop_package_import_fallback_and_tuple_assignment(self):
+        self.write('api/pkg/__init__.py','')
+        self.write('api/pkg/storage.py','import sqlite3\nDB="fixture.db"\n'
+                   'def lookup(name, other):\n    db=sqlite3.connect(DB)\n'
+                   '    db.row_factory=sqlite3.Row\n    cur=db.cursor()\n'
+                   '    cur.execute("SELECT "+name+other)\n    return None\n')
+        src=('from flask import request\n'
+             'try:\n    from .storage import lookup\n'
+             'except ImportError:\n    from storage import lookup\n'
+             'LIMIT=80\n'
+             'def route():\n'
+             '    name=request.form.get("q","")[:LIMIT]\n'
+             '    first, second=lookup(name,"fixed")\n')
+        self.write('api/pkg/route.py',src)
+        result=scan.process(self.root,'custom',['api'])
+        self.assertEqual([(h['path'],h['line']) for h in self.hits(result)],[('api/pkg/storage.py',7)])
+        self.assertEqual(self.hits(result)[0]['source_locations'],[{'path':'api/pkg/route.py','line':8}])
+        self.write('api/storage.py','def lookup(name,other):\n    return None\n')
+        self.assertFalse(self.hits(scan.process(self.root,'custom',['api'])))
+        self.write('api/storage.py','')
+        self.write('api/pkg/route.py',src.replace('except ImportError:', 'except Exception:'))
+        self.assertFalse(self.hits(scan.process(self.root,'custom',['api'])))
+
+    def test_cross_module_scope_and_unknown_receivers(self):
+        self.write('outside/requirements.txt','Flask\n')
+        self.write('outside/db.py','import sqlite3\ndef lookup(q):\n    db=sqlite3.connect("fixture.db")\n    db.execute(q)\n')
+        self.assertFalse(self.hits(self.run_scan('    lookup(request.args["q"])\n',
+            'from flask import request\nfrom outside.db import lookup\n','def route():\n')))
+        header='from flask import request\nfrom storage import lookup\n'
+        for body in ('    db=unknown()\n    db.execute(q)\n',
+                     '    db=sqlite3.connect("fixture.db")\n    db.execute(q)\n'):
+            self.write('api/storage.py','import sqlite3\nsqlite3.connect=unknown\ndef lookup(q):\n'+body)
+            self.assertFalse(self.hits(self.run_scan('    lookup(request.args["q"])\n',header,'def route():\n')))
+
 if __name__=='__main__':
     unittest.main()

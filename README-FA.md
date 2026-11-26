@@ -464,4 +464,4 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 
 فهرست معماری قابلیت‌ها: [فارسی](docs/architecture-index-FA.md) · [English](docs/architecture-index.md).
 
-[تحلیل SQL برنامه واقعی](docs/real-app-sql-FA.md) ([English](docs/real-app-sql.md)): AST پایتون نسخه ۱۰، خلاصه محدود جایگزینی رشته (نه Sanitizer)، Parser آگاه از BOM و جریان محدود JSON، Factory محدود Cache در Context فلاسک و شرط ثابت روش HTTP، Factory با Import مطلق و مسیر نام‌دار، مسیر finally صریح و زنجیره execute/fetch؛ محدودیت ارزیابی خارجی صریح است.
+[تحلیل SQL برنامه واقعی](docs/real-app-sql-FA.md) ([English](docs/real-app-sql.md)): AST پایتون نسخه ۱۱، شواهد محدود یک‌مرحله‌ای SQL بین ماژول‌ها، خلاصه محدود جایگزینی رشته (نه Sanitizer)، Parser آگاه از BOM و جریان محدود JSON، Factory محدود Cache در Context فلاسک و شرط ثابت روش HTTP، Factory با Import مطلق و مسیر نام‌دار، مسیر finally صریح و زنجیره execute/fetch؛ محدودیت ارزیابی خارجی صریح است.
