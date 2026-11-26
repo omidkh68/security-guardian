@@ -158,6 +158,7 @@ class ProfessionalReportTests(unittest.TestCase):
                 self.assertIn('Finding status',text)
                 self.assertIn('No findings recorded',text)
                 self.assertIn('Priority actions',text)
+                self.assertIn('Test record outcomes' if view=='technical' else 'Partial relationships',text)
                 self.assertNotIn(SECRET,text)
                 self.assertTrue(all((page.extract_text() or '').strip() for page in reader.pages))
                 self.assertGreaterEqual(len(reader.pages[0].get('/Annots',[])),6)

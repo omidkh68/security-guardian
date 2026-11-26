@@ -283,7 +283,7 @@ def visual_summary(d):
             'priorities':priorities,'total':len(findings),'residual':len(residual)}
 
 
-def render_pdf(d,output,font=None):
+def render_pdf(d,output,font=None,*,synthetic_demo=False):
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
@@ -301,6 +301,7 @@ def render_pdf(d,output,font=None):
         fp=Path(font).expanduser()
         if not fp.is_file():raise ValueError('Font file not found')
         pdfmetrics.registerFont(TTFont('SecurityGuardianUser',str(fp)));face='SecurityGuardianUser'
+        pdfmetrics.registerFontFamily(face,normal=face,bold=face,italic=face,boldItalic=face)
     bold='Helvetica-Bold' if face=='Helvetica' else face
     C=colors.HexColor
     navy=C('#112740');ink=C('#233D55');teal=C('#087E88');muted=C('#526779')
@@ -349,11 +350,11 @@ def render_pdf(d,output,font=None):
         h=p(title,'heading')
         h.sg_section=(key,title)
         story.append(h)
-    def table(rows,widths,*,header=False):
+    def table(rows,widths,*,header=False,compact=False):
         t=Table(rows,colWidths=widths,repeatRows=1 if header else 0,hAlign='LEFT')
         rules=[('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),9),
-               ('RIGHTPADDING',(0,0),(-1,-1),9),('TOPPADDING',(0,0),(-1,-1),6),
-               ('BOTTOMPADDING',(0,0),(-1,-1),6),
+               ('RIGHTPADDING',(0,0),(-1,-1),9),('TOPPADDING',(0,0),(-1,-1),3 if compact else 6),
+               ('BOTTOMPADDING',(0,0),(-1,-1),3 if compact else 6),
                ('LINEBELOW',(0,0),(-1,-1),.45,line),
                ('ROWBACKGROUNDS',(0,0),(-1,-1),[white,wash])]
         if header:rules.append(('BACKGROUND',(0,0),(-1,0),C('#E1EDF1')))
@@ -386,6 +387,8 @@ def render_pdf(d,output,font=None):
                   p(d['privacy'].replace('_',' '),'small'),
                   p('Based on recorded evidence in the selected finalized snapshot. Not a compliance certificate or a guarantee of security.'),
                   p('Report navigation','heading')])
+    if synthetic_demo:
+        story.append(band('SYNTHETIC DEMONSTRATION - no customer data or assessed project.'))
     for n,(key,title) in enumerate(nav,1):
         story.append(Paragraph('%02d  <a href="#%s">%s</a>'%(n,key,escape(title)),styles['nav']))
     story.append(PageBreak())
@@ -469,6 +472,39 @@ def render_pdf(d,output,font=None):
         story.append(table(rows,[width*.30,width*.23,width*.47],header=True))
     else:story.append(band('No residual findings to prioritize; review scope and coverage before making security claims.'))
     story.append(p('Evidence at a glance','heading'))
+    class EvidenceBars(Flowable):
+        def __init__(self):
+            super().__init__();self.width=width;self.height=112
+        def draw(self):
+            c=self.canv;w=self.width
+            c.setFillColor(wash);c.roundRect(0,0,w,self.height,7,stroke=0,fill=1)
+            groups=[('Test record outcomes',counts['test_results']),
+                    ('Evidence quality',counts['test_evidence_quality'])]
+            for column,(title,values) in enumerate(groups):
+                x=12+column*w/2
+                c.setFillColor(navy);c.setFont(bold,10);c.drawString(x,95,title)
+                if not values:
+                    c.setFont(face,8);c.drawString(x,74,'None recorded')
+                for i,(k,n) in enumerate(sorted(values.items())):
+                    y=76-17*i
+                    c.setFillColor(ink);c.setFont(face,7.5);c.drawString(x,y,k.replace('_',' '))
+                    bx=x+111;bw=w/2-154
+                    c.setFillColor(line);c.roundRect(bx,y-1,bw,8,3,stroke=0,fill=1)
+                    if counts['test_records']:
+                        c.setFillColor(C('#177B58') if k=='PASS' else teal)
+                        c.roundRect(bx,y-1,bw*n/counts['test_records'],8,3,stroke=0,fill=1)
+                    c.setFillColor(navy);c.setFont(bold,8)
+                    c.drawRightString(x+w/2-25,y,str(n))
+    if is_technical:
+        story.append(EvidenceBars())
+    else:
+        by_control={f['control_id']:f['standard_mapping_status'] for f in d['findings']}
+        mapped=Counter(by_control.values())
+        story.append(p('Standards relationships for distinct recorded control IDs','sub'))
+        story.append(table([[p('Partial relationships','label'),p('Unmapped','label'),p('Distinct recorded IDs','label')],
+                            [p(mapped['PARTIAL'],'value'),p(mapped['UNMAPPED'],'value'),p(len(by_control),'value')]],
+                           [width/3]*3,header=True))
+        story.append(p('These are advisory mapping counts for recorded controls, not compliance or assessed coverage.','small'))
     for key in ('test_results','test_evidence_quality'):
         values=counts[key]
         story.append(field(key,', '.join(str(a)+': '+str(b) for a,b in values.items()) or 'None recorded','body'))
@@ -490,9 +526,8 @@ def render_pdf(d,output,font=None):
             ('BACKGROUND',(2,0),(2,0),C(status_colors.get(f['status'],'#64748B'))),
             ('VALIGN',(0,0),(-1,-1),'TOP'),('TOPPADDING',(0,0),(-1,-1),7),
             ('BOTTOMPADDING',(0,0),(-1,-1),7),('LEFTPADDING',(0,0),(-1,-1),9)]))
-        story.append(KeepTogether([head,p(f['title'],'finding'),field('reason',f['reason'],'body'),
-                                   field('next_action',f['next_action'],'body')]))
-        story.append(field('verification_condition',f['verification_condition']))
+        card=[head,p(f['title'],'finding'),field('reason',f['reason'],'body'),
+              field('next_action',f['next_action'],'body'),field('verification_condition',f['verification_condition'])]
         # Compact metadata rows; project prose (possibly long) remains
         # ordinary splittable paragraphs, never an indivisible table cell.
         used={'id','title','severity','status','reason','next_action','verification_condition','standard_relationships'}
@@ -502,15 +537,20 @@ def render_pdf(d,output,font=None):
             if key.startswith('private_') or key in {'implementation','playbook'}:
                 extended.append((key,value))
             else:compact.append((key,value))
+        meta_rows=[]
         for i in range(0,len(compact),2):
             pair=compact[i:i+2]
             row=[field(k,v) for k,v in pair]
             if len(row)==1:row.append(p(''))
-            story.append(table([row],[width/2,width/2]))
-        for k,v in extended:story.append(field(k,v,'body' if k=='implementation' else 'small'))
+            meta_rows.append(row)
+        if meta_rows:card.append(table(meta_rows,[width/2,width/2],compact=True))
+        for k,v in extended:card.append(field(k,v,'body' if k=='implementation' else 'small'))
         relations='; '.join(r['reference']+' | '+r['relationship'] for r in f['standard_relationships'])
-        story.append(field('standard_relationships',relations or 'None recorded'))
-        story.append(Spacer(1,14))
+        card.append(field('standard_relationships',relations or 'None recorded'))
+        # Keep ordinary cards intact. Oversized private/technical paragraphs
+        # remain splittable rather than generating an over-height table row.
+        story.append(KeepTogether(card))
+        story.append(Spacer(1,12))
     section(*nav[3])
     if not d['tests']:story.append(band('NO EXECUTABLE TESTS RECORDED; no PASS is claimed.'))
     for t in d['tests']:

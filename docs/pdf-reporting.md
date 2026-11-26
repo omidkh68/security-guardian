@@ -70,3 +70,5 @@ flowchart LR
  D --> F[Management or technical PDF]
  E --> F
 ```
+
+Visual review refinement: compact grouped metadata, intact ordinary finding cards (oversize prose still splits), management advisory mapping counts and technical test/evidence bars. The CI-only artifact fixture uses explicitly synthetic severity/control variation and a visible demonstration notice; the existing homogeneous regression fixture remains unchanged. No new runtime dependency or user-supplied branding input.
