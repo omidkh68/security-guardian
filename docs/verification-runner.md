@@ -152,3 +152,7 @@ flowchart LR
  E --> F[Explicit verified record]
  D --> G[Manual rollback and pre-state check]
 ```
+
+## Real NestJS HTTP runtime gate (#35)
+
+The isolated required Python 3.12 CI step installs exact direct NestJS 11.1.6 dependencies with scripts disabled and executes real NestFactory, controller decorators, injected service, guard and Express HTTP transport on loopback via the existing Node adapter. Five unchanged tests: guard denies missing/invalid sessions, owner/tenant read/update/delete policy, privileged field rejection, valid owner state transitions and concurrent independent request identities. Expected two failures and three positives before, five passes after. Source/test/manifest/generated lockfile bound to receipt, no target dependency or production service. Synthetic credentials and in-memory data; explicit field policy, not a claim of ValidationPipe/ORM/database coverage. Direct versions pinned; transitive lock generated per run. CI pending.
