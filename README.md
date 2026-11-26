@@ -472,3 +472,5 @@ Capability architecture index: [English](docs/architecture-index.md) · [فار�
 The coverage inventory uses the same Python SQL pack version as the scanner; authorized local Python/Node runners remain separate from framework-wide verification. See [framework coverage](docs/framework-coverage.md) and [semantic contract](docs/semantic-contract.md).
 
 For an explicitly approved local remediation, use `prepare-fix` and `review-fix` to retain scoped pre/post Git evidence; these commands never edit application source. See [verification runner](docs/verification-runner.md).
+
+[Approved project profile](docs/project-profile.md) ([فارسی](docs/project-profile-FA.md)): explicit preview/apply and reusable selected scope. Native runtime loading remains unverified.

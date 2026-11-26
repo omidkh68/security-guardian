@@ -1,0 +1,78 @@
+name: Native CLI installation preflight
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/native-cli-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-cli-install:
+    name: Install smoke (${{ matrix.agent }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - agent: codex
+            package: '@openai/codex@0.169.0'
+          - agent: claude
+            package: '@anthropic-ai/claude-code@2.1.325'
+          - agent: gemini
+            package: '@google/gemini-cli@0.68.0'
+    steps:
+      - uses: actions/checkout@v7
+        if: matrix.agent == 'codex'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Install and inspect actual CLI (no credentials or model requests)
+        shell: bash
+        env:
+          AGENT: ${{ matrix.agent }}
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          set -euo pipefail
+          home="$(mktemp -d "$RUNNER_TEMP/sg-native-XXXXXX")"
+          trap 'rm -rf "$home"' EXIT
+          export HOME="$home"
+          export CI=true
+          export NPM_CONFIG_REGISTRY=https://registry.npmjs.org/
+          export NPM_CONFIG_FETCH_RETRIES=1
+          export NPM_CONFIG_FETCH_TIMEOUT=60000
+          unset OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY GOOGLE_API_KEY GH_TOKEN GITHUB_TOKEN NODE_AUTH_TOKEN
+          npm install --prefix "$home/tools" --no-audit --no-fund --save-exact "$PACKAGE"
+          cli="$home/tools/node_modules/.bin/$AGENT"
+          test -x "$cli"
+          timeout 60 "$cli" --version
+          timeout 60 "$cli" --help > "$home/help.txt"
+          test -s "$home/help.txt"
+          printf 'INSTALL_AND_HELP=PASS\nAUTHENTICATED_NATIVE_LOADER=NOT_RUN (no account or model call)\n'
+          if [ "$AGENT" = codex ]; then
+            # Inspect the actual model-visible input without sending a model request.
+            # A separate network namespace prevents accidental outbound calls.
+            fixture="$home/fixture"
+            mkdir -p "$fixture" "$home/codex"
+            git init -q "$fixture"
+            printf '{"dependencies":{"express":"1"}}\n' > "$fixture/package.json"
+            printf '# Team rules\nSG_NATIVE_SYNTHETIC_ROOT_MARKER\n' > "$fixture/AGENTS.md"
+            helper="$GITHUB_WORKSPACE/plugins/security-guardian/skills/security-guardian/scripts/security_project.py"
+            python3 "$helper" preview --root "$fixture" --profile backend --agent codex > "$home/preview.json"
+            token="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["approval_token"])' "$home/preview.json")"
+            python3 "$helper" apply --root "$fixture" --profile backend --agent codex --approve "$token" > "$home/apply.json"
+            python3 "$helper" status --root "$fixture" > "$home/status.json"
+            python3 -c 'import json,sys; x=json.load(open(sys.argv[1])); assert x["status"]=="READY" and x["instruction_sync"]=="MATCHED"' "$home/status.json"
+            cd "$fixture"
+            probe() {
+              sudo unshare --net -- setpriv --reuid "$(id -u)" --regid "$(id -g)" --clear-groups env -i PATH="$PATH" HOME="$home" CODEX_HOME="$home/codex" CI=true timeout 90 "$cli" debug prompt-input "Synthetic context inspection only"
+            }
+            probe > "$home/prompt.json"
+            python3 -c 'import json,sys; x=json.dumps(json.load(open(sys.argv[1]))); assert "SG_NATIVE_SYNTHETIC_ROOT_MARKER" in x and "Approved default profile: backend." in x and "Frontend: review untrusted rendering" not in x' "$home/prompt.json"
+            printf '# Synthetic override\nSG_NATIVE_SYNTHETIC_OVERRIDE_MARKER\n' > AGENTS.override.md
+            probe > "$home/override.json"
+            python3 -c 'import json,sys; x=json.dumps(json.load(open(sys.argv[1]))); assert "SG_NATIVE_SYNTHETIC_OVERRIDE_MARKER" in x and "SG_NATIVE_SYNTHETIC_ROOT_MARKER" not in x' "$home/override.json"
+            printf 'CODEX_NATIVE_PROMPT_INPUT=PASS (generated backend guidance, marker and override precedence; offline only)\n'
+          fi

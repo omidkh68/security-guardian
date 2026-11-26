@@ -61,3 +61,7 @@ flowchart LR
 - [multi-agent](multi-agent-FA.md)
 - [npm-distribution](npm-distribution-FA.md)
 
+
+## پروفایل پایدار (در انتظار پذیرش بومی)
+
+- [Project profile](project-profile-FA.md)
