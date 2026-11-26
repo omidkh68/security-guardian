@@ -61,3 +61,7 @@ flowchart LR
 - [multi-agent](multi-agent.md)
 - [npm-distribution](npm-distribution.md)
 
+
+## Persistent profile (pending native acceptance)
+
+- [Project profile](project-profile.md)

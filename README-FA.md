@@ -469,3 +469,5 @@ False Positive یافته‌اید؟ پشتیبانی از یک فریم‌ور�
 ماتریس پوشش از نسخه مشترک Pack پایتون SQL با اسکنر استفاده می‌کند؛ Runner محلی مجاز Python/Node همچنان از راستی‌آزمایی کل فریم‌ورک جداست. [پوشش فریم‌ورک](docs/framework-coverage-FA.md) و [قرارداد معنایی](docs/semantic-contract-FA.md) را ببینید.
 
 برای اصلاح محلی با تأیید صریح، `prepare-fix` و `review-fix` شواهد Git قبل/بعد در محدوده را نگه می‌دارند؛ این فرمان‌ها سورس برنامه را تغییر نمی‌دهند. [Verification Runner](docs/verification-runner-FA.md).
+
+[پروفایل تأییدشده پروژه](docs/project-profile-FA.md) ([English](docs/project-profile.md)): پیش‌نمایش/اعمال صریح و استفاده مجدد از محدوده انتخاب‌شده؛ بارگذاری واقعی Agent هنوز تأیید نشده است.
