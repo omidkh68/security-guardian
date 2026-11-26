@@ -68,7 +68,7 @@ The version badge above refers to the released v1.2.1 baseline, not the current 
 | Standards and reporting | [Crosswalk](docs/standards-crosswalk.md), [PDF v2 and coverage gaps](docs/pdf-reporting.md): advisory mappings, privacy-safe management/technical views. |
 | Benchmark | [Evidence bundle](docs/independent-benchmark.md): separate exposed synthetic and external replay metrics; no pooled accuracy. |
 
-Persistent native agent profile integration (#32) remains pending full acceptance; authenticated agent tests, independent human review, remaining RFC acceptance and public npm publication are not complete. See the [current RFC status](docs/wiki/SG-Roadmap-and-RFCs.md) and [Unreleased changelog](CHANGELOG.md#unreleased). Do not treat these development changes as released support.
+Persistent native agent profile integration (#32) remains pending full acceptance; authenticated agent tests, independent human review, remaining RFC acceptance and public npm publication are not complete. See the [current RFC status](docs/wiki/SG-Roadmap-and-RFCs.md) and [Unreleased changelog](CHANGELOG.md). Do not treat these development changes as released support.
 
 ## 🚀 Quick start
 
