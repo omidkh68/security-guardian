@@ -21,13 +21,15 @@ PATTERNS={
 def wstg(raw):
     if s.git_blob(raw)!=WSTG_BLOB:raise ValueError('WSTG checklist blob mismatch')
     d=json.loads(raw,object_pairs_hook=s.unique_object)
-    rows=[]
+    occurrences=defaultdict(int)
     for category in d['categories'].values():
         for t in category['tests']:
             if not re.fullmatch(r'WSTG-[A-Z]{4}-\d{2}',t['id']):
                 raise ValueError('Invalid WSTG ID')
-            rows.append({'id':t['id'].replace('WSTG-','WSTG-v42-',1),'source_kind':'PUBLISHER_CHECKLIST'})
-    return rows
+            occurrences[t['id'].replace('WSTG-','WSTG-v42-',1)]+=1
+    return [{'id':ident,'source_kind':'PUBLISHER_CHECKLIST',
+             'publisher_occurrences':count,'publisher_identity_conflict':count>1}
+            for ident,count in sorted(occurrences.items())]
 
 def mobile(name,tree):
     if tree.get('truncated') is not False:raise ValueError('Incomplete upstream tree')
@@ -82,6 +84,8 @@ def main():
     out={}
     rev=s.REVISIONS['WSTG']
     out['WSTG']=reconcile('WSTG',wstg(fetch('https://raw.githubusercontent.com/OWASP/wstg/'+rev+'/checklist/checklist.json',8_000_000)),data)
+    out['WSTG']['publisher_duplicate_ids']=[r['id'] for r in out['WSTG']['rows'] if r['publisher_identity_conflict']]
+    out['WSTG']['publisher_checklist_entries']=sum(r['publisher_occurrences'] for r in out['WSTG']['rows'])
     for name,repo in REPOS.items():
         rev=s.REVISIONS[name]
         raw=fetch('https://api.github.com/repos/OWASP/'+repo+'/git/trees/'+rev+'?recursive=1',16_000_000)
