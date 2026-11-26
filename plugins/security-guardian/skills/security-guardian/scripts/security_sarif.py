@@ -14,7 +14,7 @@ SCHEMA='https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif
 def export(report):
     if type(report.get('schema_version')) is not int or report['schema_version']!=1 or report.get('privacy')!='STRUCTURED_SUMMARY_NO_PROJECT_PROSE':
         raise ValueError('Only structured summary snapshots are accepted')
-    catalog={x['id'] for x in standards.load()['controls']}
+    catalog={x['control_id'] for x in standards.load()['controls']}
     rows=report['findings']
     if not isinstance(rows,list) or len(rows)>5000:raise ValueError('Invalid finding count')
     seen=set()
