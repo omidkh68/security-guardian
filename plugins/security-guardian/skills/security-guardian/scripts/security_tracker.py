@@ -546,7 +546,19 @@ def _selected_inputs(root, run, finding, files, test_file, adapter='python-unitt
     if not isinstance(fix_files, list) or any(not isinstance(p, str) or p not in files for p in fix_files):
         raise ValueError('Select every recorded fix file')
     selected = set(scope['selected_roots'])
-    if any(security_scan._owner(p, scope['components']) not in selected for p in files):
+    # A saved run is evidence of prior scope, not a license to execute after
+    # component ownership changes. Rediscover manifests read-only, keeping
+    # precisely the original roots; never select newly discovered components.
+    coverage = {}
+    inventory = list(security_scan.project_files(root, coverage))
+    current = security_scan.resolve_scope(root, inventory, coverage,
+                                           scope['requested_profile'], scope['selected_roots'])
+    if (coverage.get('truncated') or any(c.get('errors') for c in current['components'])
+            or current['status'] != 'RESOLVED'
+            or any(current[k] != scope[k] for k in
+                   ('selected_roots', 'selected_profile', 'components', 'excluded_components'))):
+        raise ValueError('Component inventory changed or is incomplete; begin a new explicitly scoped run')
+    if any(security_scan._owner(p, current['components']) not in selected for p in files):
         raise ValueError('Selected test input is outside the run component scope')
     return source_fingerprint(root, files)
 
