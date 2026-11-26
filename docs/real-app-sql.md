@@ -62,3 +62,20 @@ flowchart LR
 ```
 
 Synthetic tests cover aliases, cached connections, execute/fetch, literal guards, parameterized negatives, shadowing, mutation, mismatched keys and unknown receivers. Test-first CI 45776952724 recorded two expected failures; implementation results pending. Run the offline suite and `python scripts/benchmark_independent_sql.py`; the eight exposed cases are regression only. Rollback by reverting this bounded scanner change.
+
+## Post-v8 external boundary evaluation (#111)
+
+PR #121 CI 45777183558: 158/158 Python 3.12 tests and six required checks; previous eight-site cohort TP4 TN4 FP0 FN0 (previously TP0 TN4 FP0 FN4), all PARTIAL; two unlabeled candidates. Main CI 45777504571 succeeded. This is regression evidence, not a fresh holdout.
+
+Freeze v8 at 540fcd3 before evaluating three further MIT teaching labs. The 14 distinct labeled execute sites are split into direct HTTP route (4 positive, 3 negative) and interprocedural source/sink boundary (2 positive, 5 negative). Three callers reaching one shared sink count once. Separate app versions retain their own component-root import layout. Labels and blob hashes fixed before evaluation; no source normalization, source or test execution, production claim or statistical representativeness. Preserve parse failures and partial misses, list unlabeled candidate locations, report separate denominators. Previously inspected sources are not a blind holdout. The scanner itself is unchanged.
+
+```mermaid
+flowchart LR
+ A[Pinned author labels and source] --> B[Isolated selected components]
+ B --> C[Frozen v7 and v8 and current]
+ C --> D[Direct route metrics]
+ C --> E[Interprocedural metrics]
+ C --> F[Partial coverage and parse errors]
+```
+
+Run: `python scripts/benchmark_external_sql_boundaries.py`. Three offline evaluator tests cover duplicate labels, raw bytes, partial misses, unlabeled hits and wrong selection. Execution pending CI. Revert benchmark-only change to roll back. No #111 closure or release decision.
