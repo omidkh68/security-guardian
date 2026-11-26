@@ -46,3 +46,7 @@ Official references: [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.
 ## Preview provenance execution and action pins
 
 The provenance workflow also triggers on a change to its own file merged into main, with no PR execution or package publication. Verify the signed preview using the expected repository, signer workflow, main source ref and exact source digest; the signature result must be a nonempty JSON list. Both new standards workflows pin their actions to exact commits. This improves the new workflow supply chain only; the repository-wide Scorecard findings, including older unpinned actions, still require review. Do not claim a SLSA level or final release provenance.
+
+## Repository workflow hardening (#159)
+
+The follow-up pins all existing main workflow Action references to exact commit SHAs, disables checkout credential persistence, and separates release verification (read-only) from the release creation job (contents: write, no checkout). The required CI runs a bounded textual workflow baseline check and regression tests. This check covers the repository's current YAML formatting; it is not a general YAML security analyzer, dependency-integrity guarantee or substitute for Scorecard. The earlier Scorecard results are historical; rerun against the merged revision before claiming improvement. Private vulnerability reporting, actual review practices, dependency findings and release acceptance remain separate. No release or npm publication is performed.
