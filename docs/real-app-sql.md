@@ -93,3 +93,17 @@ flowchart LR
 ```
 
 Tests: BOM line preservation and duplicate BOM rejection, JSON source/parameter binding and mutations, factory provenance and shadowing, evaluator parse-blocked separation. Run offline suite and `python scripts/benchmark_external_sql_boundaries.py`. #123 results pending; revert scanner/evaluator change for rollback.
+
+## Bounded literal string transformation (v10, #111)
+
+PR #123 CI 45783100817: 161/161 scanner tests, six evaluator tests, six successful checks; direct route TP3 TN3 FP0 FN1, seven parse-blocked cases reduced to zero; interprocedural TP0 TN5 FP0 FN2; all 14 PARTIAL. Earlier regression cohorts retained. The remaining direct miss crosses a local literal replacement loop. v10 recognizes an undecorated one-positional-parameter function with optional docstring and exact falsy-input early return, a distinct accumulator assigned from the parameter, one loop over 1–16 literal nonempty strings (128 characters maximum each), one accumulator.replace(loop_variable, literal) assignment, and return of the accumulator. No dynamic lists, external calls, default arguments, rebindings or shadowed calls are inferred. Source lines survive the transformation as review candidates. Replacement is not accepted as a sanitizer or runtime type proof. Existing constant/parameterized negatives remain separate. Coverage is PARTIAL. Generic cross-module flow and exception paths remain outside this change.
+
+```mermaid
+flowchart LR
+ A[Flask request source] --> B[Bounded local replacement summary]
+ B --> C[Retained source provenance]
+ C --> D[SQL argument review]
+ D --> E[Heuristic candidate or partial coverage]
+```
+
+Tests cover request form/JSON source, literal loop, constant and parameterized negatives, unknown replacements, invalid loop shapes and shadowing. Run offline tests and `python scripts/benchmark_external_sql_boundaries.py`. #124 implementation results pending CI; rollback by reverting the bounded scanner change. Exposed cohort is regression, not fresh evaluation.
