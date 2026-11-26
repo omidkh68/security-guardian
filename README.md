@@ -56,6 +56,20 @@ The value is not that a general-purpose agent lacks these abilities; it is that 
 > [!IMPORTANT]
 > A scanner signal is a candidate, not proof of a vulnerability; no signal is not proof of safety. Results depend on actual code, available evidence, authorized tests and your selected agent. Security Guardian is not a certification or an autonomous penetration tester. Audit does not edit application source; remediation requires appropriate authorization.
 
+## Development status — v1.3.0 (unreleased)
+
+The version badge above refers to the released v1.2.1 baseline, not the current development tree. The following increments have been merged on main but are not a public v1.3.0 release:
+
+| Capability | Evidence and boundary |
+|---|---|
+| Scope and pack inventory | [Scope resolver](docs/scope-resolution.md), [coverage matrix v2](docs/framework-coverage.md): manifest hints, exact reference fixture versions, no version certification. |
+| Detection | [Semantic expansion](docs/semantic-expansion.md), [real-app SQL](docs/real-app-sql.md), [optional Semgrep contract](docs/verification-matrix.md): bounded candidates, partial coverage explicit. |
+| Remediation | [Verification runner](docs/verification-runner.md): approved local Python/Node execution and scoped pre/post evidence; no automatic or independent fix certification. |
+| Standards and reporting | [Crosswalk](docs/standards-crosswalk.md), [PDF v2 and coverage gaps](docs/pdf-reporting.md): advisory mappings, privacy-safe management/technical views. |
+| Benchmark | [Evidence bundle](docs/independent-benchmark.md): separate exposed synthetic and external replay metrics; no pooled accuracy. |
+
+Persistent native agent profile integration (#32) remains pending full acceptance; authenticated agent tests, independent human review, remaining RFC acceptance and public npm publication are not complete. See the [current RFC status](docs/wiki/SG-Roadmap-and-RFCs.md) and [Unreleased changelog](CHANGELOG.md#unreleased). Do not treat these development changes as released support.
+
 ## 🚀 Quick start
 
 ### Recommended — Interactive multi-agent installation
