@@ -14,8 +14,7 @@ From a trusted checkout, inspect the code and run:
 
 ```bash
 npm test
-node scripts/verify-npm-package.mjs
-npm pack --ignore-scripts
+node scripts/verify-npm-package.mjs --artifact-dir /absolute/path/to/new-artifact-directory
 ```
 
 Use the exact tarball filename printed by npm (replace the example path with your actual file):
@@ -79,3 +78,7 @@ flowchart TD
 ```
 
 Staged files and journal records are flushed with fsync; supported POSIX directory entries are flushed before advancing the journal. Flush errors are not reported as success. Node provides no portable Windows directory flush. CI exercises process termination and injected failures, not physical power loss. No guarantee is made for physical power loss, hardware write caches or filesystem corruption.
+
+## Exact tested artifact handoff (#64)
+
+The verifier can export the very tarball used for the offline smoke test to a fresh absolute directory; it does not repack after testing. It records SHA-256, source commit, package identity, runtime versions and the limited smoke scope in a receipt. Linux Node 22 and 24 CI retain their separate tested artifacts. The tagged release workflow uses the same verifier export and checks the digest and receipt before publishing. Private previews stay private; a receipt is CI evidence, not an independent signature or successful registry publication. For an approved first publication use the tested tarball from the approved revision, not a newly packed checkout. Review the digest and retain the receipt. No tag or publication is authorized by this change.
