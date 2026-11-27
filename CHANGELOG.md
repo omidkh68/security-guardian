@@ -5,6 +5,7 @@ All notable changes to this open-source distribution are documented here. Dates 
 ## [Unreleased]
 
 ### Added
+- Approved persistent scope and managed instruction preview/apply (#32); native runtime acceptance pending.
 - Publish separate benchmark evidence JSON in CI with exact input hashes, reconstructed denominators and no pooled accuracy (#37, PR #145).
 - Expose coverage gaps and unknown tool evidence in the shared privacy-safe PDF/JSON/Markdown projection (#36, PR #144).
 - Reject malformed Semgrep output, out-of-root paths and silent coverage caps; report PARTIAL explicitly (#34, PR #143).

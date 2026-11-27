@@ -72,3 +72,7 @@ Persistent native agent profiles (#32) remain a pending integration, not part of
 ## Documentation structural acceptance (#54)
 
 Run `python scripts/audit_documentation.py --require-clean` from the repository root. Required CI fails on an empty inventory, missing/orphan translation pairs, detected broken local targets and malformed or empty fenced blocks. The report remains available on stdout. Mermaid syntax/rendering, anchor resolution, external links and independent translation review are not covered by this gate.
+
+## Persistent profile (pending acceptance)
+
+- [Project profile](project-profile.md)
