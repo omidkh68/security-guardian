@@ -54,7 +54,7 @@ def export(report,*,sidecar=None,source_sha256=None):
         rules.add(cid)
         results.append({'ruleId':cid,'kind':'review' if candidate else 'fail',
                         'level':'warning' if candidate else LEVELS[severity],
-                        'message':{'text':cid+' — '+status+' (recorded ledger status; review evidence separately).'},
+                        'message':{'text':status+' (recorded ledger status; review evidence separately).'},
                         'partialFingerprints':{'securityGuardianFinding/v1':hashlib.sha256(ident.encode()).hexdigest()},
                         'properties':{'findingId':ident,'recordedStatus':status,
                                       'recordedSeverity':severity,'independentVerification':'NOT_ASSESSED'}})
