@@ -46,3 +46,33 @@ Default export names are RUN.pdf, RUN.json, RUN-REPORT.md and RUN-TECHNICAL-REPO
 Default exports intentionally exclude all project-controlled free prose, titles, paths, commands, notes, raw evidence, test logs and identities except validated finding IDs; reasons/actions are status-based guidance, not quotes from reviewer notes. Consult private snapshots for actual blockers and exact reproduction steps. Optional --private-details adds best-effort sanitized summaries in separately named PRIVATE outputs; NEVER assume these are share-safe. No raw evidence/log payload is exported even in private mode. Structured reports can still disclose risk counts and identifiers; manually review before sharing. The legacy private tracker Markdown and JSON remain unchanged and must not be shared by default.
 
 Up to 5000 findings and 5000 test records; larger inputs fail explicitly rather than silently omit rows. PDF uses split-capable paragraphs and page numbers; no 120-finding truncation. CI tests status fidelity, null denominators, scope isolation, historical re-export, protected paths, missing renderer, secret canaries in both views and extracted multipage PDF text with 125 findings plus long private content. pypdf is a test-only CI dependency. Visual/human review of typography and disclosure remains necessary. No independent security verification or compliance claim.
+
+## Unambiguous evidence links (#98)
+
+Duplicate test IDs cannot support a linked PASS. Unknown or inconsistent local/manual receipt quality cannot be linked as eligible evidence; historical manual records remain labeled MANUAL_REPORTED. Ledger status and privacy projection are unchanged. Test regressions cover ambiguous and malformed records; actual PDF pagination and extraction remain in CI. Visual human review remains separate. CI pending.
+
+## Synthetic visual-review artifacts (#98)
+
+The required Python 3.12 CI step renders the existing wholly synthetic 125-finding fixture in both management and technical PDF views, asserts every finding ID is present, pagination and absence of private canary in text and metadata, and uploads only these synthetic PDFs as `synthetic-pdf-review` with seven-day retention. No customer data, private ledger or logs are uploaded. CI output is automated content evidence, not independent human typography or disclosure approval. Visual review of the artifacts remains a distinct recorded task. CI pending.
+
+A local PASS link additionally requires exact archived receipt finding, run, adapter, exit, boolean execution status and passing counts consistency. This is an archived consistency check, not live source freshness verification. Negative tests reject mismatched or malformed receipts.
+
+## PDF v2 - visual reporting (#139)
+
+The PDF renderer now uses a branded cover, clickable section navigation and outline, four snapshot KPI cards, vector severity donut and status bars, top-five residual control concentration, and a severity-ordered action table. Each finding has textual severity/status chips, reason/next action, verification condition, compact metadata and splittable technical/private prose. Technical view retains implementation, playbook and history fields. All data derives from the same privacy-filtered finalized snapshot; JSON/Markdown schemas, paths, optional ReportLab dependency and default disclosure policy are unchanged. Unknown/zero denominators remain explicit. No invented trends, risk scores, impact/likelihood matrix, component heatmap or compliance percentages; these require additional recorded inputs and are not implemented. Test empty reports, exact visual-summary counts, clickable navigation, long content, historical export, multi-page extraction and privacy. Synthetic CI PDF artifacts are the visual-review source; CI pending.
+
+```mermaid
+flowchart LR
+ A[Finalized snapshot] --> B[Existing privacy projection]
+ B --> C[Exact counts and priorities]
+ B --> D[Finding and evidence cards]
+ C --> E[Vector dashboard]
+ D --> F[Management or technical PDF]
+ E --> F
+```
+
+Visual review refinement: compact grouped metadata, intact ordinary finding cards (oversize prose still splits), management advisory mapping counts and technical test/evidence bars. The CI-only artifact fixture uses explicitly synthetic severity/control variation and a visible demonstration notice; the existing homogeneous regression fixture remains unchanged. No new runtime dependency or user-supplied branding input.
+
+## Coverage evidence in every report format (#36)
+
+The report projection exposes recorded counts of skipped file or directory events, out-of-scope skips, unreadable/invalid source events, budget-related skips, and globally/per-control omitted signal records. Only fixed scanner-owned reason identifiers are accepted; arbitrary reason keys and project prose remain private. Missing or malformed counts remain null, and unknown reason keys cause PARTIAL_OR_UNRECORDED metadata with no total. An explicitly recorded empty skip dictionary means zero events. Global and per-control omission counts can overlap; never add them or interpret directory events as unique file counts. Optional tool execution evidence is explicitly NOT_AVAILABLE_FROM_SCANNER_SNAPSHOT, not a claim that a tool ran or was unavailable. JSON, Markdown and both PDF views use the same additive projection. No control assessment or compliance percentage is inferred.

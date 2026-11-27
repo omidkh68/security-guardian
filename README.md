@@ -56,6 +56,20 @@ The value is not that a general-purpose agent lacks these abilities; it is that 
 > [!IMPORTANT]
 > A scanner signal is a candidate, not proof of a vulnerability; no signal is not proof of safety. Results depend on actual code, available evidence, authorized tests and your selected agent. Security Guardian is not a certification or an autonomous penetration tester. Audit does not edit application source; remediation requires appropriate authorization.
 
+## Development status — v1.3.0 (unreleased)
+
+The version badge above refers to the released v1.2.1 baseline, not the current development tree. The following increments have been merged on main but are not a public v1.3.0 release:
+
+| Capability | Evidence and boundary |
+|---|---|
+| Scope and pack inventory | [Scope resolver](docs/scope-resolution.md), [coverage matrix v2](docs/framework-coverage.md): manifest hints, exact reference fixture versions, no version certification. |
+| Detection | [Semantic expansion](docs/semantic-expansion.md), [real-app SQL](docs/real-app-sql.md), [optional Semgrep contract](docs/verification-matrix.md): bounded candidates, partial coverage explicit. |
+| Remediation | [Verification runner](docs/verification-runner.md): approved local Python/Node execution and scoped pre/post evidence; no automatic or independent fix certification. |
+| Standards and reporting | [Crosswalk](docs/standards-crosswalk.md), [PDF v2 and coverage gaps](docs/pdf-reporting.md): advisory mappings, privacy-safe management/technical views. |
+| Benchmark | [Evidence bundle](docs/independent-benchmark.md): separate exposed synthetic and external replay metrics; no pooled accuracy. |
+
+Persistent native agent profile integration (#32) remains pending full acceptance; authenticated agent tests, independent human review, remaining RFC acceptance and public npm publication are not complete. See the [current RFC status](docs/wiki/SG-Roadmap-and-RFCs.md) and [Unreleased changelog](CHANGELOG.md). Do not treat these development changes as released support.
+
 ## 🚀 Quick start
 
 ### Recommended — Interactive multi-agent installation
@@ -384,7 +398,7 @@ GitHub Actions runs the offline test suite on three Python versions, checks the 
 | [Tracking](docs/tracking.md) | Status meanings, versioning, reasons, failed fixes and regression IDs |
 | [Security model](docs/security-model.md) | Safe operation, sensitive artifacts and limits |
 | Verification fingerprints ([EN](docs/verification-fingerprint.md), [FA](docs/verification-fingerprint-FA.md)) | Selected-file evidence binding; not an independent runner |
-| Local verification runner ([EN](docs/verification-runner.md), [FA](docs/verification-runner-FA.md)) | Explicitly authorized Python unittest execution; receipts are not verified fixes |
+| Local verification runner ([EN](docs/verification-runner.md), [FA](docs/verification-runner-FA.md)) | Explicitly authorized Python unittest and Node.js 22/24 node:test execution; receipts are not verified fixes |
 | [Troubleshooting](docs/troubleshooting.md) | Common installation or tracking problems |
 | [Playbook contribution](docs/contributing-playbook.md) | Add or improve controls safely |
 | [Source and provenance](docs/provenance.md) | Standards, baseline and interpretation of difficulty scores |
@@ -466,5 +480,11 @@ Python SQL AST v4 adds direct SQLite context-manager normal-path review (#90), w
 Expansion #107: see [semantic coverage expansion](docs/semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.
 
 Capability architecture index: [English](docs/architecture-index.md) · [فارسی](docs/architecture-index-FA.md).
+
+[Real application SQL analysis](docs/real-app-sql.md) ([فارسی](docs/real-app-sql-FA.md)): Python AST v13, bounded seeded/Row factories, receiver close and digest provenance, bounded typed exception/cleanup paths, bounded one-hop cross-module SQL sink evidence, bounded literal string replacement helpers (not sanitizers), BOM-aware source parsing, bounded JSON route flow and Flask context-cache factories and literal HTTP method guards, absolute-import and named-path factories, explicit finally paths and execute/fetch chains; external benchmark limitations remain explicit.
+
+The coverage inventory uses the same Python SQL pack version as the scanner; authorized local Python/Node runners remain separate from framework-wide verification. See [framework coverage](docs/framework-coverage.md) and [semantic contract](docs/semantic-contract.md).
+
+For an explicitly approved local remediation, use `prepare-fix` and `review-fix` to retain scoped pre/post Git evidence; these commands never edit application source. See [verification runner](docs/verification-runner.md).
 
 [Approved project profile](docs/project-profile.md) ([فارسی](docs/project-profile-FA.md)): explicit preview/apply and reusable selected scope. Native runtime loading remains unverified.

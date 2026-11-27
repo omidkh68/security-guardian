@@ -52,3 +52,30 @@ flowchart LR
 ```
 
 تست بسته Node 22/24 دارایی دقیق، نصب و گزارش PARTIAL را می‌سنجد؛ انتشار Registry شرط جداست.
+
+
+### توقف ناگهانی نصب
+
+برای Journal نسخه ۲، ابتدا `security-guardian --recover --project DIR --dry-run` و پس از بررسی طرح، `security-guardian --recover --project DIR --yes` را اجرا کنید (برای نصب کاربری، `--user` جایگزین محدوده پروژه است). بازیابی صریح است و هنگام نصب عادی اجرا نمی‌شود. مالک زنده، میزبان متفاوت، Journal ناقص/قدیمی، مسیر نامعتبر، تغییر شناسه فایل‌سیستم یا قفل بازیابی نامعتبر باعث توقف امن می‌شود. نسخه اصلی از backup بازگردانده می‌شود و فایل‌های نصب جدید به staging منتقل و برای بررسی حفظ می‌شوند؛ حذف بازگشتی انجام نمی‌شود. اجرای مجدد پس از خطای قابل‌مدیریت باید قابل تکرار باشد. مالکیت قفل بازیابی به‌صورت رکوردهای تغییرناپذیر و با ایجاد انحصاری hard link منتقل می‌شود؛ در صورت پایان فرایند مالک و معتبر بودن Journal، اجرای مجدد بازیابی را ادامه می‌دهد. میزبان متفاوت، مالک نامشخص، قفل قدیمی یا فایل‌سیستم فاقد hard link نیازمند بررسی دستی است. قطع فرایند هنگام پاک‌سازی نهایی ممکن است فایل‌های متادیتای بی‌اثر باقی بگذارد. تضمین قطع برق یا مقاومت در برابر عامل محلی مخرب وجود ندارد.
+
+
+### معماری و حدود دوام داده‌ها
+
+```mermaid
+flowchart TD
+ A[Exclusive install lock] --> B[Journal begin]
+ B --> C[Stage and flush files]
+ C --> D[Journal backup intent]
+ D --> E[Rename and flush directories]
+ E --> F[Journal install intent]
+ F --> G[Install and flush directories]
+ G --> H[Journal commit]
+ H --> I[Release lock]
+ D -. interrupted .-> R[Explicit recovery]
+ F -. interrupted .-> R
+ R --> V[Validate identities and owner]
+ V --> P[Preserve staged files and restore backup]
+ P --> Q[Verify and release locks]
+```
+
+فایل‌های staging و Journal با fsync همگام می‌شوند؛ روی POSIX، دایرکتوری‌های مرتبط نیز پیش از ثبت مرحله بعد همگام می‌شوند. خطای همگام‌سازی به موفقیت ساختگی تبدیل نمی‌شود. در Windows، Node رابط قابل‌حمل برای همگام‌سازی دایرکتوری ارائه نمی‌کند. آزمون‌های CI توقف فرایند و تزریق خطا هستند، نه آزمون قطع فیزیکی برق. تضمین دوام در برابر قطع برق، cache سخت‌افزار یا خرابی فایل‌سیستم ارائه نمی‌شود.

@@ -6,6 +6,34 @@ All notable changes to this open-source distribution are documented here. Dates 
 
 ### Added
 - Approved persistent scope and managed instruction preview/apply (#32); native runtime acceptance pending.
+- Publish separate benchmark evidence JSON in CI with exact input hashes, reconstructed denominators and no pooled accuracy (#37, PR #145).
+- Expose coverage gaps and unknown tool evidence in the shared privacy-safe PDF/JSON/Markdown projection (#36, PR #144).
+- Reject malformed Semgrep output, out-of-root paths and silent coverage caps; report PARTIAL explicitly (#34, PR #143).
+- Add framework coverage matrix v2 with exact reference fixture versions and uncertified target version status (#33, PR #142).
+- Redesign management/technical PDF reports with visual dashboards, clickable section navigation and compact evidence cards without changing the privacy projection (#139).
+- Revalidate official pinned standards identifiers and publish synthetic-only management/technical PDF review artifacts in CI (#97, #98).
+- Require real NestJS guard/controller/HTTP owner and tenant state receipt fixture in isolated CI (#35).
+- Record scoped remediation approval, pre/post Git fingerprints and rollback review without modifying application source (#35).
+- Harden previously closed acceptance: immutable exposed benchmark labels, shared parser input validation, synchronized coverage versions, strict standards artifact grouping, unambiguous report evidence links and actionable fixed-unverified records (#107, #96, #94, #95, #97, #98, #35).
+- Enforce matched OWASP route identities, source hashes, labels and complete parsing across isolated/contextual SQL regression evidence (#111).
+- Reject inconsistent or malformed stored execution receipts, unknown evidence quality and mismatched adapter metadata (#58, #35).
+- Require real Angular platform-server SSR runtime receipt fixture in isolated CI (#35, ANG-06).
+- Require isolated real Flask/Jinja/SQLite framework receipt verification in Python 3.12 CI, without adding product dependencies (#35).
+- Add finding-bound Node SSR HTTP cache/host regression fixture with stale config and scope rejection (#35, ANG-06).
+- Preserve real Python unittest subtest failure-event counts and reject them for verified fixes instead of misclassifying them as blocked execution (#35).
+- Exercise real loopback HTTP owner/tenant authorization with before-failing and after-passing finding-bound receipts (#35).
+- Enforce exposed Python SQL regression outcomes in CI; retain isolated-context misses and bilingual bounded acceptance evidence (#111).
+- Extend Python SQL AST v13 with bounded seeded/Row factory summaries, receiver close invalidation and digest provenance (#111, #129).
+- Extend Python SQL AST v12 with bounded typed exception handlers, nested cleanup/rethrow and possible SQLite error paths (#111, #127).
+- Extend Python SQL AST v11 with selected-component one-hop direct-call sink summaries and separate source/call locations (#111, #126).
+- Extend Python SQL AST v10 with bounded literal replacement helper summaries that retain request provenance without treating blacklists as SQL sanitizers (#111, #124).
+- Extend Python SQL AST v9 with leading UTF-8 BOM parsing, bounded JSON request maps, local row factories and local Flask app factories; separate parse-blocked evaluation (#111, #122, #123).
+- Add pinned independent matched Flask route pairs and bounded Python SQL AST v8 context-cache factories and literal method guards; retain the failed baseline and PARTIAL limitations (#111, #120, #121).
+- Add structured PDF/JSON/Markdown management and technical reporting with residual risk and privacy boundaries (#98, #109).
+- Expand bounded semantic flow (Python v5, DOM v4, Node SQL v2) and replay the pinned external context (#107, #110).
+- Extend Python SQL AST to v6/v7 with named and absolute-import factories, bounded logging and explicit finally paths; preserve frozen benchmark evidence and report residual limitations (#111, #112, #116, #117).
+- Add authorized Node 22/24 verification adapter and synthetic before/after tenant/state-race tests (#35, #113, #115).
+- Complete legacy Persian documentation inventory and paired architecture index/backfill (#54, #114).
 - Add pinned external CWE-89 evaluation and separate post-freeze semantic holdout reporting (#96).
 - Add versioned framework/pack coverage inventory and bilingual contributor mapping contract (#95).
 - Consolidate optional JS AST parser and evidence contracts; preserve DOM sanitizer call evidence without suppressing review candidates (#94).

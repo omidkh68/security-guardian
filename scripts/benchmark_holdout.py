@@ -20,6 +20,7 @@ import security_js_authz_flow as authz
 
 MANIFEST = ROOT/'benchmarks/semantic-holdout-v1.json'
 FREEZE = '914f1a0ed7383d6cbdd1f835c0d5446f4416dcc5'
+MANIFEST_BLOB = 'cc0e0c9bcf965dd373d9c0f616d06d5f5fb7fc16'
 UPSTREAM = 'f1291485808b66e20ddb6b01b10dc71b3df8c8ba'
 AUTH_STATES = {'CALLER_SCOPE_REVIEW','PRINCIPAL_SCOPE_EVIDENCE',
                'MISSING_LOCAL_SCOPE_REVIEW','UNKNOWN_RESOURCE_SCOPE','PARTIAL'}
@@ -42,7 +43,10 @@ def classify(expected,observed):
     return ('tp' if observed else 'fn') if expected else ('fp' if observed else 'tn')
 
 def load_manifest(path=MANIFEST):
-    m=json.loads(path.read_text(encoding='utf-8'))
+    raw=path.read_bytes()
+    if hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()!=MANIFEST_BLOB:
+        raise ValueError('Frozen synthetic manifest bytes changed; create a new version')
+    m=json.loads(raw)
     if (m['schema_version'],m['kind'],m['license'],m['engine_freeze'])!=(1,'POST_FREEZE_SYNTHETIC_HOLDOUT','MIT',FREEZE):
         raise ValueError('Invalid holdout provenance')
     seen=set()
@@ -110,8 +114,8 @@ def evaluate(c,parser):
                     or s['signal_coverage']['truncated'] or s['scan_coverage']['skipped'].get('outside_selected_scope')!=2):
                 raise ValueError('Scope or completeness failure')
             flow=s['python_sql_flow']
-            if flow['eligible_files']!=1:
-                raise ValueError('Expected Python file not eligible')
+            if flow['eligible_files']!=1 or flow['parsed_files']!=1:
+                raise ValueError('Expected Python file not fully parsed')
             status=flow['status']
         else:
             report=module.review(root,'custom',['app'],parser)
@@ -137,6 +141,8 @@ def evaluate(c,parser):
                 raise ValueError('Invalid evidence identity')
             observed=bool(matched)
             row.update(observed=observed,classification=classify(c['expected'],observed))
+        if module is None:
+            row.update(eligible_files=flow['eligible_files'],parsed_files=flow['parsed_files'])
         if 'source_sha256' in c:
             row['source_sha256']=c['source_sha256']
         return row
@@ -159,14 +165,42 @@ def summarize(rows):
                             'partial_misses':sum(r['classification']=='fn' and r['coverage_status']=='PARTIAL' for r in rows if r['family']==family)}
     return report
 
+def require_synthetic_regression(rows, cases):
+    """Previously exposed post-freeze labels are now regression, not new holdout."""
+    expected={c['id']:(c['family'],c['rule_id'],c['expected']) for c in cases}
+    observed={}
+    for row in rows:
+        ident=row['id']
+        if ident in observed or ident not in expected:
+            raise ValueError('Duplicate or unexpected synthetic case')
+        family,rule,label=expected[ident]
+        if (row['family']!=family or row['rule_id']!=rule or row['expected']!=label
+                or type(row['expected']) is not type(label) or type(row['observed']) is not type(label)
+                or row['scope_isolation']!='PASS'
+                or row['coverage_status'] not in {'PARTIAL','HEURISTIC_REVIEW_ONLY'}):
+            raise ValueError('Synthetic regression identity or scope mismatch')
+        result='match' if family=='authorization' and row['observed']==label else (
+            'mismatch' if family=='authorization' else classify(label,row['observed']))
+        if result!=row['classification'] or result not in {'tp','tn','match'}:
+            raise ValueError('Exposed synthetic regression: '+ident)
+        observed[ident]=True
+    if set(observed)!=set(expected):
+        raise ValueError('Missing synthetic regression cases')
+    return {'status':'EXPOSED_SYNTHETIC_REGRESSION_PASS','cases':len(observed),
+            'independently_adjudicated':False}
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--external-git',type=Path,help='Local bare repository containing pinned OWASP revision; read only')
     p.add_argument('--typescript-module',help='Approved absolute external TypeScript 5.9.3 parser')
     p.add_argument('--synthetic',choices=('python','js','all'),help='Run separate post-freeze synthetic corpus')
+    p.add_argument('--require-synthetic-regression',action='store_true',help='Require current exposed synthetic labels to match; not an independent score')
     args=p.parse_args()
     if not args.external_git and not args.synthetic:
         p.error('Choose an external or synthetic corpus')
+    if args.require_synthetic_regression and not args.synthetic:
+        p.error('Regression gate requires synthetic corpus')
     corpora=[]
     if args.external_git:
         cases,label_hash=external_cases(args.external_git)
@@ -182,7 +216,8 @@ def main():
     reports=[]
     for kind,cases,provenance in corpora:
         rows=[evaluate(c,args.typescript_module) for c in cases]
-        reports.append({'kind':kind,'provenance':provenance,'cases':len(rows),'by_family':summarize(rows),
+        regression=(require_synthetic_regression(rows,cases) if args.require_synthetic_regression and kind=='POST_FREEZE_SYNTHETIC_HOLDOUT' else None)
+        reports.append({'kind':kind,'provenance':provenance,'cases':len(rows),'by_family':summarize(rows),'regression_gate':regression,
                         'scope_isolation':{'passed':len(rows),'total':len(rows)},
                         'elapsed_seconds':round(sum(r['elapsed_seconds'] for r in rows),6),'cases_detail':rows})
     files=sorted((SKILL/'scripts').glob('security_*.py'))+sorted((SKILL/'scripts').glob('js_*.mjs'))

@@ -49,6 +49,22 @@ class SemanticFlowTests(unittest.TestCase):
         self.assertNotIn('SELECT name',json.dumps(r))
         self.assertEqual(r['summary']['python_sql_flow']['matches'],1)
 
+    def test_conditional_expression_provenance(self):
+        cases = [
+            ('request.args["q"] if flag else "fixed"', 1, False),
+            ('"fixed" if flag else request.args["q"]', 1, False),
+            ('"fixed" if True else request.args["q"]', 0, False),
+            ('request.args["q"] if False else "fixed"', 0, False),
+            ('"a" if flag else "b"', 0, False),
+            ('request.args["q"] if mutate() else "fixed"', 0, True),
+        ]
+        for expr, count, partial in cases:
+            with self.subTest(expr=expr):
+                r = self.run_scan('    query = '+expr+'\n    cur.execute(query)\n')
+                self.assertEqual(len(self.hits(r)),count)
+                self.assertEqual(r['summary']['python_sql_flow']['status']=='PARTIAL',partial)
+                self.assertTrue(all(x['pack_version']==14 for x in self.hits(r)))
+
     def test_parameterized_and_reassigned(self):
         for body in (
             '    term = request.args["q"]\n    cur.execute("SELECT * FROM items WHERE name = ?", (term,))\n',
@@ -314,10 +330,352 @@ class SemanticFlowTests(unittest.TestCase):
             self.assertEqual(len(self.hits(result)),count)
             self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
             self.assertGreater(result['summary']['python_sql_flow']['try_normal_paths'],0)
-        self.assertFalse(self.hits(self.run_scan('    try:\n        return "fixed"\n    finally:\n        db.execute(request.args["q"])\n',header,prefix)))
+        self.assertEqual(len(self.hits(self.run_scan('    try:\n        return "fixed"\n    finally:\n        db.execute(request.args["q"])\n',header,prefix))),1)
         self.assertFalse(self.hits(self.run_scan('    db.execute(request.args["q"]).unknown()\n',header,prefix)))
         self.assertFalse(self.hits(self.run_scan('    db.execute(request.args["q"])\n',header+'sqlite3.connect=unknown\n',prefix)))
         self.assertFalse(self.hits(self.run_scan('    db.execute(request.args["q"])\n',header,prefix.replace('view()','view(connect)'))))
+
+    def test_absolute_factory_and_builtin_logging(self):
+        self.write('api/storage/db.py','import sqlite3\nimport os\ndef connection():\n    return sqlite3.connect("fixture.db")\n')
+        header='from flask import request\nfrom storage.db import connection as open_db\n'
+        prefix='def view():\n    db=open_db()\n    c=db.cursor()\n'
+        body='    value=request.form["q"]\n    print("fixture",value)\n    c.execute(value)\n'
+        result=self.run_scan(body,header,prefix)
+        self.assertEqual(len(self.hits(result)),1)
+        self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertFalse(self.hits(self.run_scan(body.replace('c.execute(value)','c.execute("SELECT ?",(value,))'),header,prefix)))
+        self.assertFalse(self.hits(self.run_scan(body,header+'print=unknown\n',prefix)))
+        self.assertFalse(self.hits(self.run_scan(body,header,prefix.replace('view()','view(open_db)'))))
+        self.assertFalse(self.hits(self.run_scan(body,header,prefix.replace('view()','view(print)'))))
+        self.write('api/storage/db.py','import sqlite3\nsqlite3.connect=unknown\ndef connection():\n    return sqlite3.connect("fixture.db")\n')
+        self.assertFalse(self.hits(self.run_scan(body,header,prefix)))
+
+    def test_explicit_finally_and_normal_else(self):
+        for exit_stmt in ('return "fixed"','raise ValueError("fixture")'):
+            body='    try:\n        '+exit_stmt+'\n    finally:\n        cur.execute(request.args["q"])\n    cur.execute(request.args["unreachable"])\n'
+            result=self.run_scan(body)
+            self.assertEqual(len(self.hits(result)),1)
+            self.assertGreater(result['summary']['python_sql_flow']['explicit_finally_paths'],0)
+        body='    try:\n        return "fixed"\n    except ValueError:\n        pass\n    else:\n        cur.execute(request.args["unreachable"])\n    finally:\n        cur.execute("SELECT 1")\n'
+        self.assertFalse(self.hits(self.run_scan(body)))
+        body='    try:\n        try:\n            return "fixed"\n        finally:\n            return "changed"\n    finally:\n        cur.execute(request.args["q"])\n'
+        self.assertEqual(len(self.hits(self.run_scan(body))),1)
+
+
+    def test_flask_context_cached_connection_and_method_guard(self):
+        header = ('from flask import request as req, g as context\n'
+                  'import sqlite3 as storage\nPATH = "fixture.db"\n'
+                  'def open_db():\n'
+                  '    if "db" not in context:\n'
+                  '        context.db = storage.connect(PATH)\n'
+                  '        context.db.row_factory = storage.Row\n'
+                  '    return context.db\n')
+        prefix = 'def view():\n'
+        for query, count in [('req.form["name"]', 1),
+                             ('"SELECT ?", (req.form["name"],)', 0)]:
+            for call in ('db.execute(', 'open_db().execute('):
+                body = ('    if req.method == "POST":\n'
+                        '        db = open_db()\n'
+                        '        ' + call + query + ').fetchone()\n')
+                result = self.run_scan(body, header, prefix)
+                self.assertEqual(len(self.hits(result)), count)
+                self.assertEqual(result['summary']['python_sql_flow']['status'], 'PARTIAL')
+        result = self.run_scan('    open_db().execute(req.args["q"])\n', header, prefix)
+        self.assertEqual(len(self.hits(result)), 1)
+        self.assertEqual(self.hits(result)[0]['status'], 'HEURISTIC_REVIEW_ONLY')
+
+    def test_flask_context_factory_rejects_ambiguous_provenance(self):
+        header = ('from flask import request, g\nimport sqlite3\n'
+                  'def open_db():\n'
+                  '    if "db" not in g:\n'
+                  '        g.db = sqlite3.connect("fixture.db")\n'
+                  '    return g.db\n')
+        body = '    open_db().execute(request.args["q"])\n'
+        for bad in (
+            header.replace('from flask import request, g', 'from flask import request\nfrom elsewhere import g'),
+            header.replace('"db" not in g', '"other" not in g'),
+            header.replace('return g.db', 'return g.other'),
+            header.replace('sqlite3.connect("fixture.db")', 'unknown()'),
+            header.replace('    return g.db', '    else:\n        g.db = unknown()\n    return g.db'),
+            header + 'g.db = unknown()\n',
+            header + 'def replace():\n    g.db = unknown()\n',
+            header + 'def replace(g):\n    g.db = unknown()\n',
+            header + 'g = unknown()\n',
+            header + 'sqlite3.connect = unknown\n',
+            header + 'open_db = unknown\n',
+        ):
+            with self.subTest(header=bad):
+                self.assertFalse(self.hits(self.run_scan(body, bad, 'def view():\n')))
+        self.assertFalse(self.hits(self.run_scan(body, header, 'def view(open_db):\n')))
+        self.assertFalse(self.hits(self.run_scan(body, header, 'def view(g):\n')))
+
+    def test_request_method_guard_not_arbitrary_attribute(self):
+        for condition, count in [('request.method == "POST"', 1),
+                                 ('request.method in ("GET", "POST")', 1),
+                                 ('unknown.method == "POST"', 0),
+                                 ('request.unmodeled == "POST"', 0),
+                                 ('request.method == unknown()', 0)]:
+            result = self.run_scan('    if ' + condition + ':\n'
+                                   '        cur.execute(request.args["q"])\n')
+            self.assertEqual(len(self.hits(result)), count)
+
+
+    def test_utf8_bom_preserves_source_and_sink_lines(self):
+        result = self.run_scan('    cur.execute(request.args["q"])\n',
+                               header='\ufeff'+HEADER)
+        self.assertEqual([(x['line'], x['source_lines']) for x in self.hits(result)], [(6, [6])])
+        self.assertEqual(result['summary']['python_sql_flow']['parsed_files'], 1)
+        self.assertEqual(result['summary']['python_sql_flow']['parse_errors'], 0)
+        self.assertFalse(self.hits(self.run_scan('    cur.execute(request.args["q"])\n',
+                                                header='\ufeff\ufeff'+HEADER)))
+
+    def test_json_request_mapping_candidates(self):
+        for source in ('request.get_json()', 'request.get_json() or {}'):
+            for access in ('data.get("name", "")', 'data["name"]'):
+                body = '    data = '+source+'\n    value = '+access+'\n'
+                result = self.run_scan(body+'    cur.execute("SELECT "+value)\n')
+                self.assertEqual(len(self.hits(result)), 1)
+                self.assertEqual(result['summary']['python_sql_flow']['status'], 'PARTIAL')
+                self.assertFalse(self.hits(self.run_scan(body+'    cur.execute("SELECT ?", (value,))\n')))
+        for source in ('unknown.get_json()', 'request.get_json(force=True)', 'request.get_json() or unknown()'):
+            self.assertFalse(self.hits(self.run_scan('    data = '+source+'\n    cur.execute(data.get("name"))\n')))
+        self.assertFalse(self.hits(self.run_scan('    data=request.get_json() or {}\n    data={}\n    cur.execute(data.get("name"))\n')))
+        self.assertFalse(self.hits(self.run_scan('    data=request.get_json() or {}\n    data["name"]="fixed"\n    cur.execute(data["name"])\n')))
+
+    def test_local_row_factory_and_flask_app_factory_routes(self):
+        header = ('from flask import Flask as App, request\nimport sqlite3 as db\nimport os as paths\n'
+                  'def connect():\n'
+                  '    filename=paths.path.join(paths.path.dirname(__file__), "fixture.db")\n'
+                  '    connection=db.connect(filename)\n'
+                  '    connection.row_factory=db.Row\n'
+                  '    return connection\n'
+                  'def initialize():\n    pass\n')
+        prefix = ('def create_app():\n    app=App(__name__)\n    initialize()\n'
+                  '    @app.route("/items", methods=["POST"])\n    def items():\n')
+        body = ('        data=request.get_json() or {}\n'
+                '        connection=connect()\n'
+                '        connection.execute(data.get("name"))\n'
+                '    return app\n')
+        result = self.run_scan(body, header, prefix)
+        self.assertEqual(len(self.hits(result)), 1)
+        self.assertEqual(result['summary']['python_sql_flow']['status'], 'PARTIAL')
+        for bad in (header.replace('connection.row_factory=db.Row', 'connection.row_factory=unknown'),
+                    header.replace('return connection', 'return unknown'),
+                    header.replace('import os as paths', 'import unknown as paths'),
+                    header+'App=unknown\n', header+'paths=unknown\n'):
+            self.assertFalse(self.hits(self.run_scan(body, bad, prefix)))
+        self.assertFalse(self.hits(self.run_scan(body, header, prefix.replace('initialize()', 'initialize(app)'))))
+        self.assertFalse(self.hits(self.run_scan(body, header, prefix.replace('    initialize()\n','    app=unknown\n'))))
+        self.assertFalse(self.hits(self.run_scan(body.replace('connection.execute(data.get("name"))','connection.execute("SELECT ?", (data.get("name"),))'), header, prefix)))
+
+
+    def test_literal_replacement_helper_preserves_request_taint(self):
+        header = (HEADER+
+                  'def clean(value):\n'
+                  '    """Text normalization, not SQL safety."""\n'
+                  '    if not value:\n        return value\n'
+                  '    cleaned=value\n'
+                  '    for token in ("a", "b", "c"):\n'
+                  '        cleaned=cleaned.replace(token, "")\n'
+                  '    return cleaned\n')
+        for access in ('request.args["q"]', 'data.get("name", "")'):
+            setup = '    data=request.get_json() or {}\n' if access.startswith('data') else ''
+            body = setup+'    value=clean('+access+')\n'
+            result = self.run_scan(body+'    cur.execute("SELECT "+value)\n', header)
+            self.assertEqual(len(self.hits(result)), 1)
+            self.assertEqual(result['summary']['python_sql_flow']['status'], 'PARTIAL')
+            self.assertGreater(result['summary']['python_sql_flow']['literal_replacement_helpers'], 0)
+            self.assertFalse(self.hits(self.run_scan(body+'    cur.execute("SELECT ?", (value,))\n', header)))
+        self.assertFalse(self.hits(self.run_scan('    cur.execute(clean("constant"))\n', header)))
+
+    def test_literal_replacement_helper_rejects_unsupported_shapes(self):
+        helper = ('def clean(value):\n'
+                  '    cleaned=value\n'
+                  '    for token in ("a", "b"):\n'
+                  '        cleaned=cleaned.replace(token, "")\n'
+                  '    return cleaned\n')
+        body = '    cur.execute(clean(request.args["q"]))\n'
+        for bad in (
+            '@unknown\n'+helper,
+            helper.replace('("a", "b")', 'unknown()'),
+            helper.replace('("a", "b")', '("a",)*1000'),
+            helper.replace('replace(token, "")', 'replace(token, external)'),
+            helper.replace('replace(token, "")', 'replace(token, "", 1)'),
+            helper.replace('return cleaned', 'return unknown(cleaned)'),
+            helper.replace('    return cleaned', '        external(cleaned)\n    return cleaned'),
+            helper+'clean=unknown\n',
+            helper.replace('clean(value)', 'clean(value="constant")'),
+            helper.replace('for token in', 'for cleaned in'),
+        ):
+            with self.subTest(helper=bad):
+                result=self.run_scan(body, HEADER+bad)
+                self.assertFalse(self.hits(result))
+                self.assertEqual(result['summary']['python_sql_flow']['status'], 'PARTIAL')
+        self.assertFalse(self.hits(self.run_scan(body, HEADER+helper, PREFIX.replace('search()', 'search(clean)'))))
+
+
+    def test_cross_module_sql_sink_and_source_locations(self):
+        self.write('api/storage.py', 'import sqlite3\n'
+                   'def connect():\n    db=sqlite3.connect("fixture.db")\n'
+                   '    db.row_factory=sqlite3.Row\n    return db\n'
+                   'def lookup(query):\n    db=connect()\n    cursor=db.cursor()\n'
+                   '    try:\n        cursor.execute(query)\n    finally:\n        db.close()\n')
+        header='from flask import request\nfrom storage import lookup as find\n'
+        result=self.run_scan('    q=request.args["name"]\n    rows=find(q)\n',header,'def route():\n')
+        hits=self.hits(result)
+        self.assertEqual(len(hits),1)
+        self.assertEqual((hits[0]['path'],hits[0]['line']),('api/storage.py',10))
+        self.assertEqual(hits[0]['source_locations'],[{'path':'api/routes.py','line':4}])
+        self.assertEqual(hits[0]['call_locations'],[{'path':'api/routes.py','line':5}])
+        self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertEqual(result['summary']['python_sql_flow']['interprocedural_matches'],1)
+        self.assertFalse(self.hits(self.run_scan('    rows=find("constant")\n',header,'def route():\n')))
+        self.assertFalse(self.hits(self.run_scan('    q=request.args["name"]\n    rows=find(q)\n',header,'def route(find):\n')))
+        self.assertFalse(self.hits(self.run_scan('    q=request.args["name"]\n    rows=find(q)\n',header+'find=unknown\n','def route():\n')))
+        self.write('api/storage.py','import sqlite3\ndef lookup(query):\n    db=sqlite3.connect("fixture.db")\n    db.execute("SELECT ?",(query,))\n')
+        self.assertFalse(self.hits(self.run_scan('    rows=find(request.args["name"])\n',header,'def route():\n')))
+
+    def test_one_hop_package_import_fallback_and_tuple_assignment(self):
+        self.write('api/pkg/__init__.py','')
+        self.write('api/pkg/storage.py','import sqlite3\nDB="fixture.db"\n'
+                   'def lookup(name, other):\n    db=sqlite3.connect(DB)\n'
+                   '    db.row_factory=sqlite3.Row\n    cur=db.cursor()\n'
+                   '    cur.execute("SELECT "+name+other)\n    return None\n')
+        src=('from flask import request\n'
+             'try:\n    from .storage import lookup\n'
+             'except ImportError:\n    from storage import lookup\n'
+             'LIMIT=80\n'
+             'def route():\n'
+             '    name=request.form.get("q","")[:LIMIT]\n'
+             '    first, second=lookup(name,"fixed")\n')
+        self.write('api/pkg/route.py',src)
+        result=scan.process(self.root,'custom',['api'])
+        self.assertEqual([(h['path'],h['line']) for h in self.hits(result)],[('api/pkg/storage.py',7)])
+        self.assertEqual(self.hits(result)[0]['source_locations'],[{'path':'api/pkg/route.py','line':8}])
+        self.write('api/storage.py','def lookup(name,other):\n    return None\n')
+        self.assertFalse(self.hits(scan.process(self.root,'custom',['api'])))
+        self.write('api/storage.py','')
+        self.write('api/pkg/route.py',src.replace('except ImportError:', 'except Exception:'))
+        self.assertFalse(self.hits(scan.process(self.root,'custom',['api'])))
+
+    def test_cross_module_scope_and_unknown_receivers(self):
+        self.write('outside/requirements.txt','Flask\n')
+        self.write('outside/db.py','import sqlite3\ndef lookup(q):\n    db=sqlite3.connect("fixture.db")\n    db.execute(q)\n')
+        self.assertFalse(self.hits(self.run_scan('    lookup(request.args["q"])\n',
+            'from flask import request\nfrom outside.db import lookup\n','def route():\n')))
+        header='from flask import request\nfrom storage import lookup\n'
+        for body in ('    db=unknown()\n    db.execute(q)\n',
+                     '    db=sqlite3.connect("fixture.db")\n    db.execute(q)\n'):
+            self.write('api/storage.py','import sqlite3\nsqlite3.connect=unknown\ndef lookup(q):\n'+body)
+            self.assertFalse(self.hits(self.run_scan('    lookup(request.args["q"])\n',header,'def route():\n')))
+
+
+    def test_exception_handler_order_else_and_finally(self):
+        body=('    try:\n'
+              '        raise ValueError("fixture")\n'
+              '        cur.execute(request.args["unreachable"])\n'
+              '    except TypeError:\n'
+              '        cur.execute(request.args["wrong"])\n'
+              '    except (ValueError, LookupError) as error:\n'
+              '        cur.execute(request.args["handler"])\n'
+              '    else:\n'
+              '        cur.execute(request.args["else"])\n'
+              '    finally:\n'
+              '        cur.execute(request.args["cleanup"])\n'
+              '    cur.execute(request.args["after"])\n')
+        result=self.run_scan(body)
+        self.assertEqual([h['line'] for h in self.hits(result)],[12,16,17])
+        self.assertGreater(result['summary']['python_sql_flow']['exception_handler_paths'],0)
+        self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertFalse(self.hits(self.run_scan('    try:\n        raise ValueError("x")\n'
+            '    except ValueError:\n        cur.execute(request.args["q"])\n',
+            HEADER+'ValueError=unknown\n')))
+
+    def test_exception_rethrow_nested_cleanup_and_return(self):
+        body=('    try:\n        try:\n            raise KeyError("fixture")\n'
+              '        except LookupError:\n            raise\n'
+              '        finally:\n            cur.execute(request.args["cleanup"])\n'
+              '    except KeyError:\n        cur.execute(request.args["outer"])\n'
+              '    except ValueError:\n        cur.execute(request.args["wrong"])\n')
+        result=self.run_scan(body)
+        self.assertEqual([h['line'] for h in self.hits(result)],[12,14])
+        self.assertGreater(result['summary']['python_sql_flow']['exception_rethrow_paths'],0)
+        body=('    try:\n        try:\n            raise ValueError("fixture")\n'
+              '        finally:\n            return "fixed"\n'
+              '    except ValueError:\n        cur.execute(request.args["wrong"])\n'
+              '    cur.execute(request.args["unreachable"])\n')
+        self.assertFalse(self.hits(self.run_scan(body)))
+        body=('    value=request.args["q"]\n    try:\n        raise ValueError("fixed")\n'
+              '    except ValueError as value:\n        pass\n'
+              '    cur.execute(value)\n')
+        self.assertFalse(self.hits(self.run_scan(body)))
+
+    def test_sqlite_exception_possible_path_and_parameterized_negative(self):
+        prefix=('    try:\n        cur.execute("SELECT 1")\n'
+                '    except sqlite3.Error:\n')
+        result=self.run_scan(prefix+'        cur.execute(request.args["fallback"])\n')
+        self.assertEqual(len(self.hits(result)),1)
+        self.assertGreater(result['summary']['python_sql_flow']['sqlite_exception_paths'],0)
+        self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertFalse(self.hits(self.run_scan(prefix+'        cur.execute("SELECT ?",(request.args["fallback"],))\n')))
+        self.assertFalse(self.hits(self.run_scan(prefix.replace('sqlite3.Error','ValueError')+
+            '        cur.execute(request.args["fallback"])\n')))
+
+
+    def test_imported_row_configured_connection_factory(self):
+        storage=('import sqlite3 as db\nPATH="fixture.db"\n'
+                 'def connect():\n    conn=db.connect(PATH)\n'
+                 '    conn.row_factory=db.Row\n    return conn\n')
+        self.write('api/storage.py',storage)
+        header='from flask import request\nfrom storage import connect\n'
+        prefix='def route():\n    db=connect()\n    cursor=db.cursor()\n'
+        body='    cursor.execute(request.args["q"])\n'
+        self.assertEqual(len(self.hits(self.run_scan(body,header,prefix))),1)
+        self.assertFalse(self.hits(self.run_scan('    cursor.execute("SELECT ?", (request.args["q"],))\n',header,prefix)))
+        self.write('api/storage.py',storage+'db.connect=unknown\n')
+        self.assertFalse(self.hits(self.run_scan(body,header,prefix)))
+
+    def test_sqlite_close_reopen_and_empty_list(self):
+        body=('    rows=cur.execute("SELECT 1").fetchall()\n'
+              '    print(rows)\n    conn.close()\n    result=[]\n'
+              '    conn=sqlite3.connect("fixture.db")\n    cur=conn.cursor()\n'
+              '    cur.execute(request.args["q"])\n')
+        result=self.run_scan(body)
+        self.assertEqual(len(self.hits(result)),1)
+        self.assertGreater(result['summary']['python_sql_flow']['sqlite_close_paths'],0)
+        self.assertFalse(self.hits(self.run_scan('    alias=cur\n    conn.close()\n    alias.execute(request.args["q"])\n')))
+        self.assertFalse(self.hits(self.run_scan(body.replace('cur.execute(request.args["q"])','cur.execute("SELECT ?",(request.args["q"],))'))))
+
+    def test_hash_digest_preserves_provenance_not_sanitizer(self):
+        header=HEADER+'import hashlib as crypto\n'
+        for algorithm in ('md5','sha256'):
+            body=('    name=request.args["name"]\n    value=request.args["value"]\n'
+                  '    digest=crypto.'+algorithm+'(value.encode()).hexdigest()\n')
+            result=self.run_scan(body+'    cur.execute(f"SELECT {name} {digest}")\n',header)
+            self.assertEqual(len(self.hits(result)),1)
+            self.assertEqual(self.hits(result)[0]['source_lines'],[7,8])
+            self.assertFalse(self.hits(self.run_scan(body+'    cur.execute("SELECT ?",(digest,))\n',header)))
+            self.assertFalse(self.hits(self.run_scan(body+'    cur.execute(name)\n',header+'crypto=unknown\n')))
+            self.assertFalse(self.hits(self.run_scan(body+'    cur.execute(name)\n',header+'crypto.'+algorithm+'=unknown\n')))
+
+    def test_seeded_connection_factory_bounded_literal_setup(self):
+        factory=('def seed():\n    conn=sqlite3.connect(":memory:")\n'
+                 '    conn.row_factory=sqlite3.Row\n'
+                 '    conn.execute("CREATE TABLE fixture(id INTEGER)")\n'
+                 '    conn.executemany("INSERT INTO fixture VALUES (?)", [(1,), (2,)])\n'
+                 '    return conn\n')
+        prefix='def route():\n    conn=seed()\n'
+        body='    conn.execute(request.args["q"])\n'
+        result=self.run_scan(body,HEADER+factory,prefix)
+        self.assertEqual(len(self.hits(result)),1)
+        self.assertEqual(result['summary']['python_sql_flow']['status'],'PARTIAL')
+        self.assertGreater(result['summary']['python_sql_flow']['seeded_connection_factories'],0)
+        self.assertFalse(self.hits(self.run_scan('    conn.execute("SELECT ?",(request.args["q"],))\n',HEADER+factory,prefix)))
+        for bad in (factory.replace('[(1,), (2,)]','unknown()'),
+                    factory.replace('conn.execute("CREATE TABLE fixture(id INTEGER)")','conn.execute(dynamic)'),
+                    factory.replace('    return conn','    conn.close()\n    return conn'),
+                    factory.replace('    return conn','    conn=unknown()\n    return conn')):
+            self.assertFalse(self.hits(self.run_scan(body,HEADER+bad,prefix)))
 
 if __name__=='__main__':
     unittest.main()

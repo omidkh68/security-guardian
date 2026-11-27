@@ -15,37 +15,156 @@ jobs:
       matrix:
         python-version: ['3.10', '3.12', '3.13']
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v7
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Enforce repository workflow hardening baseline
+        run: |
+          python scripts/check_workflow_hardening.py
+          python -m unittest discover -s scripts -p test_workflow_hardening.py -v
+      - name: Record test runtime versions
+        run: |
+          python --version
+          node --version
       - name: Validate catalog, plugin metadata, scripts, layouts and documentation pairs
         env:
           SG_DOC_BASE: ${{ github.event.pull_request.base.sha }}
         run: python scripts/validate_package.py
+      - name: Audit human documentation inventory and local targets
+        if: matrix.python-version == '3.12'
+        run: |
+          python -m unittest discover -s scripts -p test_documentation_audit.py -v
+          python scripts/audit_documentation.py | tee "$RUNNER_TEMP/documentation-audit.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: matrix.python-version == '3.12'
+        with:
+          name: documentation-audit
+          path: ${{ runner.temp }}/documentation-audit.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Install optional PDF renderer for reporting tests
         run: python -m pip install -r requirements-pdf.txt 'pypdf>=5,<7'
       - name: Run offline tests
         run: python -m unittest discover -s plugins/security-guardian/skills/security-guardian/tests -v
+      - name: Verify real Flask runtime receipts in isolated fixture environment
+        if: matrix.python-version == '3.12'
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/sg-framework-fixture"
+          PY="$RUNNER_TEMP/sg-framework-fixture/bin/python"
+          "$PY" -m pip install --only-binary=:all: --no-deps -r scripts/requirements-framework-fixture.txt
+          "$PY" -m pip check
+          "$PY" scripts/test_framework_verification.py -v
+      - name: Verify real Angular SSR runtime receipts in isolated fixture environment
+        if: matrix.python-version == '3.12'
+        run: |
+          set -euo pipefail
+          ROOT="$(mktemp -d "$RUNNER_TEMP/sg-angular-XXXXXX")"
+          trap 'rm -rf -- "$ROOT"' EXIT
+          mkdir "$ROOT/app"
+          cp scripts/fixtures/angular-ssr/package.json "$ROOT/app/package.json"
+          npm install --prefix "$ROOT/app" --ignore-scripts --no-audit --no-fund --package-lock=true
+          python scripts/test_angular_ssr_verification.py "$ROOT" -v
+      - name: Verify real NestJS HTTP runtime receipts in isolated fixture environment
+        if: matrix.python-version == '3.12'
+        run: |
+          set -euo pipefail
+          ROOT="$(mktemp -d "$RUNNER_TEMP/sg-nest-XXXXXX")"
+          trap 'rm -rf -- "$ROOT"' EXIT
+          mkdir "$ROOT/app"
+          cp scripts/fixtures/nest-http/package.json "$ROOT/app/package.json"
+          npm install --prefix "$ROOT/app" --ignore-scripts --no-audit --no-fund --package-lock=true
+          python scripts/test_nest_http_verification.py "$ROOT" -v
+      - name: Revalidate exact pinned official standards references
+        if: matrix.python-version == '3.12'
+        run: python scripts/verify_standards_sources.py --fetch-official --asvs-inventory-output "$RUNNER_TEMP/asvs-inventory.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: matrix.python-version == '3.12'
+        with:
+          name: asvs-requirement-inventory
+          path: ${{ runner.temp }}/asvs-inventory.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Render synthetic management and technical PDF review artifacts
+        if: matrix.python-version == '3.12'
+        run: python scripts/export_synthetic_review_reports.py "$RUNNER_TEMP/sg-pdf-review"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: matrix.python-version == '3.12'
+        with:
+          name: synthetic-pdf-review
+          path: ${{ runner.temp }}/sg-pdf-review/*.pdf
+          if-no-files-found: error
+          retention-days: 7
       - name: Measure synthetic indicator benchmark (report only; scope and completeness gate)
         run: |
           python scripts/benchmark_scanner.py
           python scripts/benchmark_sql_flow.py
-          python -m unittest discover -s scripts -p test_benchmark_holdout.py -v
-          python scripts/benchmark_holdout.py --synthetic python
+          python -m unittest discover -s scripts -p 'test_benchmark_*.py' -v
+          python scripts/benchmark_holdout.py --synthetic python --require-synthetic-regression
       - name: Measure external OWASP Python CWE-89 corpus (pinned, source-only)
         if: matrix.python-version == '3.12'
         run: |
           set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/sg-sql-regression"
           git init --bare "$RUNNER_TEMP/sg-owasp-benchmark"
           git -C "$RUNNER_TEMP/sg-owasp-benchmark" fetch --depth=1 --no-tags https://github.com/OWASP-Benchmark/BenchmarkPython.git f1291485808b66e20ddb6b01b10dc71b3df8c8ba
-          python scripts/benchmark_holdout.py --external-git "$RUNNER_TEMP/sg-owasp-benchmark"
-          python scripts/benchmark_semantic_context.py --external-git "$RUNNER_TEMP/sg-owasp-benchmark"
+          python scripts/benchmark_holdout.py --external-git "$RUNNER_TEMP/sg-owasp-benchmark" | tee "$RUNNER_TEMP/sg-sql-regression/isolated.json"
+          python scripts/benchmark_semantic_context.py --external-git "$RUNNER_TEMP/sg-owasp-benchmark" | tee "$RUNNER_TEMP/sg-sql-regression/contextual.json"
       - name: Measure fresh externally labeled Flask SQLite pair (source-only)
         if: matrix.python-version == '3.12'
-        run: python scripts/benchmark_semantic_context.py --fresh-flask
+        run: |
+          set -euo pipefail
+          python scripts/benchmark_semantic_context.py --fresh-flask | tee "$RUNNER_TEMP/sg-sql-regression/fresh_pair.json"
+      - name: Measure pinned external author-labeled Flask SQLite lab (report only)
+        if: matrix.python-version == '3.12'
+        run: |
+          set -euo pipefail
+          python scripts/benchmark_semantic_context.py --external-lab | tee "$RUNNER_TEMP/sg-sql-regression/external_lab.json"
+      - name: Measure new pinned external SQL route pairs (report only)
+        if: matrix.python-version == '3.12'
+        run: |
+          set -euo pipefail
+          python scripts/benchmark_independent_sql.py | tee "$RUNNER_TEMP/sg-sql-regression/route_pairs.json"
+      - name: Measure pinned external SQL boundary cohort (report only)
+        if: matrix.python-version == '3.12'
+        run: |
+          set -euo pipefail
+          python scripts/benchmark_external_sql_boundaries.py | tee "$RUNNER_TEMP/sg-sql-regression/boundary.json"
+      - name: Measure post-v12 independently authored SQL pairs (report only)
+        if: matrix.python-version == '3.12'
+        run: |
+          set -euo pipefail
+          python scripts/benchmark_final_sql_holdout.py | tee "$RUNNER_TEMP/sg-sql-regression/post_v12.json"
+      - name: Enforce exposed Python SQL regression outcomes and preserve isolated limitations
+        if: matrix.python-version == '3.12'
+        run: python scripts/check_sql_regressions.py "$RUNNER_TEMP/sg-sql-regression"
+      - name: Build separated benchmark release evidence (no pooled accuracy)
+        if: matrix.python-version == '3.12'
+        run: |
+          set -euo pipefail
+          REPORTS="$RUNNER_TEMP/sg-sql-regression"
+          npm install --prefix "$RUNNER_TEMP/sg-evidence-typescript" --no-save --ignore-scripts --no-audit --no-fund typescript@5.9.3
+          PARSER="$RUNNER_TEMP/sg-evidence-typescript/node_modules/typescript/lib/typescript.js"
+          python scripts/benchmark_scanner.py > "$REPORTS/indicator.json"
+          python scripts/benchmark_holdout.py --synthetic all --require-synthetic-regression --typescript-module "$PARSER" > "$REPORTS/semantic.json"
+          python scripts/benchmark_release_evidence.py --reports "$REPORTS" --typescript-module "$PARSER" | tee "$RUNNER_TEMP/benchmark-evidence.json"
+          python scripts/benchmark_external_dom.py --typescript-module "$PARSER" | tee "$RUNNER_TEMP/external-dom-probe.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: matrix.python-version == '3.12'
+        with:
+          name: benchmark-evidence
+          path: |
+            ${{ runner.temp }}/benchmark-evidence.json
+            ${{ runner.temp }}/external-dom-probe.json
+          if-no-files-found: error
+          retention-days: 7
       - name: Verify no tracked secret-like files or generated reports
         run: |
           if git ls-files | grep -E '(^|/)(\.env(\.|$)|\.security-guardian/)|\.(pem|p12|pfx|key)$' ; then
@@ -55,7 +174,9 @@ jobs:
   install-smoke:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Test direct installation and upgrade offline
         run: |
           set -euo pipefail
@@ -77,11 +198,13 @@ jobs:
       matrix:
         node-version: ['22', '24']
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: ${{ matrix.node-version }}
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: '3.12'
       - name: Install pinned optional AST parser in isolated runner directory
@@ -89,7 +212,51 @@ jobs:
       - name: Test local CLI safety, upgrades and optional AST review
         run: |
           SG_TEST_TYPESCRIPT="$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js" npm test
-      - name: Measure post-freeze JS semantic holdout (report only)
-        run: python scripts/benchmark_holdout.py --synthetic js --typescript-module "$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js"
+      - name: Enforce exposed JS semantic regression labels (not independent accuracy)
+        run: python scripts/benchmark_holdout.py --synthetic js --require-synthetic-regression --typescript-module "$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js"
       - name: Verify exact tarball manifest and offline npx install-to-report
+        run: node scripts/verify-npm-package.mjs
+
+  npm-macos-smoke:
+    name: npm macOS smoke (Node ${{ matrix.node-version }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22', '24']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Test installer safety and release manifest
+        run: node --test tests/npm-cli.test.mjs tests/npm-release.test.mjs
+      - name: Verify exact tarball and isolated offline install-to-report
+        run: node scripts/verify-npm-package.mjs
+
+  npm-windows-smoke:
+    name: npm Windows smoke (Node ${{ matrix.node-version }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22', '24']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Test installer safety and release manifest
+        run: node --test tests/npm-cli.test.mjs tests/npm-release.test.mjs
+      - name: Verify exact tarball and isolated offline install-to-report
         run: node scripts/verify-npm-package.mjs

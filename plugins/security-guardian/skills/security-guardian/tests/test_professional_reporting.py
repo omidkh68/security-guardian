@@ -49,6 +49,40 @@ class ProfessionalReportTests(unittest.TestCase):
             self.assertTrue(f['reason'] and f['next_action'] and f['verification_condition'])
             self.assertEqual(f['standard_verification'],'NOT_VERIFIED')
         self.assertIn('ASVS:1.2.4',d['standards']['references'])
+    def test_coverage_gap_counts_and_unknown_metadata(self):
+        run,ledger,scan=fixture()
+        coverage=scan['summary']['scan_coverage']
+        signals=scan['summary']['signal_coverage']
+        coverage['skipped']={'outside_selected_scope':7,'unreadable_source':2,
+                             'oversized_file':3,'excluded_directory':4}
+        signals.update(omitted_global=5,omitted_per_control=8)
+        for view in ('management','technical'):
+            d=r.build_export(run,ledger,scan,view=view)
+            result=d['coverage']
+            self.assertEqual(result['skip_reason_metadata'],'RECORDED')
+            self.assertEqual(result['skipped_file_or_directory_events'],16)
+            self.assertEqual(result['skipped_outside_scope'],7)
+            self.assertEqual(result['skipped_unreadable_or_invalid'],2)
+            self.assertEqual(result['skipped_budget_limit'],3)
+            self.assertEqual(result['signal_records_omitted_global'],5)
+            self.assertEqual(result['signal_records_omitted_per_control'],8)
+            self.assertEqual(result['optional_tool_execution_evidence'],'NOT_AVAILABLE_FROM_SCANNER_SNAPSHOT')
+            self.assertIn('skipped\\_outside\\_scope: 7',r.markdown(d))
+        coverage['skipped']={SECRET:1,'unreadable_source':True}
+        signals['omitted_global']=-1
+        d=r.build_export(run,ledger,scan)
+        self.assertEqual(d['coverage']['skip_reason_metadata'],'PARTIAL_OR_UNRECORDED')
+        self.assertIsNone(d['coverage']['skipped_file_or_directory_events'])
+        self.assertIsNone(d['coverage']['skipped_unreadable_or_invalid'])
+        self.assertIsNone(d['coverage']['signal_records_omitted_global'])
+        self.assertNotIn(SECRET,json.dumps(d))
+        del coverage['skipped']
+        result=r.build_export(run,ledger,scan)['coverage']
+        self.assertIsNone(result['skipped_outside_scope'])
+        self.assertIsNone(result['skipped_budget_limit'])
+        coverage['skipped']={}
+        self.assertEqual(r.build_export(run,ledger,scan)['coverage']['skipped_file_or_directory_events'],0)
+
     def test_privacy_and_views(self):
         run,ledger,scan=fixture()
         for view in ('management','technical'):
@@ -70,6 +104,43 @@ class ProfessionalReportTests(unittest.TestCase):
         run['tests']=[]
         row=next(x for x in r.build_export(run,ledger,scan)['findings'] if x['id']==f['id'])
         self.assertEqual(row['verification_evidence'],'PRIOR_OR_UNAVAILABLE_LINK')
+    def test_ambiguous_or_malformed_pass_never_links(self):
+        run,ledger,scan=fixture()
+        f=next(x for x in ledger['findings'].values() if x['status']=='VERIFIED_FIXED')
+        test=run['tests'][0];test['finding_ids']=[f['id']]
+        f['verification']={'test_id':test['test_id'],'executed':True,'result':'PASS'}
+        def evidence(tests):
+            run['tests']=tests
+            return next(x for x in r.build_export(run,ledger,scan)['findings'] if x['id']==f['id'])
+        self.assertEqual(evidence([test])['verification_evidence'],'LINKED_PASS_IN_SELECTED_RUN')
+        for tests in ([test,dict(test)], [{**test,'evidence_quality':'UNKNOWN'}],
+                      [{**test,'evidence_quality':'LOCAL_EXECUTION','execution_receipt':{'result':'FAIL'}}],
+                      [{**test,'execution_receipt':{'result':'PASS'}}]):
+            result=evidence(tests)
+            self.assertEqual(result['verification_evidence'],'PRIOR_OR_UNAVAILABLE_LINK')
+            self.assertIsNone(result['linked_test'])
+        self.assertEqual(evidence([{k:v for k,v in test.items() if k!='evidence_quality'}])['linked_test_quality'],'MANUAL_REPORTED')
+
+    def test_local_pass_receipt_must_match_exact_finding_and_counts(self):
+        run,ledger,scan=fixture()
+        f=next(x for x in ledger['findings'].values() if x['status']=='VERIFIED_FIXED')
+        test=run['tests'][0]
+        test.update(evidence_quality='LOCAL_EXECUTION',command_or_method='python-unittest-v1',finding_ids=[f['id']])
+        f['verification']={'test_id':test['test_id'],'executed':True,'result':'PASS'}
+        receipt={'schema_version':1,'run_id':run['id'],'finding_id':f['id'],
+                 'adapter':'python-unittest-v1','result':'PASS','execution_result':'PASS',
+                 'executed':True,'exit_code':0,'independently_verified_fix':False,
+                 'counts':{'tests_run':1,'failures':0,'errors':0,'skipped':0,
+                           'expected_failures':0,'unexpected_successes':0}}
+        test['execution_receipt']=receipt
+        def row():
+            return next(x for x in r.build_export(run,ledger,scan)['findings'] if x['id']==f['id'])
+        self.assertEqual(row()['linked_test_quality'],'LOCAL_EXECUTION')
+        for bad in ({'finding_id':'SG-API-07-000000000099'},{'counts':{'tests_run':0}},
+                    {'exit_code':1},{'adapter':'node-test-v1'},{'schema_version':True}):
+            test['execution_receipt']={**receipt,**bad}
+            self.assertEqual(row()['verification_evidence'],'PRIOR_OR_UNAVAILABLE_LINK')
+
     def test_historical_reexport_and_protected_outputs(self):
         run,ledger,scan=fixture()
         with tempfile.TemporaryDirectory() as tmp:
@@ -91,6 +162,41 @@ class ProfessionalReportTests(unittest.TestCase):
             with self.assertRaises(ValueError):r.export_report(store,rd,run,format='json',output=store/'ledger.json')
             with self.assertRaises(ValueError):r.export_report(store,rd,dict(run,status='IN_PROGRESS'),format='json')
             self.assertEqual(original,{p:p.read_bytes() for p in original})
+    def test_visual_summary_uses_only_projected_snapshot_counts(self):
+        run,ledger,scan=fixture(125)
+        d=r.build_export(run,ledger,scan)
+        summary=r.visual_summary(d)
+        self.assertEqual(summary['total'],125)
+        self.assertEqual(sum(summary['severity'].values()),125)
+        self.assertEqual(sum(summary['status'].values()),125)
+        self.assertEqual(summary['residual'],d['counts']['residual_findings'])
+        self.assertEqual(len(summary['priorities']),5)
+        self.assertTrue(all(f['residual_risk'] for f in summary['priorities']))
+        self.assertNotIn(SECRET,json.dumps(summary))
+        empty=r.visual_summary(r.build_export(run,{'findings':{}},scan))
+        self.assertEqual(empty,{'severity':{},'status':{},'concentration':[],
+                                'priorities':[],'total':0,'residual':0})
+
+    @unittest.skipUnless(importlib.util.find_spec('reportlab') and importlib.util.find_spec('pypdf'),'optional PDF renderer/extractor')
+    def test_visual_navigation_and_zero_findings(self):
+        from pypdf import PdfReader
+        run,ledger,scan=fixture(0)
+        with tempfile.TemporaryDirectory() as tmp:
+            for view in ('management','technical'):
+                output=Path(tmp)/(view+'.pdf')
+                r.render_pdf(r.build_export(run,ledger,scan,view=view),output)
+                reader=PdfReader(output)
+                text='\n'.join(page.extract_text() or '' for page in reader.pages)
+                self.assertEqual(len(reader.outline),6)
+                self.assertIn('Severity distribution',text)
+                self.assertIn('Finding status',text)
+                self.assertIn('No findings recorded',text)
+                self.assertIn('Priority actions',text)
+                self.assertIn('Test record outcomes' if view=='technical' else 'Partial relationships',text)
+                self.assertNotIn(SECRET,text)
+                self.assertTrue(all((page.extract_text() or '').strip() for page in reader.pages))
+                self.assertGreaterEqual(len(reader.pages[0].get('/Annots',[])),6)
+
     def test_missing_renderer_does_not_leave_partial_artifact(self):
         run,ledger,scan=fixture()
         with tempfile.TemporaryDirectory() as tmp:

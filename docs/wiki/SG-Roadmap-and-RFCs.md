@@ -36,7 +36,7 @@ Before accepting an RFC or implementation PR:
 6. Standards crosswalk and unresolved-finding reporting.
 7. Benchmark corpus and release quality gates (starts alongside scope and pack work).
 
-### Registered proposals — open for review
+### Registered RFCs — original dependency plan
 
 Parent: [#30 — Operational engine vision](https://github.com/omidkh68/security-guardian/issues/30).
 
@@ -61,3 +61,20 @@ Parent: [#30 — Operational engine vision](https://github.com/omidkh68/security
 - Release gate targets calibrated using real seeded benchmark runs, not arbitrary security percentages.
 
 See [vision](SG-Vision.md) and [profiles](SG-Stack-Profiles.md).
+
+## Development acceptance checkpoint
+
+Snapshot: 2026-11-26; development main after PR #145, not a release announcement. The table above is the historical proposal sequence, not the current completion status.
+
+| RFC | Current evidence | Outstanding |
+|---|---|---|
+| #31 | Closed; explicit scope discovery | No claim of complete discovery |
+| #32 | Open; PR #141, native CLI installation and offline Codex prompt input validated | Authenticated three-client acceptance; integration on current main |
+| #33 | Open; PR #142 merged, coverage matrix v2 | Remaining pack acceptance |
+| #34 | Open; PR #143 merged, Semgrep output contract | Real Semgrep and remaining adapter acceptance |
+| #35 | Closed; PR #138, scoped before/after and rollback evidence | Independent fix attestation not claimed |
+| #36 | Open; PRs #140 and #144 merged, PDF v2 and coverage evidence | Independent semantic standards review and remaining acceptance |
+| #37 | Open; PR #145 merged, separate benchmark evidence artifact | Fresh blind holdout, agent evaluation and comparisons |
+| #54 / #105 | Open; documentation and quality review | Final evidence and release gate |
+
+See [architecture index](../architecture-index.md) and [Unreleased changelog](../../CHANGELOG.md). The public npm release and v1.3.0 tag remain pending. No proposal is closed merely because an implementation increment was merged.

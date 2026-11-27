@@ -1,5 +1,8 @@
 """Offline synthetic fixtures for the explicitly authorized unittest adapter."""
 import json
+import os
+import signal
+import time
 from pathlib import Path
 import subprocess
 import sys
@@ -68,6 +71,26 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual(receipt['result'], status)
                 self.assertFalse(receipt['independently_verified_fix'])
 
+    def test_subtest_failure_events_are_not_bounded_by_test_methods(self):
+        body = ('import unittest\nclass Tests(unittest.TestCase):\n'
+                '    def test_matrix(self):\n'
+                '        for n in range(3):\n'
+                '            with self.subTest(n=n):\n'
+                '                self.assertEqual(n, -1, "PRIVATE_FIXTURE_OUTPUT")\n')
+        code, receipt = self.execute(body)
+        self.assertEqual(code, 1)
+        self.assertEqual(receipt['result'], 'FAIL')
+        self.assertEqual(receipt['counts']['tests_run'], 1)
+        self.assertEqual(receipt['counts']['failures'], 3)
+        self.assertEqual(receipt['counts']['errors'], 0)
+        self.assertTrue(receipt['executed'])
+        self.assertFalse(receipt['independently_verified_fix'])
+        self.assertEqual(receipt['fingerprint_before'], receipt['fingerprint_after'])
+        code, receipt = self.execute(body.replace('self.assertEqual(n, -1,','self.assertEqual(n, n,'))
+        self.assertEqual((code, receipt['result']), (0, 'PASS'))
+        self.assertEqual(receipt['counts']['tests_run'], 1)
+        self.assertEqual(receipt['counts']['failures'], 0)
+
     def test_class_setup_error_is_real_failure_and_class_skip_is_incomplete(self):
         cases = [
             ('import unittest\nclass Tests(unittest.TestCase):\n'
@@ -120,6 +143,48 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(receipt['result'], 'OUTPUT_LIMIT')
         self.assertLessEqual(receipt['output_bytes'], 16384)
 
+
+
+    def test_interrupt_terminates_authorized_worker(self):
+        self.test.write_text(
+            'import os,time,unittest\nfrom pathlib import Path\n'
+            'class Tests(unittest.TestCase):\n'
+            '    def test_wait(self):\n'
+            '        Path("worker-ready").write_text(str(os.getpid()))\n'
+            '        time.sleep(30)\n'
+            '        Path("worker-finished").write_text("unexpected")\n')
+        command=[sys.executable,str(SCRIPT),'--root',str(self.root),
+                 '--test-file',self.test.name,'--finding-id',FINDING,
+                 '--file',self.test.name,'--file','app.py',
+                 '--timeout','40','--authorize-local-test']
+        proc=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+        worker=None
+        try:
+            until=time.monotonic()+8
+            ready=self.root/'worker-ready'
+            while time.monotonic()<until and not ready.exists() and proc.poll() is None:
+                time.sleep(0.02)
+            self.assertTrue(ready.exists(),'Worker did not start')
+            worker=int(ready.read_text())
+            proc.send_signal(signal.SIGINT)
+            out,err=proc.communicate(timeout=8)
+            self.assertEqual(proc.returncode,2,err)
+            receipt=json.loads(out)
+            self.assertEqual(receipt['result'],'CANCELLED')
+            self.assertTrue(receipt['executed'])
+            self.assertFalse(receipt['independently_verified_fix'])
+            self.assertIsNone(receipt['counts'])
+            self.assertFalse((self.root/'worker-finished').exists())
+            with self.assertRaises(ProcessLookupError):
+                os.kill(worker,0)
+            worker=None
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.communicate(timeout=5)
+            if worker is not None:
+                try:os.kill(worker,signal.SIGKILL)
+                except ProcessLookupError:pass
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "standard": "MASVS",
+  "edition": "2.1.0",
+  "source_revision": "8e133d09f4140518ed04cc254b18be9ff4990ffc",
+  "crosswalk_version": 2,
+  "review_status": "AUTHOR_REVIEWED_NOT_INDEPENDENTLY_APPROVED",
+  "gaps": [
+    {
+      "id": "MASVS-AUTH-2",
+      "source_blob_sha": "1a7d6a671cafaf9185c1eeecc6f4e680555eaebc",
+      "related_controls": [
+        "IAM-08",
+        "MOB-09"
+      ],
+      "disposition": "NEW_CONTROL_REQUIRED",
+      "rationale": "Existing step-up and key controls do not specify local authentication lifecycle or platform authentication policy.",
+      "acceptance_plan": "Inspect platform authentication configuration and challenge/key binding; test cancellation, failed authentication, enrollment changes and unauthorized access on an owned test device."
+    },
+    {
+      "id": "MASVS-CODE-1",
+      "source_blob_sha": "f4484bedd287559082c79f789cf2a90ed4b916af",
+      "related_controls": [],
+      "disposition": "NEW_CONTROL_REQUIRED",
+      "rationale": "No dedicated minimum supported OS or security-patch policy is defined by the current mobile catalog.",
+      "acceptance_plan": "Review supported Android/iOS versions against the product threat model; test behavior on supported and unsupported OS versions; document security update policy."
+    },
+    {
+      "id": "MASVS-CODE-2",
+      "source_blob_sha": "e7fa97b3b0dd1ae789f4bc3b92897faf09660ca7",
+      "related_controls": [
+        "SDLC-09"
+      ],
+      "disposition": "NEW_CONTROL_REQUIRED",
+      "rationale": "Controlled deployment does not establish enforcement of a minimum safe app version after release.",
+      "acceptance_plan": "Inspect the signed version policy and server enforcement; test outdated versions, network failure, rollout exceptions and authorized update recovery."
+    },
+    {
+      "id": "MASVS-PRIVACY-2",
+      "source_blob_sha": "b01d587c0bece44e75bd210c5f6a8a4f5933dbeb",
+      "related_controls": [
+        "MOB-14"
+      ],
+      "disposition": "EXTENSION_REQUIRED",
+      "rationale": "Permission and SDK minimization do not establish unlinkability or separation of identity signals by purpose.",
+      "acceptance_plan": "Inventory identifiers and SDK data flows; verify isolation of fraud and analytics signals using synthetic accounts and authorized traffic evidence."
+    },
+    {
+      "id": "MASVS-PRIVACY-3",
+      "source_blob_sha": "a7608be0779aea587814044fd3ff863364b02eaf",
+      "related_controls": [
+        "MOB-14"
+      ],
+      "disposition": "EXTENSION_REQUIRED",
+      "rationale": "Documented permission purpose is narrower than accurate user-facing disclosure of collection, retention and sharing.",
+      "acceptance_plan": "Compare actual data flows, background collection and SDK sharing with privacy notices and platform declarations; record discrepancies."
+    },
+    {
+      "id": "MASVS-PRIVACY-4",
+      "source_blob_sha": "45bc9666290491cf4a2f64ff2013936f6553df0a",
+      "related_controls": [
+        "DATA-05",
+        "MOB-14"
+      ],
+      "disposition": "EXTENSION_REQUIRED",
+      "rationale": "Retention/deletion and permission minimization do not establish user-driven correction, consent withdrawal or renewed consent.",
+      "acceptance_plan": "Exercise user data access, correction, deletion and consent withdrawal with synthetic records; inspect downstream propagation and documented exceptions."
+    },
+    {
+      "id": "MASVS-RESILIENCE-4",
+      "source_blob_sha": "3a0d3329e12eed2e5c14399cfa92000479fc1c8b",
+      "related_controls": [
+        "MOB-10",
+        "MOB-07"
+      ],
+      "disposition": "EXTENSION_REQUIRED",
+      "rationale": "Release hygiene and attestation signals do not prove runtime analysis resistance or define response behavior.",
+      "acceptance_plan": "Review threat-model-dependent runtime integrity policy; use authorized lab instrumentation and assess detection, false positives, fail-safe behavior and server authority."
+    }
+  ]
+}

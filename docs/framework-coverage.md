@@ -1,6 +1,6 @@
 # Framework coverage and pack contributor contract
 
-Issue [#95](https://github.com/omidkh68/security-guardian/issues/95) · [فارسی](framework-coverage-FA.md) · matrix schema v1
+Issue [#95](https://github.com/omidkh68/security-guardian/issues/95) · [فارسی](framework-coverage-FA.md) · matrix v2 · schema v1
 
 The development tree provides 19 manifest framework hints (not installed-version or support certification). Run the installed read-only inventory:
 
@@ -76,3 +76,19 @@ This inventory is additive; scanner and tracker formats, rule keys and default s
 
 
 Expansion #107: see [semantic coverage expansion](semantic-expansion.md) for current model boundaries and separate evaluation. Prior version sections describe historical baselines.
+
+## Synchronized inventory (#95)
+
+Python SQL pack version is sourced directly from the scanner (v13), with an actual scoped dispatch test; inventory lists both Python and Node authorized adapters, preserving legacy available_runner and NOT_RUN. This is not automatic framework verification. Flask/Angular fixtures are separate CI evidence, not customer coverage. CI pending.
+
+## Explicit version evidence (#33)
+
+Matrix v2 adds `version_evidence` to each framework row and to the scoped component inventory. Installed target versions are always `NOT_INSPECTED`; supported version ranges are `NOT_CERTIFIED`. The reference fixture is null for other frameworks. The exact direct dependency pins below describe repository-owned executable fixtures, not a tested range or target security verdict.
+
+| Framework | Reference fixture version | Scenario |
+|---|---|---|
+| Angular | 20.3.34 | Angular SSR |
+| NestJS | 11.1.6 | NestJS HTTP |
+| Flask | 3.1.2 | Flask SQLite HTTP |
+
+The inventory reports `NOT_RUN_BY_INVENTORY` for reference fixtures and `NOT_RUN` for target verification, even for a selected component. The repository CI runs these suites separately; [main CI #246](https://github.com/omidkh68/security-guardian/actions/runs/45898734410) is historical evidence for those exact fixtures. Regression tests compare the metadata with the fixture manifests in a full checkout and check that target dependency strings are not exposed. This is additive to schema v1 and does not expand scanner support. No framework-version certification, independent benchmark or automatic remediation claim.

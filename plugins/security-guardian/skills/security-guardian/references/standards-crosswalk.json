@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "crosswalk_version": 1,
+  "crosswalk_version": 2,
   "catalog_blob_sha": "7d939ce0b3d83250b6eb47adf172e16a98f5f1f2",
   "review_status": "AUTHOR_REVIEWED_NOT_INDEPENDENTLY_APPROVED",
   "sources": {
@@ -43,6 +43,15 @@
     }
   },
   "references": {
+    "ASVS:1.1.2": {
+      "standard": "ASVS",
+      "id": "1.1.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 1.1.2"
+    },
     "ASVS:1.2.1": {
       "standard": "ASVS",
       "id": "1.2.1",
@@ -97,6 +106,15 @@
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 1.3.1"
     },
+    "ASVS:1.3.2": {
+      "standard": "ASVS",
+      "id": "1.3.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 1.3.2"
+    },
     "ASVS:1.3.6": {
       "standard": "ASVS",
       "id": "1.3.6",
@@ -115,6 +133,24 @@
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 1.3.7"
     },
+    "ASVS:10.1.1": {
+      "standard": "ASVS",
+      "id": "10.1.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.1.1"
+    },
+    "ASVS:10.1.2": {
+      "standard": "ASVS",
+      "id": "10.1.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.1.2"
+    },
     "ASVS:10.2.1": {
       "standard": "ASVS",
       "id": "10.2.1",
@@ -132,6 +168,33 @@
       "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 10.2.2"
+    },
+    "ASVS:10.2.3": {
+      "standard": "ASVS",
+      "id": "10.2.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.2.3"
+    },
+    "ASVS:10.3.1": {
+      "standard": "ASVS",
+      "id": "10.3.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.3.1"
+    },
+    "ASVS:10.3.4": {
+      "standard": "ASVS",
+      "id": "10.3.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 10.3.4"
     },
     "ASVS:10.4.1": {
       "standard": "ASVS",
@@ -664,6 +727,24 @@
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 16.5.4"
     },
+    "ASVS:2.1.1": {
+      "standard": "ASVS",
+      "id": "2.1.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 2.1.1"
+    },
+    "ASVS:2.1.3": {
+      "standard": "ASVS",
+      "id": "2.1.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 2.1.3"
+    },
     "ASVS:2.2.1": {
       "standard": "ASVS",
       "id": "2.2.1",
@@ -735,6 +816,15 @@
       "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 2.4.1"
+    },
+    "ASVS:2.4.2": {
+      "standard": "ASVS",
+      "id": "2.4.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 2.4.2"
     },
     "ASVS:3.2.2": {
       "standard": "ASVS",
@@ -979,6 +1069,15 @@
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 4.4.3"
     },
+    "ASVS:5.1.1": {
+      "standard": "ASVS",
+      "id": "5.1.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 5.1.1"
+    },
     "ASVS:5.2.1": {
       "standard": "ASVS",
       "id": "5.2.1",
@@ -1042,6 +1141,15 @@
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 5.4.3"
     },
+    "ASVS:6.1.1": {
+      "standard": "ASVS",
+      "id": "6.1.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.1.1"
+    },
     "ASVS:6.3.1": {
       "standard": "ASVS",
       "id": "6.3.1",
@@ -1086,6 +1194,24 @@
       "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 6.4.3"
+    },
+    "ASVS:6.5.1": {
+      "standard": "ASVS",
+      "id": "6.5.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.5.1"
+    },
+    "ASVS:6.5.3": {
+      "standard": "ASVS",
+      "id": "6.5.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 6.5.3"
     },
     "ASVS:6.5.5": {
       "standard": "ASVS",
@@ -1141,6 +1267,15 @@
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 7.1.2"
     },
+    "ASVS:7.2.1": {
+      "standard": "ASVS",
+      "id": "7.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 7.2.1"
+    },
     "ASVS:7.3.1": {
       "standard": "ASVS",
       "id": "7.3.1",
@@ -1176,6 +1311,15 @@
       "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 7.4.2"
+    },
+    "ASVS:7.4.3": {
+      "standard": "ASVS",
+      "id": "7.4.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 7.4.3"
     },
     "ASVS:7.4.5": {
       "standard": "ASVS",
@@ -1239,6 +1383,15 @@
       "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 8.1.3"
+    },
+    "ASVS:8.1.4": {
+      "standard": "ASVS",
+      "id": "8.1.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Requirement 8.1.4"
     },
     "ASVS:8.2.1": {
       "standard": "ASVS",
@@ -1366,6 +1519,42 @@
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 9.2.3"
     },
+    "CWE:CWE-307": {
+      "standard": "CWE",
+      "id": "CWE-307",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/307.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Weakness 307"
+    },
+    "CWE:CWE-312": {
+      "standard": "CWE",
+      "id": "CWE-312",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/312.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Weakness 312"
+    },
+    "CWE:CWE-319": {
+      "standard": "CWE",
+      "id": "CWE-319",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/319.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Weakness 319"
+    },
+    "CWE:CWE-321": {
+      "standard": "CWE",
+      "id": "CWE-321",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/321.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Weakness 321"
+    },
     "CWE:CWE-352": {
       "standard": "CWE",
       "id": "CWE-352",
@@ -1384,6 +1573,33 @@
       "source_blob_sha": null,
       "topic": "Resource consumption"
     },
+    "CWE:CWE-434": {
+      "standard": "CWE",
+      "id": "CWE-434",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/434.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Weakness 434"
+    },
+    "CWE:CWE-532": {
+      "standard": "CWE",
+      "id": "CWE-532",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/532.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Weakness 532"
+    },
+    "CWE:CWE-613": {
+      "standard": "CWE",
+      "id": "CWE-613",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/613.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Weakness 613"
+    },
     "CWE:CWE-639": {
       "standard": "CWE",
       "id": "CWE-639",
@@ -1401,6 +1617,15 @@
       "source_path": null,
       "source_blob_sha": null,
       "topic": "Web page generation injection"
+    },
+    "CWE:CWE-798": {
+      "standard": "CWE",
+      "id": "CWE-798",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/798.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Weakness 798"
     },
     "CWE:CWE-862": {
       "standard": "CWE",
@@ -1438,6 +1663,24 @@
       "source_blob_sha": null,
       "topic": "SSRF"
     },
+    "MASTG:MASTG-TEST-0203": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0203",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-STORAGE/MASTG-TEST-0203.md",
+      "source_path": "tests-beta/android/MASVS-STORAGE/MASTG-TEST-0203.md",
+      "source_blob_sha": "4d13c11384e49669e9d861395780ad49b584a999",
+      "topic": "Android beta test 0203"
+    },
+    "MASTG:MASTG-TEST-0207": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0207",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-STORAGE/MASTG-TEST-0207.md",
+      "source_path": "tests-beta/android/MASVS-STORAGE/MASTG-TEST-0207.md",
+      "source_blob_sha": "44f826b893a36d19b729bc393b0ecc92e86321d8",
+      "topic": "Android beta test 0207"
+    },
     "MASTG:MASTG-TEST-0217": {
       "standard": "MASTG",
       "id": "MASTG-TEST-0217",
@@ -1447,6 +1690,15 @@
       "source_blob_sha": "bb10d7894272236c7093b1f90bb61d20f9000772",
       "topic": "Insecure TLS protocols"
     },
+    "MASTG:MASTG-TEST-0231": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0231",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-STORAGE/MASTG-TEST-0231.md",
+      "source_path": "tests-beta/android/MASVS-STORAGE/MASTG-TEST-0231.md",
+      "source_blob_sha": "eb469c93c0a61cc03133e26accfe42c22710fef9",
+      "topic": "Android beta test 0231"
+    },
     "MASTG:MASTG-TEST-0242": {
       "standard": "MASTG",
       "id": "MASTG-TEST-0242",
@@ -1455,6 +1707,69 @@
       "source_path": "tests-beta/android/MASVS-NETWORK/MASTG-TEST-0242.md",
       "source_blob_sha": "50950c6a4caa8000e73d8b6715dfb4bbfb5f0231",
       "topic": "Android network configuration pinning"
+    },
+    "MASTG:MASTG-TEST-0315": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0315",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-PLATFORM/MASTG-TEST-0315.md",
+      "source_path": "tests-beta/android/MASVS-PLATFORM/MASTG-TEST-0315.md",
+      "source_blob_sha": "a3d08767af30ea614d03e1f9b523cba57f962ec5",
+      "topic": "Android beta test 0315"
+    },
+    "MASTG:MASTG-TEST-0338": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0338",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-RESILIENCE/MASTG-TEST-0338.md",
+      "source_path": "tests-beta/android/MASVS-RESILIENCE/MASTG-TEST-0338.md",
+      "source_blob_sha": "1b5c43e9b7e1efbed359eb643258a9cee2a9f0db",
+      "topic": "Android beta test 0338"
+    },
+    "MASVS:MASVS-AUTH-1": {
+      "standard": "MASVS",
+      "id": "MASVS-AUTH-1",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-AUTH-1.md",
+      "source_path": "controls/MASVS-AUTH-1.md",
+      "source_blob_sha": "bdca12fbebc8b96733c69ab918fdbfe543307495",
+      "topic": "Mobile requirement AUTH-1"
+    },
+    "MASVS:MASVS-AUTH-3": {
+      "standard": "MASVS",
+      "id": "MASVS-AUTH-3",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-AUTH-3.md",
+      "source_path": "controls/MASVS-AUTH-3.md",
+      "source_blob_sha": "480a05bea25bf50fe4834c90539142c0e09fa6cd",
+      "topic": "Mobile requirement AUTH-3"
+    },
+    "MASVS:MASVS-CODE-3": {
+      "standard": "MASVS",
+      "id": "MASVS-CODE-3",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-CODE-3.md",
+      "source_path": "controls/MASVS-CODE-3.md",
+      "source_blob_sha": "920ad7a92c18155f6ddc6fe0f86126c4af5b2393",
+      "topic": "Mobile requirement CODE-3"
+    },
+    "MASVS:MASVS-CODE-4": {
+      "standard": "MASVS",
+      "id": "MASVS-CODE-4",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-CODE-4.md",
+      "source_path": "controls/MASVS-CODE-4.md",
+      "source_blob_sha": "463f1c165f7b814aab31dbe61055caeea95033d5",
+      "topic": "Mobile requirement CODE-4"
+    },
+    "MASVS:MASVS-CRYPTO-1": {
+      "standard": "MASVS",
+      "id": "MASVS-CRYPTO-1",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-CRYPTO-1.md",
+      "source_path": "controls/MASVS-CRYPTO-1.md",
+      "source_blob_sha": "9f361a0bad2f49316b9d8244fcc31abad15a40eb",
+      "topic": "Mobile requirement CRYPTO-1"
     },
     "MASVS:MASVS-CRYPTO-2": {
       "standard": "MASVS",
@@ -1501,6 +1816,24 @@
       "source_blob_sha": "ed37e4df5badda98fd7e0b85e85ad77f399c2598",
       "topic": "WebView safety"
     },
+    "MASVS:MASVS-PLATFORM-3": {
+      "standard": "MASVS",
+      "id": "MASVS-PLATFORM-3",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-PLATFORM-3.md",
+      "source_path": "controls/MASVS-PLATFORM-3.md",
+      "source_blob_sha": "47579d78873ea6b8c707061f834a7b5b9e411893",
+      "topic": "Mobile requirement PLATFORM-3"
+    },
+    "MASVS:MASVS-PRIVACY-1": {
+      "standard": "MASVS",
+      "id": "MASVS-PRIVACY-1",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-PRIVACY-1.md",
+      "source_path": "controls/MASVS-PRIVACY-1.md",
+      "source_blob_sha": "8f13f068815b8798a137a3fea8dddf3763c21445",
+      "topic": "Mobile requirement PRIVACY-1"
+    },
     "MASVS:MASVS-RESILIENCE-1": {
       "standard": "MASVS",
       "id": "MASVS-RESILIENCE-1",
@@ -1519,6 +1852,15 @@
       "source_blob_sha": "2048f25907bb2618d404ab0a30fcaa904897b59f",
       "topic": "Tamper resistance"
     },
+    "MASVS:MASVS-RESILIENCE-3": {
+      "standard": "MASVS",
+      "id": "MASVS-RESILIENCE-3",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-RESILIENCE-3.md",
+      "source_path": "controls/MASVS-RESILIENCE-3.md",
+      "source_blob_sha": "cdce9a149aaa7153d603151c760156f3dbbeebb0",
+      "topic": "Mobile requirement RESILIENCE-3"
+    },
     "MASVS:MASVS-STORAGE-1": {
       "standard": "MASVS",
       "id": "MASVS-STORAGE-1",
@@ -1527,6 +1869,69 @@
       "source_path": "controls/MASVS-STORAGE-1.md",
       "source_blob_sha": "de44ce4e25ae4192d2eb8310e2e666804a9fd71b",
       "topic": "Sensitive storage"
+    },
+    "MASVS:MASVS-STORAGE-2": {
+      "standard": "MASVS",
+      "id": "MASVS-STORAGE-2",
+      "version": "2.1.0",
+      "source_url": "https://github.com/OWASP/masvs/blob/8e133d09f4140518ed04cc254b18be9ff4990ffc/controls/MASVS-STORAGE-2.md",
+      "source_path": "controls/MASVS-STORAGE-2.md",
+      "source_blob_sha": "900306f6c498874fc56fdd654b2654a17e7b82f7",
+      "topic": "Mobile requirement STORAGE-2"
+    },
+    "MASWE:MASWE-0001": {
+      "standard": "MASWE",
+      "id": "MASWE-0001",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-STORAGE/MASWE-0001.md",
+      "source_path": "weaknesses/MASVS-STORAGE/MASWE-0001.md",
+      "source_blob_sha": "29679e98390ffa73d888c0e43e3b2a766299c5cb",
+      "topic": "Mobile weakness 0001"
+    },
+    "MASWE:MASWE-0002": {
+      "standard": "MASWE",
+      "id": "MASWE-0002",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-STORAGE/MASWE-0002.md",
+      "source_path": "weaknesses/MASVS-STORAGE/MASWE-0002.md",
+      "source_blob_sha": "cfa9d91e3ced3ba087c141ebd69345f409e56008",
+      "topic": "Mobile weakness 0002"
+    },
+    "MASWE:MASWE-0003": {
+      "standard": "MASWE",
+      "id": "MASWE-0003",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-STORAGE/MASWE-0003.md",
+      "source_path": "weaknesses/MASVS-STORAGE/MASWE-0003.md",
+      "source_blob_sha": "95a2821f9153006aae62a67ae087a6b5da8c1f90",
+      "topic": "Mobile weakness 0003"
+    },
+    "MASWE:MASWE-0004": {
+      "standard": "MASWE",
+      "id": "MASWE-0004",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-STORAGE/MASWE-0004.md",
+      "source_path": "weaknesses/MASVS-STORAGE/MASWE-0004.md",
+      "source_blob_sha": "1f1161c359c9fc3c54bbf4ca5e03c7958582aa47",
+      "topic": "Mobile weakness 0004"
+    },
+    "MASWE:MASWE-0005": {
+      "standard": "MASWE",
+      "id": "MASWE-0005",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-STORAGE/MASWE-0005.md",
+      "source_path": "weaknesses/MASVS-STORAGE/MASWE-0005.md",
+      "source_blob_sha": "50411eccbe76cc8f999f8a923c363c28e27ff715",
+      "topic": "Mobile weakness 0005"
+    },
+    "MASWE:MASWE-0006": {
+      "standard": "MASWE",
+      "id": "MASWE-0006",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-STORAGE/MASWE-0006.md",
+      "source_path": "weaknesses/MASVS-STORAGE/MASWE-0006.md",
+      "source_blob_sha": "358dadab400e62f45a6e0ac957287586525c6110",
+      "topic": "Mobile weakness 0006"
     },
     "MASWE:MASWE-0026": {
       "standard": "MASWE",
@@ -1546,6 +1951,24 @@
       "source_blob_sha": "426ca4d8fd02a8759455a5005b279a353fb55a72",
       "topic": "Pinning weakness"
     },
+    "WSTG:WSTG-v42-APIT-01": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-APIT-01",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/12-API_Testing/01-Testing_GraphQL.md",
+      "source_path": "document/4-Web_Application_Security_Testing/12-API_Testing/01-Testing_GraphQL.md",
+      "source_blob_sha": "847283cd4068fdf425c502b244b60339bae8de69",
+      "topic": "Web testing APIT-01"
+    },
+    "WSTG:WSTG-v42-ATHN-03": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-ATHN-03",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/04-Authentication_Testing/03-Testing_for_Weak_Lock_Out_Mechanism.md",
+      "source_path": "document/4-Web_Application_Security_Testing/04-Authentication_Testing/03-Testing_for_Weak_Lock_Out_Mechanism.md",
+      "source_blob_sha": "139d9de6c706098914048347a6039055de9317d0",
+      "topic": "Web testing ATHN-03"
+    },
     "WSTG:WSTG-v42-ATHZ-04": {
       "standard": "WSTG",
       "id": "WSTG-v42-ATHZ-04",
@@ -1554,6 +1977,24 @@
       "source_path": "document/4-Web_Application_Security_Testing/05-Authorization_Testing/04-Testing_for_Insecure_Direct_Object_References.md",
       "source_blob_sha": "e38b89555cdaa0a4957851565d250ffb91fc366a",
       "topic": "Object reference authorization"
+    },
+    "WSTG:WSTG-v42-BUSL-08": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-BUSL-08",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/10-Business_Logic_Testing/08-Test_Upload_of_Unexpected_File_Types.md",
+      "source_path": "document/4-Web_Application_Security_Testing/10-Business_Logic_Testing/08-Test_Upload_of_Unexpected_File_Types.md",
+      "source_blob_sha": "56d3efb0c80528c5e251fd25d52fc04faa2444ca",
+      "topic": "Web testing BUSL-08"
+    },
+    "WSTG:WSTG-v42-BUSL-09": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-BUSL-09",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/10-Business_Logic_Testing/09-Test_Upload_of_Malicious_Files.md",
+      "source_path": "document/4-Web_Application_Security_Testing/10-Business_Logic_Testing/09-Test_Upload_of_Malicious_Files.md",
+      "source_blob_sha": "35f48cbb23f1f4cd212e80d57a106005a2d9f092",
+      "topic": "Web testing BUSL-09"
     },
     "WSTG:WSTG-v42-CLNT-01": {
       "standard": "WSTG",
@@ -1564,6 +2005,42 @@
       "source_blob_sha": "ce9dffc1971b667d01bb504eaf7b7995d876bf13",
       "topic": "DOM XSS tests"
     },
+    "WSTG:WSTG-v42-CLNT-07": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-CLNT-07",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/11-Client-side_Testing/07-Testing_Cross_Origin_Resource_Sharing.md",
+      "source_path": "document/4-Web_Application_Security_Testing/11-Client-side_Testing/07-Testing_Cross_Origin_Resource_Sharing.md",
+      "source_blob_sha": "5516149449cab2906b0056b4701048802d00944c",
+      "topic": "Web testing CLNT-07"
+    },
+    "WSTG:WSTG-v42-CLNT-09": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-CLNT-09",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/11-Client-side_Testing/09-Testing_for_Clickjacking.md",
+      "source_path": "document/4-Web_Application_Security_Testing/11-Client-side_Testing/09-Testing_for_Clickjacking.md",
+      "source_blob_sha": "8b055b6e0c2caf03dac68b442c4092798dedbcbc",
+      "topic": "Web testing CLNT-09"
+    },
+    "WSTG:WSTG-v42-CONF-07": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-CONF-07",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/07-Test_HTTP_Strict_Transport_Security.md",
+      "source_path": "document/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/07-Test_HTTP_Strict_Transport_Security.md",
+      "source_blob_sha": "301cb889142ee9e0baf527c28f210bdc74253ab6",
+      "topic": "Web testing CONF-07"
+    },
+    "WSTG:WSTG-v42-IDNT-04": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-IDNT-04",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/03-Identity_Management_Testing/04-Testing_for_Account_Enumeration_and_Guessable_User_Account.md",
+      "source_path": "document/4-Web_Application_Security_Testing/03-Identity_Management_Testing/04-Testing_for_Account_Enumeration_and_Guessable_User_Account.md",
+      "source_blob_sha": "98e4985a50e7e50c8ebdd2aa77183693c950790f",
+      "topic": "Web testing IDNT-04"
+    },
     "WSTG:WSTG-v42-INPV-05": {
       "standard": "WSTG",
       "id": "WSTG-v42-INPV-05",
@@ -1573,6 +2050,15 @@
       "source_blob_sha": "3a22e2c82f1c2bc485c4c57295af4a506fadfcbd",
       "topic": "SQL injection tests"
     },
+    "WSTG:WSTG-v42-SESS-02": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-SESS-02",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/06-Session_Management_Testing/02-Testing_for_Cookies_Attributes.md",
+      "source_path": "document/4-Web_Application_Security_Testing/06-Session_Management_Testing/02-Testing_for_Cookies_Attributes.md",
+      "source_blob_sha": "2c7eeca34b1c9a9dad4a9af506ff20ab8a25c3a6",
+      "topic": "Web testing SESS-02"
+    },
     "WSTG:WSTG-v42-SESS-05": {
       "standard": "WSTG",
       "id": "WSTG-v42-SESS-05",
@@ -1581,6 +2067,15 @@
       "source_path": "document/4-Web_Application_Security_Testing/06-Session_Management_Testing/05-Testing_for_Cross_Site_Request_Forgery.md",
       "source_blob_sha": "3249c7d414c1aaa82e23a93e58fbb333764bce49",
       "topic": "CSRF tests"
+    },
+    "WSTG:WSTG-v42-SESS-06": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-SESS-06",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/06-Session_Management_Testing/06-Testing_for_Logout_Functionality.md",
+      "source_path": "document/4-Web_Application_Security_Testing/06-Session_Management_Testing/06-Testing_for_Logout_Functionality.md",
+      "source_blob_sha": "c58c0091125f754cc19ffc98e05e8da9f464bd0f",
+      "topic": "Web testing SESS-06"
     }
   },
   "controls": [
@@ -1772,6 +2267,12 @@
           "relationship": "RELATED_WEAKNESS",
           "rationale": "CSRF; taxonomy association only",
           "applicability": "WHERE_WEAKNESS_APPLIES"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-SESS-02",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review session cookie attributes against configured policy.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -1821,6 +2322,18 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Token validation and refresh lifecycle",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:7.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Server JWT validation and refresh handling address backend session verification; other session token types need review.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:10.3.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "JWT audience validation addresses service audience checks; opaque access token introspection requires separate review.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -1840,6 +2353,30 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Brute force and enumeration",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:6.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Layered login limits and avoiding victim lockout address the anti-guessing policy; documentation and adaptive response require review.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-IDNT-04",
+          "relationship": "RELATED_TEST",
+          "rationale": "Compare identification responses to review account enumeration exposure.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-ATHN-03",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review guessing controls and recovery from lockout; avoid victim denial of service.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-307",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Excessive authentication attempts overlap layered login guessing controls.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
         }
       ],
       "unmapped_reason": null,
@@ -1877,6 +2414,18 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Recovery and OTP integrity",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:6.5.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Atomic one-time consumption addresses replay of OTP and recovery codes; each applicable authenticator needs verification.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:6.5.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Requires cryptographically random codes; seed generation for other authenticators needs additional evidence.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -1896,6 +2445,18 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Sensitive operation reauthentication",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:10.3.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Step-up policy covers strength and recent authentication intent; claim validation by each resource server remains unverified.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASVS:MASVS-AUTH-3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Step-up for sensitive operations addresses part of mobile additional authentication; local platform implementation remains unassessed.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -1933,6 +2494,24 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Parallel sessions and termination",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:7.4.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Session inventory and optional revocation after password change address session termination; other factor-change paths require evidence.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-SESS-06",
+          "relationship": "RELATED_TEST",
+          "rationale": "Check whether logout invalidates session credentials.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-613",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Insufficient session expiration overlaps idle and absolute expiry and revocation.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
         }
       ],
       "unmapped_reason": null,
@@ -1994,6 +2573,18 @@
           "reference": "ASVS:10.5.4",
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Selected OAuth/OIDC safeguards",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:10.1.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "PKCE, state and nonce address flow binding; transaction-specific storage and replay evidence remain necessary.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:10.2.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Tight OAuth scopes address least-privilege requests; client-specific scope review required.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
@@ -2063,6 +2654,12 @@
           "relationship": "RELATED_WEAKNESS",
           "rationale": "Web page generation injection; taxonomy association only",
           "applicability": "WHERE_WEAKNESS_APPLIES"
+        },
+        {
+          "reference": "ASVS:1.1.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Safe Angular rendering addresses final browser output context; other interpreters remain outside this control.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -2107,6 +2704,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Template injection and production debug",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:1.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Prohibits user-influenced runtime template compilation; other dynamic execution mechanisms require separate review.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -2125,6 +2728,12 @@
           "reference": "ASVS:14.3.3",
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Browser storage and cleanup",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:10.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "BFF and avoidance of persistent browser refresh credentials address token exposure; every token receiver must be assessed.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
@@ -2383,6 +2992,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "CORS and independent authorization",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-CLNT-07",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review browser origin policy, credentials and allowed origins.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -2419,6 +3034,12 @@
           "reference": "ASVS:3.4.6",
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Browser response headers",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-CLNT-09",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review frame-ancestors policy and whether protected views can be framed.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
@@ -2519,6 +3140,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Trusted validation and output fields",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:2.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Input shape constraints address validation design; formal documentation and format-specific rules need separate evidence.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -2618,6 +3245,30 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Selected upload handling",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:5.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "File type allowlists and upload size limits address part of the documented upload policy; feature-specific documentation is separate.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-BUSL-08",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review rejected file types and batch upload enforcement.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-BUSL-09",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review authorized negative upload fixtures and safe processing.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-434",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Dangerous unrestricted file uploads overlap type and processing constraints.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
         }
       ],
       "unmapped_reason": null,
@@ -2693,6 +3344,12 @@
           "relationship": "RELATED_WEAKNESS",
           "rationale": "Resource consumption; taxonomy association only",
           "applicability": "WHERE_WEAKNESS_APPLIES"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-APIT-01",
+          "relationship": "RELATED_TEST",
+          "rationale": "GraphQL production configuration and resolver authorization review; not execution of every GraphQL test.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -2837,6 +3494,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Permission and context rules",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:8.1.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Contextual authorization evaluates tenant, owner, time and status; risk thresholds and documentation remain separate.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -2912,6 +3575,18 @@
           "reference": "ASVS:2.4.1",
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Business abuse limits",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:2.1.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Per-user and tenant workflow budgets address business limits; documentation and global thresholds need separate evidence.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:2.4.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Periodic workflow budgets limit rapid submissions; human timing and per-flow policy require additional evidence.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
@@ -3033,6 +3708,42 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Key lifecycle; related aspect only",
           "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASVS:MASVS-STORAGE-2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Avoids plaintext secrets and backup exposure; logs and other leakage paths require separate checks.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0207",
+          "relationship": "RELATED_TEST",
+          "rationale": "Authorized runtime sandbox file inspection relates to unencrypted secret storage.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0001",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Cleartext sensitive information in app-private storage overlaps secure storage policy.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0002",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Unencrypted sensitive information in shared storage overlaps secret storage review.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0006",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Sensitive mobile backup data overlaps secure storage extraction acceptance.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-312",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Cleartext storage of secrets overlaps secure storage policy.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
         }
       ],
       "unmapped_reason": null,
@@ -3058,6 +3769,12 @@
           "relationship": "RELATED_TEST",
           "rationale": "Insecure TLS protocols; related aspect only",
           "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-319",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Cleartext network transmission overlaps production transport restrictions.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
         }
       ],
       "unmapped_reason": null,
@@ -3128,6 +3845,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Backend enforcement for mobile clients",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASVS:MASVS-AUTH-1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Server-side authorization remains authoritative when the mobile client is tampered; client protocol security still needs assessment.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -3166,6 +3889,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "IPC safety; related aspect only",
           "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASVS:MASVS-CODE-4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Native bridge input validation addresses one mobile input boundary; UI, files, IPC and network paths remain separate.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -3179,6 +3908,18 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Key lifecycle; related aspect only",
           "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0003",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Keys outside platform keystore overlap non-exportable key handling.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-321",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Hardcoded cryptographic keys conflict with generated non-exportable key handling.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
         }
       ],
       "unmapped_reason": null,
@@ -3198,6 +3939,36 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Tamper resistance; related aspect only",
           "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASVS:MASVS-RESILIENCE-3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Measured obfuscation addresses one static analysis resistance measure; not anti-tamper proof.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0203",
+          "relationship": "RELATED_TEST",
+          "rationale": "Authorized runtime logging inspection relates to release log hygiene; test is beta and not executed by this mapping.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0231",
+          "relationship": "RELATED_TEST",
+          "rationale": "Static logging API review relates to sensitive release logs; API presence alone is not a failure.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0004",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Hardcoded sensitive values in distributed app packages overlap release secret hygiene.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0005",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Sensitive mobile logs overlap release log hygiene.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -3205,9 +3976,22 @@
     },
     {
       "control_id": "MOB-11",
-      "mappings": [],
-      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
-      "status": "UNMAPPED"
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-PLATFORM-3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Protects sensitive UI, screenshots and previews; platform-specific evidence remains necessary.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0315",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review notification contents for confidential UI data; platform behavior requires manual evidence.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
     },
     {
       "control_id": "MOB-12",
@@ -3230,6 +4014,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Sensitive storage; related aspect only",
           "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0338",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review integrity-check APIs for stored security state; server authority remains necessary.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -3237,9 +4027,16 @@
     },
     {
       "control_id": "MOB-14",
-      "mappings": [],
-      "unmapped_reason": "No sufficiently specific reviewed relationship established in this edition; retain handbook control and manual review.",
-      "status": "UNMAPPED"
+      "mappings": [
+        {
+          "reference": "MASVS:MASVS-PRIVACY-1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Permission minimization and SDK tracking review address data minimization; consent and third-party enforcement remain separate.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        }
+      ],
+      "unmapped_reason": null,
+      "status": "PARTIAL"
     },
     {
       "control_id": "PKI-01",
@@ -3261,6 +4058,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Signature algorithms and hashes",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASVS:MASVS-CRYPTO-1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Approved signing algorithms address part of cryptographic policy; other cryptographic uses require assessment.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -3502,6 +4305,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "TLS and HSTS",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-CONF-07",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review HSTS response behavior under the selected host policy.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -3733,6 +4542,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Rotation only",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-798",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Hardcoded credentials overlap secret detection and rotation.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
         }
       ],
       "unmapped_reason": null,
@@ -3758,6 +4573,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Dependency remediation",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASVS:MASVS-CODE-3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Mobile dependency vulnerability monitoring addresses known-component weaknesses; actual app inventory and advisories need evidence.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -3865,6 +4686,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Log metadata, redaction and encoding",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-532",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Sensitive logging overlaps token, PIN and key redaction policy.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
         }
       ],
       "unmapped_reason": null,

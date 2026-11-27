@@ -54,5 +54,4 @@ flowchart LR
 
 Scope fixtures check selected and excluded roots; unresolved scope must not widen silently.
 
-
 Proposed #32 extension: [persistent profile](project-profile.md) covers explicit approved selection and inventory revalidation; do not treat it as released until native loader acceptance and RFC merge.

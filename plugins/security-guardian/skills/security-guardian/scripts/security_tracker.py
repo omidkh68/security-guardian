@@ -23,6 +23,7 @@ import security_scan
 import control_mapping
 from security_fingerprint import fingerprint as source_fingerprint
 import security_test_runner
+import security_remediation
 
 VERSION = '1.1.0'
 TRACK_DIR = '.security-guardian'
@@ -196,6 +197,8 @@ def validate_finding(obj):
         raise ValueError('VERIFIED_FIXED requires executed=true, result=PASS, evidence and test_id')
     if status in {'DEFERRED', 'BLOCKED', 'ACCEPTED_RISK'} and not str(row.get('next_action', '')).strip():
         raise ValueError(f'{status} requires next_action')
+    if status == 'FIXED_UNVERIFIED' and not str(row.get('next_action', '')).strip():
+        row['next_action'] = 'Run authorized finding-specific regression tests, review current evidence and record verification or blocker.'
     if status == 'ACCEPTED_RISK' and not str(row.get('approver', '')).strip():
         raise ValueError('Risk acceptance requires approver')
     category = row.get('finding_category')
@@ -471,10 +474,12 @@ def record(args):
         # but cannot independently prove an external command really ran.
         test_by_id = {t['test_id']: t for t in run['tests'] if 'test_id' in t}
         for e in entries:
+            if e['status'] in {'FIXED_UNVERIFIED','VERIFIED_FIXED'}:
+                _validate_remediation_link(root,run,e)
             if e['status'] == 'VERIFIED_FIXED':
                 verification = e['verification']
                 test = test_by_id.get(verification['test_id'])
-                if (test is None or test['result'] != 'PASS' or not test['executed'] or
+                if (test is None or test['result'] != 'PASS' or test.get('executed') is not True or
                         e['id'] not in test.get('finding_ids', []) or not test.get('evidence')):
                     raise ValueError('VERIFIED_FIXED requires linked PASS test evidence from this run and finding ID')
                 tested_sha = test.get('git_commit')
@@ -483,12 +488,19 @@ def record(args):
                     raise ValueError('Git HEAD changed after linked PASS test; rerun verification')
                 verification['git_commit'] = tested_sha
                 quality = test.get('evidence_quality', 'MANUAL_REPORTED')
+                if quality not in ('LOCAL_EXECUTION', 'MANUAL_REPORTED'):
+                    raise ValueError('Unknown stored evidence quality')
+                if quality == 'MANUAL_REPORTED' and 'execution_receipt' in test:
+                    raise ValueError('Manual evidence must not contain a local execution receipt')
                 if quality == 'LOCAL_EXECUTION':
+                    receipt = test.get('execution_receipt')
+                    if not isinstance(receipt, dict) or test.get('command_or_method') != receipt.get('adapter'):
+                        raise ValueError('Local test command and execution receipt must agree')
                     review = verification.get('security_assertion_review')
                     if not isinstance(review, str) or not 10 <= len(review.strip()) <= 2000:
                         raise ValueError('Local execution requires explicit security assertion review')
                     existing = ledger['findings'].get(e['id'])
-                    validate_execution_receipt(root, run, existing, test['execution_receipt'])
+                    validate_execution_receipt(root, run, existing, receipt)
                     if any(e[k] != existing[k] for k in ('location', 'title', 'fix')):
                         raise ValueError('Finding title, location or fix changed after execution; rerun')
                 verification['evidence_quality'] = quality
@@ -546,23 +558,149 @@ def _selected_inputs(root, run, finding, files, test_file, adapter='python-unitt
     if not isinstance(fix_files, list) or any(not isinstance(p, str) or p not in files for p in fix_files):
         raise ValueError('Select every recorded fix file')
     selected = set(scope['selected_roots'])
-    if any(security_scan._owner(p, scope['components']) not in selected for p in files):
+    # A saved run is evidence of prior scope, not a license to execute after
+    # component ownership changes. Rediscover manifests read-only, keeping
+    # precisely the original roots; never select newly discovered components.
+    coverage = {}
+    inventory = list(security_scan.project_files(root, coverage))
+    current = security_scan.resolve_scope(root, inventory, coverage,
+                                           scope['requested_profile'], scope['selected_roots'])
+    if (coverage.get('truncated') or any(c.get('errors') for c in current['components'])
+            or current['status'] != 'RESOLVED'
+            or any(current[k] != scope[k] for k in
+                   ('selected_roots', 'selected_profile', 'components', 'excluded_components'))):
+        raise ValueError('Component inventory changed or is incomplete; begin a new explicitly scoped run')
+    if any(security_scan._owner(p, current['components']) not in selected for p in files):
         raise ValueError('Selected test input is outside the run component scope')
     return source_fingerprint(root, files)
+
+
+def _remediation_scope(root, run, finding, files):
+    if run['mode']!='fix' or not finding or finding['status'] not in {'CONFIRMED_OPEN','FIXED_UNVERIFIED','VERIFIED_FIXED'}:
+        raise ValueError('Remediation evidence requires a confirmed finding in an active fix run')
+    scope=run.get('scope_resolution') or {}
+    if scope.get('status')!='RESOLVED' or not scope.get('selected_roots'):
+        raise ValueError('Remediation requires resolved component scope')
+    location=re.sub(r':\d+(?::\d+)?$', '', finding['location'])
+    if location not in files:
+        raise ValueError('Include the finding source in approved paths')
+    coverage={}
+    inventory=list(security_scan.project_files(root,coverage))
+    current=security_scan.resolve_scope(root,inventory,coverage,scope['requested_profile'],scope['selected_roots'])
+    if (coverage.get('truncated') or any(c.get('errors') for c in current['components'])
+            or current['status']!='RESOLVED' or any(current[k]!=scope[k] for k in
+                 ('selected_roots','selected_profile','components','excluded_components'))):
+        raise ValueError('Component inventory changed or is incomplete; begin a new scoped run')
+    if any(security_scan._owner(p,current['components']) not in set(scope['selected_roots']) for p in files):
+        raise ValueError('Approved path is outside the run component scope')
+
+
+def prepare_fix(args):
+    root,store=root_and_store(args.root)
+    # A record of an actual owner decision, not permission inferred from
+    # severity or test consent. Only the agent/owner can adjudicate.
+    for value in (args.approver,args.approval_ref,args.change_summary,args.rollback_plan):
+        if not isinstance(value,str) or not 1<=len(value.strip())<=2000:
+            raise ValueError('Explicit approver, approval reference, change and rollback plan required')
+    with locked(store):
+        index,ledger=load_state(store)
+        rdir,run=ensure_run(store,index,args.run)
+        finding=ledger['findings'].get(args.finding_id)
+        _remediation_scope(root,run,finding,args.file)
+        if finding['status']!='CONFIRMED_OPEN':
+            raise ValueError('Prepare before editing an open confirmed finding')
+        before=security_remediation.capture(root,args.file,prepare=True)
+        plans=run.setdefault('remediation_plans',[])
+        if any(p['finding_id']==args.finding_id and p['status'] in {'PREPARED','REVIEWED'} for p in plans):
+            raise ValueError('An active plan already exists for this finding')
+        plan={'plan_id':'SGP-'+secrets.token_hex(8).upper(),'status':'PREPARED',
+              'finding_id':args.finding_id,'scope_stamp':_finding_stamp(run['scope_resolution']),
+              'finding_stamp':_finding_stamp(finding),'risk_class':args.risk,
+              'finding_title':finding['title'],'finding_location':finding['location'],
+              'approver':args.approver,'approval_ref':args.approval_ref,
+              'change_summary':args.change_summary,'rollback_plan':args.rollback_plan,
+              'files':before['selected']['files'],'before':before,'prepared_at':now()}
+        plans.append(plan)
+        append_event(rdir/'events.jsonl',{'at':now(),'type':'REMEDIATION_PREPARED','plan_id':plan['plan_id']})
+        save_state(store,index,ledger)
+        snapshot(store,rdir,run,ledger,read_json(rdir/'scanner.json'))
+    print(dump({'plan_id':plan['plan_id'],'status':'PREPARED','finding_id':args.finding_id}).strip())
+
+
+def review_fix(args):
+    root,store=root_and_store(args.root)
+    with locked(store):
+        index,ledger=load_state(store)
+        rdir,run=ensure_run(store,index,args.run)
+        plan=next((p for p in run.get('remediation_plans',[]) if p['plan_id']==args.plan_id),None)
+        if not plan or plan['status']!=('REVIEWED' if args.rollback else 'PREPARED'):
+            raise ValueError('No eligible remediation plan')
+        finding=ledger['findings'].get(plan['finding_id'])
+        _remediation_scope(root,run,finding,plan['files'])
+        if plan['scope_stamp']!=_finding_stamp(run['scope_resolution']) or (
+                not args.rollback and plan['finding_stamp']!=_finding_stamp(finding)):
+            raise ValueError('Finding or scope changed since approval; review a new plan')
+        after=security_remediation.capture(root,plan['files'])
+        security_remediation.compare(plan['before'],after,rollback=args.rollback)
+        plan['status']='ROLLED_BACK' if args.rollback else 'REVIEWED'
+        plan['rollback' if args.rollback else 'after']=after
+        plan['reviewed_at']=now()
+        if args.rollback and finding['status'] in {'FIXED_UNVERIFIED','VERIFIED_FIXED'}:
+            # A checked rollback invalidates the active fixed status. Preserve
+            # prior evidence in history and require new security review.
+            entry={**finding,'status':'NEEDS_REVIEW',
+                   'reason':'Reviewed patch returned to its approved pre-edit state.',
+                   'next_action':'Reassess the finding and obtain fresh scoped security evidence.',
+                   'fix':{},'verification':{}}
+            apply_event(ledger,entry,run)
+            append_event(rdir/'events.jsonl',{'at':now(),'type':'FINDING_REVIEWED',
+                         'id':entry['id'],'status':entry['status'],'reason':entry['reason']})
+        append_event(rdir/'events.jsonl',{'at':now(),'type':'REMEDIATION_'+plan['status'],'plan_id':plan['plan_id']})
+        save_state(store,index,ledger)
+        snapshot(store,rdir,run,ledger,read_json(rdir/'scanner.json'))
+    print(dump({'plan_id':plan['plan_id'],'status':plan['status'],'finding_id':plan['finding_id']}).strip())
+
+
+def _validate_remediation_link(root,run,entry):
+    fix=entry['fix']
+    plan_id=fix.get('remediation_plan_id')
+    # Legacy unstructured records remain explicitly human-reported. A declared
+    # high-risk patch or an active plan must not bypass its review.
+    active=[p for p in run.get('remediation_plans',[]) if p['finding_id']==entry['id']]
+    if not plan_id and fix.get('risk_class')!='HIGH' and not active:
+        return
+    plan=next((p for p in active if p['plan_id']==plan_id),None)
+    if (not plan or plan['status']!='REVIEWED'
+            or plan['scope_stamp']!=_finding_stamp(run.get('scope_resolution'))
+            or fix.get('risk_class')!=plan['risk_class']
+            or fix.get('summary')!=plan['change_summary']
+            or entry['title']!=plan['finding_title'] or entry['location']!=plan['finding_location']
+            or not isinstance(fix.get('files'),list) or any(not isinstance(p,str) for p in fix['files'])
+            or sorted(fix['files'])!=plan['files']):
+        raise ValueError('Declared high-risk or planned fix requires reviewed matching remediation plan')
+    _remediation_scope(root,run,entry,plan['files'])
+    current=security_remediation.capture(root,plan['files'])
+    security_remediation.compare(plan['before'],current)
+    if current!=plan['after']:
+        raise ValueError('Reviewed remediation evidence is stale; review again')
 
 
 def validate_execution_receipt(root, run, finding, receipt):
     """Validate a directly collected receipt; not cryptographic attestation."""
     if not isinstance(receipt, dict) or not finding:
         raise ValueError('Missing local execution evidence')
-    if (receipt.get('schema_version') != 1 or receipt.get('adapter') not in security_test_runner.ADAPTERS
+    if (type(receipt.get('schema_version')) is not int or receipt['schema_version'] != 1
+            or receipt.get('adapter') not in security_test_runner.ADAPTERS
             or receipt.get('run_id') != run['id'] or receipt.get('finding_id') != finding['id']
             or receipt.get('finding_stamp') != _finding_stamp(finding)
             or receipt.get('scope_stamp') != _finding_stamp(run.get('scope_resolution'))
-            or receipt.get('result') != 'PASS' or receipt.get('executed') is not True
+            or receipt.get('result') != 'PASS' or receipt.get('execution_result') != 'PASS'
+            or receipt.get('executed') is not True
             or type(receipt.get('exit_code')) is not int or receipt['exit_code'] != 0
             or receipt.get('independently_verified_fix') is not False):
         raise ValueError('Ineligible or unrelated local execution receipt')
+    if receipt.get('command_contract')!=security_test_runner.command_contract(receipt['adapter'],receipt.get('test_file')):
+        raise ValueError('Local execution command identity is missing or inconsistent')
     counts = receipt.get('counts')
     keys = {'tests_run', 'failures', 'errors', 'skipped', 'expected_failures', 'unexpected_successes'}
     if (not isinstance(counts, dict) or set(counts) != keys
@@ -586,12 +724,18 @@ def validate_execution_receipt(root, run, finding, receipt):
             or not isinstance(receipt.get('output_sha256'), str)
             or not re.fullmatch(r'[0-9a-f]{64}', receipt['output_sha256'])
             or type(receipt.get('output_bytes')) is not int
-            or not 0 <= receipt['output_bytes'] <= security_test_runner.MAX_OUTPUT):
+            or not 1 <= receipt['output_bytes'] <= security_test_runner.MAX_OUTPUT
+            or type(receipt.get('timeout_seconds')) is not int
+            or not 1 <= receipt['timeout_seconds'] <= security_test_runner.MAX_TIMEOUT
+            or type(receipt.get('elapsed_ms')) is not int or receipt['elapsed_ms'] < 0):
         raise ValueError('Invalid local execution metadata')
-    if receipt['adapter']=='node-test-v1' and not re.fullmatch(r'v(?:22|24)\.\d+\.\d+',str(receipt.get('node_version',''))):
+    if receipt['adapter']=='node-test-v1' and (not isinstance(receipt.get('node_version'), str)
+            or not re.fullmatch(r'v(?:22|24)\.\d+\.\d+',receipt['node_version'])):
         raise ValueError('Invalid Node execution version')
     current = _selected_inputs(root, run, finding, files, receipt.get('test_file'),receipt['adapter'])
-    if before != after or after != current:
+    # Canonical JSON comparison also rejects bool/float aliases of integer
+    # fields, which ordinary Python dict equality would accept.
+    if dump(before) != dump(current) or dump(after) != dump(current):
         raise ValueError('Local execution evidence is stale; rerun verification')
 
 
@@ -809,6 +953,23 @@ def main():
     p.add_argument('--timeout', type=int, default=15)
     p.add_argument('--authorize-local-test', action='store_true')
     p.set_defaults(fn=run_test)
+    p = subs.add_parser('prepare-fix', help='Record explicit local remediation approval and pre-edit Git evidence')
+    p.add_argument('--root',default='.')
+    p.add_argument('--run',required=True)
+    p.add_argument('--finding-id',required=True)
+    p.add_argument('--file',action='append',required=True)
+    p.add_argument('--risk',choices=('LOW','MEDIUM','HIGH'),required=True)
+    p.add_argument('--approver',required=True)
+    p.add_argument('--approval-ref',required=True)
+    p.add_argument('--change-summary',required=True)
+    p.add_argument('--rollback-plan',required=True)
+    p.set_defaults(fn=prepare_fix)
+    p = subs.add_parser('review-fix',help='Check approved-path changes or a manually performed rollback; never edits source')
+    p.add_argument('--root',default='.')
+    p.add_argument('--run',required=True)
+    p.add_argument('--plan-id',required=True)
+    p.add_argument('--rollback',action='store_true')
+    p.set_defaults(fn=review_fix)
     p = subs.add_parser('finish', help='Finalize one run and freeze the run archive')
     p.add_argument('--root', default='.')
     p.add_argument('--run', required=True)

@@ -47,6 +47,42 @@ class CoverageContractTests(unittest.TestCase):
         self.assertEqual(len(mapping),28)
         self.assertFalse(report['runtime']['automatic_framework_verification'])
 
+    def test_version_evidence_is_not_target_support_or_runtime_result(self):
+        report=c.inventory()
+        self.assertEqual(report['matrix_version'],2)
+        rows={r['framework']:r for r in report['frameworks']}
+        expected={'Angular':'20.3.34','NestJS':'11.1.6','Flask':'3.1.2'}
+        for name,row in rows.items():
+            v=row['version_evidence']
+            self.assertEqual(v['installed_version'],'NOT_INSPECTED')
+            self.assertEqual(v['supported_version_range'],'NOT_CERTIFIED')
+            if name in expected:
+                self.assertEqual(v['reference_fixture']['framework_version'],expected[name])
+                self.assertEqual(v['reference_fixture']['status'],'NOT_RUN_BY_INVENTORY')
+            else:
+                self.assertIsNone(v['reference_fixture'])
+        self.package('web','@angular/core')
+        self.package('api','@nestjs/core')
+        result=c.scoped_inventory(scan.preview_scope(self.root,'frontend'))
+        by={row['root']:row for row in result['components']}
+        self.assertEqual(by['web']['version_evidence']['Angular'],rows['Angular']['version_evidence'])
+        self.assertFalse(by['api']['eligible_packs'])
+        self.assertEqual(by['api']['runtime_verification'],'NOT_RUN')
+        self.assertNotIn('PRIVATE_VERSION',json.dumps(result))
+
+    def test_reference_fixture_metadata_matches_repository_pins(self):
+        repo=Path(__file__).resolve().parents[5]
+        if not (repo/'scripts/requirements-framework-fixture.txt').is_file():
+            self.skipTest('Repository fixtures are not bundled in standalone skill')
+        for name,(version,manifest,suite,_) in c.REFERENCE_FIXTURES.items():
+            self.assertTrue((repo/suite).is_file())
+            content=(repo/manifest).read_text(encoding='utf-8')
+            if name=='Flask':
+                self.assertIn('Flask=='+version,content.splitlines())
+            else:
+                key={'Angular':'@angular/core','NestJS':'@nestjs/core'}[name]
+                self.assertEqual(json.loads(content)['dependencies'][key],version)
+
     def test_per_framework_named_heuristics_match_scanner_dispatch(self):
         # Check all named rule eligibility across actual supported source/config suffixes.
         for name in sorted(c.FRAMEWORKS):
@@ -75,6 +111,18 @@ class CoverageContractTests(unittest.TestCase):
             self.assertEqual(r['pack_version'],model['pack_version'])
             declared={q['rule_id'] for x in c.inventory()['frameworks'] for p in x['ast_packs'] if p['pack_id']==pid for q in p['rules']}
             self.assertEqual(declared,set(r.get('rule_ids',[r['rule_id']])))
+
+    def test_python_pack_matches_actual_dispatch_and_runtime_inventory(self):
+        self.write('flask/requirements.txt','Flask\n')
+        self.write('flask/app.py','from flask import request\nimport sqlite3\n')
+        report=scan.process(self.root,'custom',['flask'])
+        flow=report['summary']['python_sql_flow']
+        model=next(p for p in c.framework_row('Flask')['ast_packs'] if p['pack_id']==scan.PY_SQL_PACK)
+        self.assertEqual(model['pack_version'],flow['pack_version'])
+        self.assertEqual(model['pack_version'],scan.PY_SQL_VERSION)
+        from security_test_runner import ADAPTERS
+        self.assertEqual(c.inventory()['runtime']['available_runners'],list(ADAPTERS))
+        self.assertEqual(c.inventory()['runtime']['status'],'NOT_RUN')
 
     def test_scope_isolation_and_redaction(self):
         self.package('web','next','react')

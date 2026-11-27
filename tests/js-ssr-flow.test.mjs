@@ -195,3 +195,59 @@ test('SSR app router, Nitro/H3 and SvelteKit server endpoints: separate syntheti
     assert.equal(outside.status,'PARTIAL');assert.deepEqual(outside.signals,[]);
   }
 });
+
+test('SSR v5 server entry path-local taint and conservative incomplete paths',{skip:!parser},t=>{
+  const groups=[
+    {name:'next',dep:'next',file:'app/page.tsx',wrap:app,pre:appStart,source:'q.name',sink:x=>'return <div dangerouslySetInnerHTML={{__html:'+x+'}} />;'},
+    {name:'nuxt',dep:'nuxt',file:'server/routes/example.ts',wrap:nuxt,pre:nuxtStart,source:'q.name',sink:x=>'return reply(event,'+x+',"text/html");'},
+    {name:'kit',dep:'@sveltejs/kit',file:'src/routes/example/+server.ts',wrap:kit,pre:kitStart,source:'q',sink:kitHTML}
+  ];
+  for(const g of groups){
+    const s=g.source,ret=g.sink;
+    for(const [label,body,count,partial] of [
+      ['branch positive','let html="fixed"; if('+s+'){html='+s+';} '+ret('html'),1,false],
+      ['both safe','let html='+s+'; if('+s+'){html="a";}else{html="b";} '+ret('html'),0,false],
+      ['early safe return','if('+s+'){'+ret('"fixed"')+'} '+ret(s),1,false],
+      ['dead branch','if(false){'+ret(s)+'} '+ret('"fixed"'),0,false],
+      ['unknown effect','if('+s+'){mutate();}else{'+ret(s)+'}',1,true],
+      ['unknown condition','if(mutate()){'+ret(s)+'}else{'+ret('"fixed"')+'}',0,true],
+      ['scope','if('+s+'){const html='+s+';} '+ret('html'),0,true],
+      ['duplicate','if('+s+'){}else{} '+ret(s),1,false],
+      ['missing return','if('+s+'){'+ret(s)+'}',1,true],
+      ['budget',Array.from({length:8},()=> 'if('+s+'){}').join(' ')+ret(s),0,true]
+    ]){
+      const r=run(fixture(t,g.wrap(g.pre+body),g.dep,g.file));
+      const name=g.name+'/'+label;
+      assert.equal(r.pack_version,6,name);
+      assert.equal(r.signals.length,count,name);
+      assert.equal(r.status==='PARTIAL',partial,name);
+      assert.ok(r.signals.every(x=>x.status==='HEURISTIC_REVIEW_ONLY'&&x.path==='web/'+g.file),name);
+      if(label==='budget')assert.equal(r.coverage.path_limited_files,1,name);
+    }
+  }
+  console.log('SSR_SERVER_CONTROL_FLOW_CASES=30');
+});
+
+test('SSR v6 Angular and Next Pages bounded path regression',{skip:!parser},t=>{
+  const cases=[
+    ['angular-branch',ng('let html="fixed"; if(input.query.flag){html=input.query.name;} return engine.render({document:html});'),'@angular/core','src/server.ts',1,false],
+    ['angular-safe',ng('let html=input.query.name; if(input.query.flag){html="a";}else{html="b";} return engine.render({document:html});'),'@angular/core','src/server.ts',0,false],
+    ['angular-dead',ng('if(false){return engine.render({document:input.query.name});} return engine.render({document:"fixed"});'),'@angular/core','src/server.ts',0,false],
+    ['angular-unknown',ng('if(mutate()){return engine.render({document:input.query.name});}'),'@angular/core','src/server.ts',0,true],
+    ['angular-response',nodeApp(pre+'const html=await response.text(); let extra="fixed"; if(input.query.flag){extra=input.query.name;} return res.send(html+extra);'),'@angular/core','src/server.ts',1,false],
+    ['angular-guard-local',nodeApp('const response=await engine.handle(input); if(input.query.flag){if(!response)return;} const html=await response.text(); return res.send(html+input.query.name);'),'@angular/core','src/server.ts',1,true],
+    ['pages-branch',page('if(ctx.query.flag){return {props:{name:ctx.query.name}};} return {props:{name:"fixed"}};',raw),'next','pages/index.tsx',1,false],
+    ['pages-safe',page('let q=ctx.query.name; if(ctx.query.flag){q="a";}else{q="b";} return {props:{name:q}};',raw),'next','pages/index.tsx',0,false],
+    ['pages-render',page(direct,'if(props.name){return <div dangerouslySetInnerHTML={{__html:props.name}} />;} return <div>fixed</div>;'),'next','pages/index.tsx',1,false],
+    ['pages-unknown',page('if(mutate()){return {props:{name:ctx.query.name}};} return {props:{name:"fixed"}};',raw),'next','pages/index.tsx',0,true],
+    ['pages-prop-isolation',page('if(ctx.query.flag){return {props:{name:ctx.query.name,other:"fixed"}};} return {props:{name:"fixed",other:ctx.query.other}};','return <div dangerouslySetInnerHTML={{__html:props.name}} />;'),'next','pages/index.tsx',1,false]
+  ];
+  for(const [label,code,dep,file,count,partial] of cases){
+    const r=run(fixture(t,code,dep,file));
+    assert.equal(r.pack_version,6,label);
+    assert.equal(r.signals.length,count,label);
+    assert.equal(r.status==='PARTIAL',partial,label);
+    assert.ok(r.signals.every(x=>x.status==='HEURISTIC_REVIEW_ONLY'),label);
+  }
+  console.log('SSR_ANGULAR_PAGES_CASES=11');
+});
