@@ -435,3 +435,27 @@ test('late recovery contender does not leave a guard after another process compl
   assert.equal(JSON.parse(ok(run(...recover))).action, 'NO_RECOVERY_NEEDED');
   ok(run('--agent', 'claude', '--project', project, '--yes'));
 });
+
+test('commit flush uncertainty preserves complete journal and installed state', t => {
+  const { root, project, home, run } = fixture(t);
+  const args = ['--agent', 'claude', '--project', project, '--yes'];
+  ok(run(...args));
+  const target = path.join(project, '.claude', 'skills', 'security-guardian');
+  fs.writeFileSync(path.join(target, 'local-note.txt'), 'preserve');
+  const hook = path.join(root, 'commit-flush.cjs');
+  fs.writeFileSync(hook, "const fs = require('node:fs'); const write = fs.writeSync; const sync = fs.fsyncSync; let commit = false; fs.writeSync = function(fd,data,...args) { const result = write.call(fs,fd,data,...args); try { if (JSON.parse(String(data)).phase === 'committed') commit = true; } catch {} return result; }; fs.fsyncSync = function(fd) { if (commit) throw new Error('injected commit flush error'); return sync.call(fs,fd); };");
+  const result = spawnSync(process.execPath, ['--require', hook, cli, ...args, '--upgrade'], { encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home }, timeout: 15000 });
+  denied(result);
+  assert.match(result.stderr, /Commit durability uncertain/);
+  const lock = path.join(project, '.security-guardian-install.lock');
+  const records = fs.readFileSync(lock, 'utf8').trimEnd().split('\n').map(JSON.parse);
+  assert.equal(records.at(-1).phase, 'committed');
+  const backup = records.find(x => x.phase === 'backup-intent').backup;
+  assert.equal(fs.readFileSync(path.join(backup, 'local-note.txt'), 'utf8'), 'preserve');
+  assert.ok(!fs.existsSync(path.join(target, 'local-note.txt')));
+  const recover = ['--recover', '--project', project];
+  assert.equal(JSON.parse(ok(run(...recover, '--dry-run'))).actions.length, 0);
+  assert.equal(JSON.parse(ok(run(...recover, '--yes'))).action, 'RECOVERED');
+  assert.ok(!fs.existsSync(lock));
+  assert.equal(fs.readFileSync(path.join(backup, 'local-note.txt'), 'utf8'), 'preserve');
+});
