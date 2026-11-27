@@ -1,0 +1,5 @@
+# بازبینی کنترل‌های مصنوعی موبایل (#151)
+
+[English](mobile-control-review.md)
+
+فرمان `python3 <skill-dir>/scripts/security_mobile_control_review.py --reference MASVS-PRIVACY-4 --policy policy.json --observations observations.json` را اجرا کنید (همچنین `MASVS-RESILIENCE-4`). فیلدهای سیاست: `schema_version: 1`، `synthetic_only: true`، `reference` و `signal_policy` (برای PRIVACY-4 خالی؛ برای RESILIENCE-4 نگاشت `INTEGRITY_SIGNAL_ABSENT`، `INTEGRITY_SIGNAL_INVALID` و `INTEGRITY_SIGNAL_REPLAYED` به DENIED، STEP_UP یا RESTRICTED). فایل مشاهده شامل `schema_version: 1`، `synthetic_only: true`، `policy_sha256` از بایت‌های دقیق سیاست و ردیف‌های `observations` با `scenario`، `decision` و `evidence_sha256` متمایز است. شناسه سناریوها در CASES سورس قرار دارند. ابزار مشاهده‌های دسترسی، اصلاح، حذف، لغو و تمدید رضایت و پاسخ نمونه به سیگنال یکپارچگی همراه مجوز مستقل سمت سرور را بررسی می‌کند. مشاهده ناقص یا متناقض رد می‌شود؛ شواهد خام بررسی نمی‌شوند. این بازبینی مصنوعی محدود است، نه تست دستگاه واقعی، شواهد مستقل، نگاشت هنجاری یا انطباق. تطابق مشاهده اثبات مقاومت یا تحقق حقوق حریم خصوصی نیست. CI باقی است.
