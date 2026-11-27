@@ -155,11 +155,14 @@ jobs:
           python scripts/benchmark_scanner.py > "$REPORTS/indicator.json"
           python scripts/benchmark_holdout.py --synthetic all --require-synthetic-regression --typescript-module "$PARSER" > "$REPORTS/semantic.json"
           python scripts/benchmark_release_evidence.py --reports "$REPORTS" --typescript-module "$PARSER" | tee "$RUNNER_TEMP/benchmark-evidence.json"
+          python scripts/benchmark_external_dom.py --typescript-module "$PARSER" | tee "$RUNNER_TEMP/external-dom-probe.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: matrix.python-version == '3.12'
         with:
           name: benchmark-evidence
-          path: ${{ runner.temp }}/benchmark-evidence.json
+          path: |
+            ${{ runner.temp }}/benchmark-evidence.json
+            ${{ runner.temp }}/external-dom-probe.json
           if-no-files-found: error
           retention-days: 7
       - name: Verify no tracked secret-like files or generated reports

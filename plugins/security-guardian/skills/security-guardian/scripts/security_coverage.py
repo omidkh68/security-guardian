@@ -60,7 +60,7 @@ def framework_row(name):
         heuristic(scan.WEB_CORE_PACK,scan.WEB_CORE_VERSION,
                   [(r,c) for (c,_),r in scan.WEB_CORE_RULES.items()],
                   'JS/TS browser DOM, storage and navigation indicators')
-        ast('js-dom-flow',4,[(dom.RULE,'ANG-01')],'security_js_flow.py',
+        ast('js-dom-flow',5,[(dom.RULE,'ANG-01')],'security_js_flow.py',
             'Browser location to recognized DOM innerHTML; local paths/helpers, URI transformations and observed sanitizer calls')
     if name in NODE:
         heuristic(scan.BACKEND_CORE_PACK,scan.BACKEND_CORE_VERSION,
@@ -83,7 +83,7 @@ def framework_row(name):
         ast('js-authz-flow',2,[(authz.RULE,'BIZ-01')],'security_js_authz_flow.py',
             'Explicit routes and bounded Prisma/TypeORM resource selectors; UNVERIFIED evidence')
     if name in SSR_RULES:
-        ast('js-ssr-flow',5,SSR_RULES[name],'security_js_ssr_flow.py',
+        ast('js-ssr-flow',6,SSR_RULES[name],'security_js_ssr_flow.py',
             {'Angular':'CommonEngine document, NodeAppEngine response, credential TransferState',
              'Next.js':'Pages Router props and App Router raw JSX',
              'Nuxt':'Explicit H3 HTML endpoint, not Vue template/hydration',

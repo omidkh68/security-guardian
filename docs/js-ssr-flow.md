@@ -120,3 +120,7 @@ The preceding Angular v3 CI run 45632019323 passed all six jobs. New group measu
 ## SSR pack v5 — bounded server-entry control flow (#34)
 
 Next.js App Router, explicit Nuxt H3 server handlers and SvelteKit +server HTML endpoints now model independent states for restricted if/else, nested lexical blocks, local let reassignment and early returns. Boolean literals prune dead paths; unknown conditions/effects and missing returns are PARTIAL, retaining already modeled candidates. Bounds: 64 paths, 4096 statement steps, depth 32. Exact duplicate evidence is deduplicated. Thirty synthetic scenarios (ten per framework) exercise positive, negative, incomplete and budget cases on the trusted TypeScript parser. Existing Pages Router, Angular CommonEngine/NodeAppEngine and TransferState models are unchanged; their path expansion remains separate. No proof of exploitability, general template or cross-module flow, or runtime security.
+
+## Pack v6 — Angular server and Next Pages paths (#34)
+
+Angular CommonEngine and guarded NodeAppEngine response postprocessing now model bounded independent if/else states and local let bindings. The exact response guard remains path-local; it cannot authorize another branch. Next Pages Router analyzes each returned props map independently against page render paths, capped at 16 server outputs, 64 paths and 4096 steps per body, depth 32. Unknown effects and incomplete returns remain PARTIAL. Eleven added synthetic cases cover both frameworks. TransferState is unchanged; no whole-program or runtime claim.

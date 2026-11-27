@@ -29,7 +29,7 @@ def review(root, profile, components, parser):
                 and set(c['frameworks']) & {'Next.js','Angular','Nuxt','SvelteKit'}}
     roots = set(selected)
     stats = Counter()
-    result = {'schema_version':1, 'contract_version':contract.CONTRACT_VERSION, 'pack_id':'js-ssr-flow', 'pack_version':5,
+    result = {'schema_version':1, 'contract_version':contract.CONTRACT_VERSION, 'pack_id':'js-ssr-flow', 'pack_version':6,
               'rule_id':RULE, 'rule_ids':[RULE,'JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT','JS.ANGULAR.SSR.REQUEST_TO_RESPONSE_HTML','JS.ANGULAR.SSR.CREDENTIAL_TO_TRANSFER_STATE','JS.NEXT.APP.REQUEST_TO_RAW_HTML','JS.NUXT.SSR.REQUEST_TO_HTML','JS.SVELTEKIT.SSR.REQUEST_TO_HTML'], 'legacy_control_id':'ANG-01', 'status':'NOT_AVAILABLE',
               'selected_roots':sorted(roots), 'signals':[],
               'unsupported_frameworks':[],

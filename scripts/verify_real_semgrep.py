@@ -37,6 +37,9 @@ def main():
         before={p.relative_to(root).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file()}
         r=sg.run(root,executable=executable)
         assert r['status']=='COMPLETED',r
+        assert r['schema_version']==1 and r['tool_version']=='1.140.0',r
+        assert r['ledger_link_status']=='NOT_LINKED',r
+        assert all(len(f['fingerprint'])==64 and f['occurrences']==1 for f in r['findings']),r
         actual={(f['path'],f['rule_id']) for f in r['findings']}
         expected={(name,'security-guardian.'+rule) for name,(_,rule) in CASES.items() if rule}
         assert actual==expected,(actual,expected)

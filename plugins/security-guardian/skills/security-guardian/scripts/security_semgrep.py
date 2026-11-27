@@ -3,6 +3,11 @@
 from __future__ import annotations
 import argparse
 import json
+import hashlib
+import os
+import signal
+import threading
+import time
 import re
 from pathlib import Path
 import shutil
@@ -13,6 +18,8 @@ DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / 'references' / 'semgre
 
 MAX_RESULTS = 2000
 MAX_JSON_CHARS = 16_000_000
+MAX_STDERR_BYTES = 1_000_000
+MAX_STDOUT_BYTES = 16_000_000
 RULE_ID = re.compile(r'[A-Za-z0-9_.-]{1,160}')
 SEVERITIES = {'INFO', 'WARNING', 'ERROR', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'INVENTORY', 'EXPERIMENT'}
 
@@ -24,6 +31,72 @@ def unique_object(pairs):
             raise ValueError('Duplicate JSON key')
         result[key] = value
     return result
+
+
+def bounded_capture(command, root, timeout):
+    """Cap captured bytes while reading, not after subprocess completion."""
+    process = subprocess.Popen(command, cwd=root, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, stdin=subprocess.DEVNULL,
+                               start_new_session=(os.name == 'posix'))
+    buffers = [bytearray(), bytearray()]
+    exceeded = threading.Event()
+    failed = threading.Event()
+    def drain(pipe, buffer, cap):
+        try:
+            while True:
+                chunk = pipe.read1(65536)
+                if not chunk:
+                    return
+                if len(buffer)+len(chunk)>cap:
+                    exceeded.set()
+                    return
+                buffer.extend(chunk)
+        except (OSError, ValueError):
+            failed.set()
+    readers = [threading.Thread(target=drain,args=(pipe,buf,cap),daemon=True)
+               for pipe,buf,cap in zip((process.stdout,process.stderr),buffers,
+                                      (MAX_STDOUT_BYTES,MAX_STDERR_BYTES))]
+    for reader in readers:
+        reader.start()
+    deadline=time.monotonic()+timeout
+    status='OK'
+    try:
+        while process.poll() is None or any(reader.is_alive() for reader in readers):
+            if exceeded.is_set() or failed.is_set():
+                status='OUTPUT_LIMIT' if exceeded.is_set() else 'ERROR'
+                break
+            if time.monotonic()>=deadline:
+                status='TIMEOUT'
+                break
+            time.sleep(0.01)
+        if exceeded.is_set():
+            status='OUTPUT_LIMIT'
+        elif failed.is_set() and status=='OK':
+            status='ERROR'
+    finally:
+        if status!='OK':
+            try:
+                if os.name=='posix':
+                    os.killpg(process.pid,signal.SIGKILL)
+                elif process.poll() is None:
+                    process.kill()
+            except ProcessLookupError:
+                pass
+        try:
+            process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=2)
+        for reader in readers:
+            reader.join(timeout=1)
+        for reader,pipe in zip(readers,(process.stdout,process.stderr)):
+            if not reader.is_alive():
+                pipe.close()
+        if any(reader.is_alive() for reader in readers):
+            status='ERROR'
+    if status!='OK':
+        return status, None, ''
+    return status,process.returncode,buffers[0].decode('utf-8',errors='strict')
 
 
 def normalize(root, stdout):
@@ -42,7 +115,11 @@ def normalize(root, stdout):
             raise ValueError('Invalid path coverage shape')
     except (ValueError, RecursionError):
         return {'status': 'ERROR', 'findings': [], 'limitations': ['Semgrep returned invalid JSON or coverage structure.']}
+    version = raw.get('version')
+    if not isinstance(version,str) or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]{1,40})?',version):
+        version = 'NOT_REPORTED'
     findings, rejected = [], 0
+    by_identity = {}
     for row in raw['results'][:MAX_RESULTS]:
         try:
             if not isinstance(row, dict):
@@ -67,8 +144,16 @@ def normalize(root, stdout):
         except (ValueError, OSError, RuntimeError):
             rejected += 1
             continue
-        findings.append({'rule_id': rid, 'path': relative, 'line': line,
-                         'severity': severity, 'confidence': 'AST_CANDIDATE_UNCONFIRMED'})
+        key = (rid, relative, line, severity)
+        if key in by_identity:
+            by_identity[key]['occurrences'] += 1
+            continue
+        fingerprint = hashlib.sha256(json.dumps(key,ensure_ascii=True,separators=(',',':')).encode()).hexdigest()
+        finding={'rule_id':rid,'path':relative,'line':line,'severity':severity,
+                 'confidence':'AST_CANDIDATE_UNCONFIRMED','fingerprint':fingerprint,
+                 'occurrences':1}
+        findings.append(finding)
+        by_identity[key]=finding
     capped = max(0, len(raw['results']) - MAX_RESULTS)
     coverage_missing = 'errors' not in raw or 'paths' not in raw or 'scanned' not in paths
     partial = bool(rejected or capped or errors or skipped or coverage_missing)
@@ -76,6 +161,7 @@ def normalize(root, stdout):
             'errors_count': len(errors), 'paths_scanned': len(scanned),
             'paths_skipped': len(skipped), 'rejected_results': rejected,
             'capped_results': capped, 'coverage_metadata_missing': coverage_missing,
+            'duplicate_results':sum(x['occurrences']-1 for x in findings), 'tool_version':version,
             'limitations': ['Local structural patterns produce candidates, not exploit proof or authorization verification.',
                             'Matched source snippets are intentionally not persisted.',
                             'Partial or absent coverage cannot establish a clean result.']}
@@ -86,23 +172,32 @@ def run(root: Path, *, executable='semgrep', timeout=120, config=DEFAULT_CONFIG)
     config = Path(config).resolve(strict=True)
     if not root.is_dir() or not config.is_file():
         raise ValueError('Root must be a directory and rules must be a local file')
-    if not shutil.which(executable):
+    resolved = shutil.which(executable)
+    if not resolved:
         return {'status': 'NOT_AVAILABLE', 'findings': [], 'limitations': ['Semgrep CLI is not installed; AST scan not performed.']}
-    command = [executable, 'scan', '--config', str(config), '--metrics=off',
+    command = [resolved, 'scan', '--config', str(config), '--metrics=off',
                '--json', '--quiet', '--disable-version-check', '--no-rewrite-rule-ids',
                '--timeout=15', '--max-target-bytes=900000',
                '--exclude=.security-guardian', '--exclude=.git', str(root)]
+    with config.open('rb') as config_file:
+        config_bytes = config_file.read(1_000_001)
+    if len(config_bytes)>1_000_000:
+        return {'status':'ERROR','findings':[],'limitations':['Local configuration exceeds size bound.']}
+    metadata={'schema_version':1,'tool':'semgrep','stdout_budget_bytes':MAX_STDOUT_BYTES,
+              'stderr_budget_bytes':MAX_STDERR_BYTES,'timeout_seconds':timeout,
+              'rule_config_sha256':hashlib.sha256(config_bytes).hexdigest(),
+              'ledger_link_status':'NOT_LINKED'}
+    def finish(data):
+        return {**data,**metadata}
     try:
-        completed = subprocess.run(command, cwd=root, capture_output=True,
-                                   text=True, timeout=timeout, check=False)
-    except subprocess.TimeoutExpired:
-        return {'status': 'TIMEOUT', 'findings': [], 'limitations': ['Semgrep timed out; coverage incomplete.']}
-    except (OSError, UnicodeError):
-        return {'status': 'ERROR', 'findings': [], 'limitations': ['Semgrep could not execute or returned undecodable output.']}
-    if completed.returncode not in (0, 1):
-        return {'status': 'ERROR', 'findings': [], 'limitations':
-                [f'Semgrep exited with code {completed.returncode}; review CLI locally (stderr redacted).']}
-    return normalize(root, completed.stdout)
+        status,code,stdout=bounded_capture(command,root,timeout)
+    except (OSError, UnicodeError, subprocess.TimeoutExpired):
+        return finish({'status':'ERROR','findings':[],'limitations':['Semgrep execution failed; raw output redacted.']})
+    if status!='OK':
+        return finish({'status':status,'findings':[],'limitations':['Semgrep capture incomplete; no clean verdict.']})
+    if code not in (0,1):
+        return finish({'status':'ERROR','findings':[],'limitations':[f'Semgrep exited with code {code}; raw output redacted.']})
+    return finish(normalize(root,stdout))
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

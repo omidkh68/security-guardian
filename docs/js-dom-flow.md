@@ -33,3 +33,7 @@ flowchart LR
 ```
 
 Fixtures exercise recognized sinks, branches, helper summaries and unsupported paths; no real-world accuracy claim.
+
+## Pack v5 — restricted DOM predicates (#34)
+
+Parenthesized and negated predicates, literal Boolean pruning, strict comparisons and modeled scalar source expressions extend the existing path-local DOM model. Unknown calls terminate the affected path as PARTIAL. Comparison reads are distinguished from writes during conservative global binding checks. Six new synthetic cases; no proof of sanitizer correctness or complete template coverage.
