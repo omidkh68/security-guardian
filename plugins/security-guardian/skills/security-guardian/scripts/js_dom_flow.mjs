@@ -37,8 +37,8 @@ function analyze(ts, file) {
           (n.text==='document'&&!['getElementById','querySelector'].includes(p.name.text))) shadow=true;
       if(p&&ts.isPropertyAccessExpression(p)&&p.expression===n){
         const q=p.parent;
-        if(q&&ts.isBinaryExpression(q)&&q.left===p) shadow=true;
-        if(q&&ts.isPropertyAccessExpression(q)&&q.expression===p&&q.parent&&ts.isBinaryExpression(q.parent)&&q.parent.left===q) shadow=true;
+        if(q&&ts.isBinaryExpression(q)&&q.left===p&&![ts.SyntaxKind.EqualsEqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(q.operatorToken.kind)) shadow=true;
+        if(q&&ts.isPropertyAccessExpression(q)&&q.expression===p&&q.parent&&ts.isBinaryExpression(q.parent)&&q.parent.left===q&&![ts.SyntaxKind.EqualsEqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(q.parent.operatorToken.kind)) shadow=true;
       }
     }
     if(ts.isIdentifier(n)&&transforms.has(n.text)){
