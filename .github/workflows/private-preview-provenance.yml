@@ -56,6 +56,20 @@ jobs:
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
           subject-path: preview/preview.tgz
+  verify:
+    needs: [build, attest]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: private-preview
+          path: preview
+      - run: cd preview && sha256sum --check SHA256SUMS
       - name: Verify signed provenance using GitHub CLI
         env:
           GH_TOKEN: ${{ github.token }}
@@ -64,10 +78,30 @@ jobs:
         run: |
           set -euo pipefail
           gh attestation verify preview/preview.tgz --repo "$REPO" --signer-workflow "$REPO/.github/workflows/private-preview-provenance.yml" --source-digest "$SHA" --source-ref refs/heads/main --format json > verification.json
-          python -c 'import json; x=json.load(open("verification.json")); assert isinstance(x,list) and x'
+          python - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          raw=Path('verification.json').read_bytes()
+          result=json.loads(raw)
+          if not isinstance(result,list) or not result:
+              raise ValueError('Missing successful verification result')
+          artifact=Path('preview/preview.tgz')
+          digest=hashlib.sha256(artifact.read_bytes()).hexdigest()
+          evidence={'schema_version':1,'kind':'PRIVATE_PREVIEW_PROVENANCE_VERIFICATION',
+                    'repository':os.environ['REPO'],'source_commit':os.environ['SHA'],
+                    'source_ref':'refs/heads/main','workflow_run_id':os.environ['GITHUB_RUN_ID'],
+                    'artifact_sha256':digest,
+                    'verification_sha256':hashlib.sha256(raw).hexdigest(),
+                    'verification':'GH_ATTESTATION_VERIFY_SUCCEEDED',
+                    'slsa_level':'NOT_ASSESSED','publication':'NOT_PERFORMED'}
+          Path('verification-evidence.json').write_text(json.dumps(evidence,indent=2,sort_keys=True))
+          print(json.dumps(evidence,sort_keys=True))
+          PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: preview-provenance-verification
-          path: verification.json
+          path: |
+            verification.json
+            verification-evidence.json
           if-no-files-found: error
           retention-days: 7

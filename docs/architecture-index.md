@@ -61,7 +61,7 @@ flowchart LR
 - [Indicator benchmark](benchmark.md)
 - [Verification matrix and optional Semgrep adapter](verification-matrix.md)
 
-Persistent native agent profiles (#32) remain a pending integration, not part of main.
+Persistent native agent profile implementation (#32) is merged on main; authenticated native-loader acceptance remains pending.
 
 ## Distribution
 
@@ -76,3 +76,7 @@ Run `python scripts/audit_documentation.py --require-clean` from the repository 
 ## Persistent profile (pending acceptance)
 
 - [Project profile](project-profile.md)
+
+## Mermaid browser validation (#54)
+
+CI extracts all tracked human-documentation Mermaid fences, checks the count against the structural audit, and runs the pinned Mermaid parser and SVG renderer in Chrome with strict configuration and blocked page requests. Results contain only document, line, source hash and validation status. The test includes valid and malformed diagrams. This validates syntax and SVG generation, not visual quality, anchor resolution or independent translation fidelity. CI evidence must be observed before claiming acceptance.
