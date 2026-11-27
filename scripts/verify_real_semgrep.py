@@ -24,8 +24,11 @@ CASES={
 def main():
     executable=shutil.which('semgrep')
     if not executable:raise RuntimeError('Required test tool missing')
-    v=subprocess.run([executable,'--version'],capture_output=True,text=True,check=True,timeout=30)
-    if v.stdout.strip()!='1.140.0':raise RuntimeError('Unexpected Semgrep version')
+    v=subprocess.run([executable,'--disable-version-check','--version'],capture_output=True,text=True,check=False,timeout=30)
+    if v.returncode or v.stdout.strip()!='1.140.0':
+        # Disposable environment; no target source or credentials have been loaded.
+        print('Synthetic version diagnostic:',v.returncode,v.stdout[-2000:],v.stderr[-4000:],file=sys.stderr)
+        raise RuntimeError('Pinned Semgrep CLI version check failed')
     with tempfile.TemporaryDirectory(prefix='sg-real-semgrep-') as tmp:
         root=Path(tmp).resolve()
         for name,(source,_) in CASES.items():(root/name).write_text(source+'\n',encoding='utf-8')
