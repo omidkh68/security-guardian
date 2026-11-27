@@ -237,3 +237,34 @@ test('recovery refuses active owner, foreign paths, malformed journals and symli
   assert.ok(fs.lstatSync(lock).isSymbolicLink());
   assert.ok(!fs.existsSync(target));
 });
+
+test('recovery validates all targets before writes and resumes after a recovery rename fails', t => {
+  const { root, project, home, run } = fixture(t);
+  const args = ['--agent', 'all', '--project', project, '--yes'];
+  ok(run(...args));
+  const targets = ['.claude', '.agents'].map(config => path.join(project, config, 'skills', 'security-guardian'));
+  for (const target of targets) fs.writeFileSync(path.join(target, 'local-note.txt'), target);
+  const hook = path.join(root, 'crash.cjs');
+  fs.writeFileSync(hook, "const fs = require('node:fs'); const rename = fs.renameSync; let n = 0; fs.renameSync = function(...args) { rename.apply(fs, args); if (++n === 4) process.exit(86); };");
+  const spawn = (hook, args) => spawnSync(process.execPath, ['--require', hook, cli, ...args], {
+    encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home }, timeout: 15000
+  });
+  assert.equal(spawn(hook, [...args, '--upgrade']).status, 86);
+  const lock = path.join(project, '.security-guardian-install.lock');
+  const raw = fs.readFileSync(lock, 'utf8');
+  const records = raw.trim().split('\n').map(JSON.parse);
+  const bad = structuredClone(records);
+  bad.find(x => x.phase === 'backup-intent').backup = path.join(root, 'outside');
+  fs.writeFileSync(lock, bad.map(x => JSON.stringify(x)).join('\n') + '\n');
+  const recover = ['--recover', '--project', project, '--yes'];
+  denied(run(...recover));
+  for (const target of targets) assert.ok(!fs.existsSync(path.join(target, 'local-note.txt')));
+  fs.writeFileSync(lock, raw);
+  const failHook = path.join(root, 'recovery-fail.cjs');
+  fs.writeFileSync(failHook, "const fs = require('node:fs'); const rename = fs.renameSync; let n = 0; fs.renameSync = function(...args) { if (++n === 2) throw new Error('recovery fault'); return rename.apply(fs, args); };");
+  denied(spawn(failHook, recover));
+  assert.equal(fs.readFileSync(lock, 'utf8'), raw);
+  assert.ok(!fs.existsSync(path.join(project, '.security-guardian-recovery.lock')));
+  assert.equal(JSON.parse(ok(run(...recover))).action, 'RECOVERED');
+  for (const target of targets) assert.equal(fs.readFileSync(path.join(target, 'local-note.txt'), 'utf8'), target);
+});
