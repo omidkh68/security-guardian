@@ -71,5 +71,31 @@ class ReleaseEvidenceTests(unittest.TestCase):
                     b.sql_summary(bad,'head',hashes)
 
 
+    def test_dom_positive_only_preserves_misses_and_rejects_drift(self):
+        hashes={'security_js_flow.py':'scanner','js_dom_flow.mjs':'dom'}
+        files=[{'file':name,'source_git_blob':blob,'source_sha256':'a'*64,
+                'coverage_status':'PARTIAL','unlabeled_candidate_count':0}
+               for name,blob in b.DOM_FILES.items()]
+        rows=[{'file':name,'line':line,'expected':'AUTHOR_ALERT',
+               'observed_candidate':line==1,'classification':'tp' if line==1 else 'fn',
+               'coverage_status':'PARTIAL'}
+              for name in b.DOM_FILES for line in (1,2)]
+        report={'schema_version':1,'kind':'EXTERNAL_AUTHOR_LABELED_DOM_POSITIVE_PROBE',
+                'revision':b.DOM_REV,'engine_commit':'head','engine_sha256':hashes,
+                'parser_sha256':'parser','precision':None,'negative_labels':0,
+                'scope_isolation':{'passed':2,'total':2},'files':files,'cases':rows,
+                'positive_labels':4,'matched':2,'missed':2,'elapsed_seconds':0.5,
+                'candidate_overlap':{'numerator':2,'denominator':4,'value':0.5}}
+        result=b.dom_summary(report,'head',hashes,'parser')
+        self.assertEqual(result['partial_misses'],2)
+        self.assertIsNone(result['precision'])
+        self.assertEqual(result['codeql_execution'],'NOT_RUN')
+        for field,value in [('matched',4),('precision',1),('negative_labels',1),
+                            ('engine_commit','old'),('elapsed_seconds',float('nan')),
+                            ('cases',rows[:-1]+[rows[0]])]:
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                b.dom_summary({**report,field:value},'head',hashes,'parser')
+
+
 if __name__=='__main__':
     unittest.main()
