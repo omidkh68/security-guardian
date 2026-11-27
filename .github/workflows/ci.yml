@@ -50,6 +50,22 @@ jobs:
           path: ${{ runner.temp }}/documentation-audit.json
           if-no-files-found: error
           retention-days: 7
+      - name: Parse and render tracked Mermaid diagrams in isolated browser
+        if: matrix.python-version == '3.12'
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s scripts -p test_mermaid_inventory.py -v
+          python scripts/export_mermaid_inventory.py > "$RUNNER_TEMP/mermaid-input.json"
+          npm install --prefix "$RUNNER_TEMP/sg-mermaid" --no-save --ignore-scripts --no-audit --no-fund mermaid@11.17.2 puppeteer-core@24.31.0
+          node scripts/validate_mermaid_browser.mjs "$RUNNER_TEMP/mermaid-input.json" "$RUNNER_TEMP/sg-mermaid" "$RUNNER_TEMP/documentation-audit.json" | tee "$RUNNER_TEMP/mermaid-validation.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always() && matrix.python-version == '3.12'
+        with:
+          name: mermaid-validation
+          path: ${{ runner.temp }}/mermaid-validation.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Install optional PDF renderer for reporting tests
         run: python -m pip install -r requirements-pdf.txt 'pypdf>=5,<7'
       - name: Run offline tests
