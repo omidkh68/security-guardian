@@ -119,3 +119,67 @@ test('mixed missing upgrade and symlink lock fail without side effects', t => {
   assert.ok(fs.lstatSync(lock).isSymbolicLink());
   assert.ok(!fs.existsSync(path.join(project, '.agents')));
 });
+
+test('abrupt exit after backup rename retains journal and original files', t => {
+  const { root, project, home, run } = fixture(t);
+  const args = ['--agent', 'claude', '--project', project, '--yes'];
+  ok(run(...args));
+  const target = path.join(project, '.claude', 'skills', 'security-guardian');
+  fs.writeFileSync(path.join(target, 'local-note.txt'), 'preserve original');
+  const hook = path.join(root, 'crash-hook.cjs');
+  fs.writeFileSync(hook, `const fs = require('node:fs');
+const original = fs.renameSync;
+fs.renameSync = function(from, to) {
+  original.call(fs, from, to);
+  process.exit(86);
+};`);
+  const crashed = spawnSync(process.execPath, ['--require', hook, cli, ...args, '--upgrade'], {
+    encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home }, timeout: 15000
+  });
+  assert.equal(crashed.status, 86, crashed.stderr);
+  const lock = path.join(project, '.security-guardian-install.lock');
+  const evidence = fs.readFileSync(lock, 'utf8');
+  const records = evidence.trim().split('\n').map(JSON.parse);
+  const intent = records.find(x => x.phase === 'backup-intent');
+  assert.ok(intent);
+  assert.equal(intent.target, target);
+  assert.equal(fs.readFileSync(path.join(intent.backup, 'local-note.txt'), 'utf8'), 'preserve original');
+  assert.ok(!fs.existsSync(target));
+  assert.ok(fs.existsSync(intent.stage));
+  assert.ok(!records.some(x => x.phase === 'committed'));
+  const refused = run('--agent', 'codex', '--project', project, '--yes');
+  denied(refused);
+  assert.match(refused.stderr, /Installation lock exists/);
+  assert.equal(fs.readFileSync(lock, 'utf8'), evidence);
+  assert.ok(!fs.existsSync(path.join(project, '.agents')));
+});
+
+test('incomplete rollback retains recovery evidence rather than unlocking', t => {
+  const { root, project, home, run } = fixture(t);
+  const args = ['--agent', 'claude', '--project', project, '--yes'];
+  ok(run(...args));
+  const target = path.join(project, '.claude', 'skills', 'security-guardian');
+  fs.writeFileSync(path.join(target, 'local-note.txt'), 'keep');
+  const hook = path.join(root, 'rollback-hook.cjs');
+  fs.writeFileSync(hook, `const fs = require('node:fs');
+const original = fs.renameSync;
+let calls = 0;
+fs.renameSync = function(from, to) {
+  if (++calls > 1) throw new Error('simulated rename failure');
+  return original.call(fs, from, to);
+};`);
+  const failed = spawnSync(process.execPath, ['--require', hook, cli, ...args, '--upgrade'], {
+    encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home }, timeout: 15000
+  });
+  denied(failed);
+  assert.match(failed.stderr, /rollback incomplete/);
+  const lock = path.join(project, '.security-guardian-install.lock');
+  const evidence = fs.readFileSync(lock, 'utf8');
+  const records = evidence.trim().split('\n').map(JSON.parse);
+  const intent = records.find(x => x.phase === 'backup-intent');
+  assert.ok(intent);
+  assert.ok(records.some(x => x.phase === 'rollback-incomplete'));
+  assert.equal(fs.readFileSync(path.join(intent.backup, 'local-note.txt'), 'utf8'), 'keep');
+  denied(run('--agent', 'codex', '--project', project, '--yes'));
+  assert.equal(fs.readFileSync(lock, 'utf8'), evidence);
+});
