@@ -115,6 +115,9 @@ def normalize(root, stdout):
             raise ValueError('Invalid path coverage shape')
     except (ValueError, RecursionError):
         return {'status': 'ERROR', 'findings': [], 'limitations': ['Semgrep returned invalid JSON or coverage structure.']}
+    version = raw.get('version')
+    if not isinstance(version,str) or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]{1,40})?',version):
+        version = 'NOT_REPORTED'
     findings, rejected = [], 0
     by_identity = {}
     for row in raw['results'][:MAX_RESULTS]:
@@ -158,7 +161,7 @@ def normalize(root, stdout):
             'errors_count': len(errors), 'paths_scanned': len(scanned),
             'paths_skipped': len(skipped), 'rejected_results': rejected,
             'capped_results': capped, 'coverage_metadata_missing': coverage_missing,
-            'duplicate_results':sum(x['occurrences']-1 for x in findings),
+            'duplicate_results':sum(x['occurrences']-1 for x in findings), 'tool_version':version,
             'limitations': ['Local structural patterns produce candidates, not exploit proof or authorization verification.',
                             'Matched source snippets are intentionally not persisted.',
                             'Partial or absent coverage cannot establish a clean result.']}
@@ -169,15 +172,20 @@ def run(root: Path, *, executable='semgrep', timeout=120, config=DEFAULT_CONFIG)
     config = Path(config).resolve(strict=True)
     if not root.is_dir() or not config.is_file():
         raise ValueError('Root must be a directory and rules must be a local file')
-    if not shutil.which(executable):
+    resolved = shutil.which(executable)
+    if not resolved:
         return {'status': 'NOT_AVAILABLE', 'findings': [], 'limitations': ['Semgrep CLI is not installed; AST scan not performed.']}
-    command = [executable, 'scan', '--config', str(config), '--metrics=off',
+    command = [resolved, 'scan', '--config', str(config), '--metrics=off',
                '--json', '--quiet', '--disable-version-check', '--no-rewrite-rule-ids',
                '--timeout=15', '--max-target-bytes=900000',
                '--exclude=.security-guardian', '--exclude=.git', str(root)]
+    with config.open('rb') as config_file:
+        config_bytes = config_file.read(1_000_001)
+    if len(config_bytes)>1_000_000:
+        return {'status':'ERROR','findings':[],'limitations':['Local configuration exceeds size bound.']}
     metadata={'schema_version':1,'tool':'semgrep','stdout_budget_bytes':MAX_STDOUT_BYTES,
               'stderr_budget_bytes':MAX_STDERR_BYTES,'timeout_seconds':timeout,
-              'rule_config_sha256':hashlib.sha256(config.read_bytes()).hexdigest(),
+              'rule_config_sha256':hashlib.sha256(config_bytes).hexdigest(),
               'ledger_link_status':'NOT_LINKED'}
     def finish(data):
         return {**data,**metadata}
