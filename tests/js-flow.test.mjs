@@ -158,7 +158,7 @@ test('DOM v6 browser provenance and fresh partial segments',{skip:!parser},t=>{
     ['location-string',source+'el.innerHTML=window.location.toString();'+close,1,false],
     ['descendant',source+'const child=el.getElementsByTagName("p")[0]; child.innerHTML=window.name;'+close,1,false],
     ['unknown-parent',source+'const child=other.getElementsByTagName("p")[0]; child.innerHTML=window.name;'+close,0,true],
-    ['fresh-segment','function render(){unknown(); const el=document.getElementById("x"); el.innerHTML=window.location.hash; el.innerHTML=window.location.search;}',2,true],
+    ['fresh-segment','function render(){unknown(); const el=document.getElementById("x"); el.innerHTML=window.location.hash;\n el.innerHTML=window.location.search;}',2,true],
     ['no-stale-binding',source+'unknown(); el.innerHTML=window.location.hash;'+close,0,true],
     ['return-barrier','function render(){unknown(); return; const el=document.getElementById("x"); el.innerHTML=window.location.hash;}',0,true],
     ['shadowed-source','function render(window){const el=document.getElementById("x"); el.innerHTML=window.name;}',0,true],
