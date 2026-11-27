@@ -37,8 +37,8 @@ def main():
         before={p.relative_to(root).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file()}
         r=sg.run(root,executable=executable)
         assert r['status']=='COMPLETED',r
-        actual={(f['path'],f['rule_id'].split('.')[-1]) for f in r['findings']}
-        expected={(name,rule) for name,(_,rule) in CASES.items() if rule}
+        actual={(f['path'],f['rule_id']) for f in r['findings']}
+        expected={(name,'security-guardian.'+rule) for name,(_,rule) in CASES.items() if rule}
         assert actual==expected,(actual,expected)
         assert len(r['findings'])==len(expected),r
         assert all(f['line']==1 and f['confidence']=='AST_CANDIDATE_UNCONFIRMED' for f in r['findings'])
