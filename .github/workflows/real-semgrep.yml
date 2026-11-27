@@ -23,7 +23,8 @@ jobs:
       - name: Install optional pinned scanner in runner-only environment
         run: |
           python -m venv "$RUNNER_TEMP/sg-semgrep"
-          "$RUNNER_TEMP/sg-semgrep/bin/python" -m pip install 'semgrep==1.140.0'
+          "$RUNNER_TEMP/sg-semgrep/bin/python" -m pip install 'semgrep==1.140.0' 'pydantic==2.12.5'
+          "$RUNNER_TEMP/sg-semgrep/bin/python" -m pip check
       - name: Execute local rules with no outbound network or inherited credentials
         shell: bash
         run: |
