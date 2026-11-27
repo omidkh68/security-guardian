@@ -123,17 +123,37 @@ function mkdirTracked(dir, created) {
 function install(options, base, files) {
   // The lock coordinates this CLI, not other programs or hostile filesystem actors.
   const lock = path.join(base, '.security-guardian-install.lock');
-  const fd = fs.openSync(lock, 'wx', 0o600);
+  let fd;
+  try { fd = fs.openSync(lock, 'wx', 0o600); }
+  catch (error) {
+    if (error.code === 'EEXIST') fail('Installation lock exists; another installer may be active or interrupted. Preserve the lock and inspect installation/backups before recovery: ' + lock);
+    throw error;
+  }
+  // Append-only recovery evidence; never trust journal paths as deletion instructions.
+  const transaction = randomUUID();
+  const record = (phase, details = {}) => {
+    const line = Buffer.from(JSON.stringify({ schema: 1, transaction, phase, ...details }) + '\n');
+    let offset = 0;
+    while (offset < line.length) {
+      const written = fs.writeSync(fd, line, offset, line.length - offset);
+      if (written <= 0) fail('Unable to write installation journal.');
+      offset += written;
+    }
+    fs.fsyncSync(fd);
+  };
+  let preserveLock = false;
   const created = [];
   const work = [];
   try {
     checkAncestors(base);
     const targets = plan(options, base);
+    record('begin', { pid: process.pid, base, targets: targets.map(x => ({ target: x.target, existing: x.existing })) });
     for (const target of targets) {
       mkdirTracked(target.parent, created);
       const stage = fs.mkdtempSync(path.join(target.parent, '.security-guardian-stage-'));
       const item = { ...target, stage, backup: null, installed: false, moved: false };
       work.push(item);
+      record('stage-created', { target: item.target, stage });
       for (const rel of files) {
         const dest = path.join(stage, rel);
         fs.mkdirSync(path.dirname(dest), { recursive: true, mode: 0o700 });
@@ -150,12 +170,17 @@ function install(options, base, files) {
     plan(options, base);
     for (const item of work) {
       if (item.existing) {
+        record('backup-intent', { target: item.target, backup: item.backup, stage: item.stage });
         fs.renameSync(item.target, item.backup);
         item.moved = true;
+        record('backup-moved', { target: item.target, backup: item.backup });
       }
+      record('install-intent', { target: item.target, stage: item.stage, backup: item.backup });
       fs.renameSync(item.stage, item.target);
       item.installed = true;
+      record('installed', { target: item.target, backup: item.backup });
     }
+    record('committed');
     return work.map(x => ({ target: x.target, backup: x.backup }));
   } catch (error) {
     const rollback = [];
@@ -169,11 +194,15 @@ function install(options, base, files) {
     for (const dir of created.reverse()) {
       try { fs.rmdirSync(dir); } catch { /* preserve non-empty directories */ }
     }
-    if (rollback.length) fail('Installation failed; rollback incomplete: ' + rollback.join('; '));
+    if (rollback.length) {
+      preserveLock = true;
+      try { record('rollback-incomplete', { errors: rollback }); } catch { /* preserve existing evidence */ }
+      fail('Installation failed; rollback incomplete; recovery journal retained at ' + lock + ': ' + rollback.join('; '));
+    }
     throw error;
   } finally {
     fs.closeSync(fd);
-    fs.unlinkSync(lock);
+    if (!preserveLock) fs.unlinkSync(lock);
   }
 }
 try {
