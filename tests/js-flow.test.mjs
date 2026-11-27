@@ -133,3 +133,20 @@ test('URI transformations preserve candidate flow and reject shadowing',{skip:!p
     if(count){assert.equal(r.status,'PARTIAL');assert.equal(r.signals[0].sanitizer_evidence,'NONE_OBSERVED');}
   }
 });
+
+test('DOM v5 restricted conditions retain provenance and reject unknown effects',{skip:!parser},t=>{
+  for(const [label,body,count,partial] of [
+    ['request predicate','if(window.location.hash){el.innerHTML=window.location.hash;}',1,false],
+    ['strict comparison','if(window.location.search==="x"){el.innerHTML=window.location.hash;}',1,false],
+    ['negated false','if(!false){el.innerHTML=window.location.hash;}',1,false],
+    ['negated true','if(!true){el.innerHTML=window.location.hash;}',0,false],
+    ['unknown condition','if(mutate()){el.innerHTML=window.location.hash;}',0,true],
+    ['overwrite','let q=window.location.hash; if(window.location.search==="x"){q="a";}else{q="b";} el.innerHTML=q;',0,false]
+  ]){
+    const r=run(fixture(t,source+body+close));
+    assert.equal(r.pack_version,5,label);
+    assert.equal(r.signals.length,count,label);
+    assert.equal(r.status==='PARTIAL',partial,label);
+  }
+  console.log('DOM_PREDICATE_CASES=6');
+});
