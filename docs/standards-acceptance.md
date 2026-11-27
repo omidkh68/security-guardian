@@ -64,3 +64,7 @@ Optional CI validates both projections against the pinned OASIS schema and runs 
 ## Separate read-only provenance verification (#160)
 
 The private preview workflow now separates build, signing and verification into three jobs. Only the signing job has token and attestation write permissions; verification downloads the exact private preview again, checks its digest, and runs `gh attestation verify` against the repository, signer workflow, main ref and exact source commit. A companion receipt binds the artifact SHA-256, verification JSON hash and workflow run ID. Main execution is required before claiming successful verification; no public npm publication or SLSA level claim.
+
+## Shipped file inventory (#157–158)
+
+Preview evidence now enumerates and hashes every regular file in the exact npm tarball, including shipped Python, JavaScript and reference assets. Unsafe paths, duplicate members, links and oversized archives fail before inventory acceptance. The declared package license is separate from file-level NOASSERTION. This is a companion inventory, not a modification of the npm-generated SPDX or CycloneDX SBOM or a full Python dependency/license adjudication. Final published artifact validation remains pending.
