@@ -144,9 +144,33 @@ test('DOM v5 restricted conditions retain provenance and reject unknown effects'
     ['overwrite','let q=window.location.hash; if(window.location.search==="x"){q="a";}else{q="b";} el.innerHTML=q;',0,false]
   ]){
     const r=run(fixture(t,source+body+close));
-    assert.equal(r.pack_version,5,label);
+    assert.equal(r.pack_version,6,label);
     assert.equal(r.signals.length,count,label);
     assert.equal(r.status==='PARTIAL',partial,label);
   }
   console.log('DOM_PREDICATE_CASES=6');
+});
+
+test('DOM v6 browser provenance and fresh partial segments',{skip:!parser},t=>{
+  const cases=[
+    ['window-name',source+'el.innerHTML=window.name;'+close,1,false],
+    ['document-location',source+'el.innerHTML=document.location.search;'+close,1,false],
+    ['location-string',source+'el.innerHTML=window.location.toString();'+close,1,false],
+    ['descendant',source+'const child=el.getElementsByTagName("p")[0]; child.innerHTML=window.name;'+close,1,false],
+    ['unknown-parent',source+'const child=other.getElementsByTagName("p")[0]; child.innerHTML=window.name;'+close,0,true],
+    ['fresh-segment','function render(){unknown(); const el=document.getElementById("x"); el.innerHTML=window.location.hash; el.innerHTML=window.location.search;}',2,true],
+    ['no-stale-binding',source+'unknown(); el.innerHTML=window.location.hash;'+close,0,true],
+    ['return-barrier','function render(){unknown(); return; const el=document.getElementById("x"); el.innerHTML=window.location.hash;}',0,true],
+    ['shadowed-source','function render(window){const el=document.getElementById("x"); el.innerHTML=window.name;}',0,true],
+    ['write-source','function render(){window.name="fixed";const el=document.getElementById("x");el.innerHTML=window.name;}',0,true],
+    ['safe-segment','function render(){unknown();const el=document.getElementById("x");el.textContent=window.name;}',0,true]
+  ];
+  for(const [label,code,count,partial] of cases){
+    const r=run(fixture(t,code));
+    assert.equal(r.pack_version,6,label);
+    assert.equal(r.signals.length,count,label);
+    assert.equal(r.status==='PARTIAL',partial,label);
+    assert.ok(r.signals.every(x=>x.status==='HEURISTIC_REVIEW_ONLY'),label);
+  }
+  console.log('DOM_BROWSER_PROVENANCE_CASES=11');
 });
