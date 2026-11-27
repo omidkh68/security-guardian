@@ -22,3 +22,7 @@ flowchart LR
 ```
 
 Fixtures distinguish SQL text, bound parameters, local helpers and unsupported receivers; no SQL execution.
+
+## Node SQL pack v3 — bounded control flow (#34)
+
+Path-local states support `if`/`else`, nested blocks, early returns, literal Boolean pruning and restricted side-effect-free conditions. Unknown conditions or statements terminate the affected path as PARTIAL; other modeled paths retain evidence. Branch-local bindings do not escape their block. Maximum 64 paths, 4096 statement steps and depth 32; exhaustion is PARTIAL with `path_limit`. This is not feasibility solving, whole-program taint, loop/exception handling or arbitrary side-effect analysis. Existing rule IDs and historical regression labels remain unchanged. Thirteen additional synthetic cases exercise detection, parameterization, overwrite, early exits, deduplication, scope and budgets using the actual pinned TypeScript parser in CI. No fixture code executes.
