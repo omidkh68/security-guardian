@@ -104,3 +104,7 @@ flowchart LR
  D --> E[New control or extension backlog]
  E --> F[Authorized tests still NOT_RUN]
 ```
+
+## Cumulative ASVS review plan (#149)
+
+Use `python3 <skill-dir>/scripts/security_asvs.py --source /path/to/pinned-asvs.json --review-level 2` to produce a cumulative Level 1+2 review worklist, including every unmapped selected requirement. Levels 1, 2 and 3 are explicit review selections; higher-level IDs remain listed separately. Each selected requirement identifies the next mapping/applicability review action and retains NOT_ASSESSED/NOT_VERIFIED. No inferred assurance level, assessment or compliance. Default full inventory is unchanged. Offline regression tests cover selection and unknown states; CI pending.
