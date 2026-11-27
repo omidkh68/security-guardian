@@ -572,7 +572,7 @@ function analyze(ts,file){
           if(ts.isVariableStatement(s)&&(s.declarationList.flags&(ts.NodeFlags.Const|ts.NodeFlags.Let))){
             let ok=true;
             for(const d of s.declarationList.declarations){
-              const n=id(d.name),v=value(d.initializer);
+              const n=id(d.name),v=d.initializer?value(d.initializer):null;
               if(!n||n===param||names.has(n)||env.has(n)||v===null){ok=false;break;}
               env.set(n,v);if(s.declarationList.flags&ts.NodeFlags.Let)mutable.add(n);
             }
