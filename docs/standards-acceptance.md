@@ -60,3 +60,7 @@ The default SARIF output remains location-free. For explicitly reviewed disclosu
 ```
 
 Optional CI validates both projections against the pinned OASIS schema and runs the actual Microsoft [sarif-tools 3.0.0](https://pypi.org/project/sarif-tools/3.0.0/) CSV consumer against synthetic data, checking the two records and their distinct statuses and paths. This does not test every consumer. The CVSS test suite now contains twelve vectors, eleven from [FIRST examples, document v1.9](https://www.first.org/cvss/v4.0/examples) and one synthetic zero-impact vector; Base, Threat, Environmental and combined cases are represented. The optional pinned calculator, explicit vector policy and evidence limits are unchanged. A curated reference set is not exhaustive validation. CI results must be observed before claiming these tests passed.
+
+## Portable SARIF paths and explicit CVSS output checks (#155–156)
+
+The opt-in location sidecar rejects Windows reserved device names in every path segment. Fingerprint identity remains stable when the ledger status or severity changes. CVSS output is checked for finite one-decimal scores within 0–10 and matching qualitative severity. Environmental metric membership is explicit; supplemental metrics and explicit Not Defined values do not change the B/BT/BE/BTE nomenclature. New regression tests exercise these boundaries and malformed calculator output. This is not exhaustive scoring validation or GitHub code scanning import evidence.

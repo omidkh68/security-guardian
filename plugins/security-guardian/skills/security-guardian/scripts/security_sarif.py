@@ -9,6 +9,7 @@ import security_standards as standards
 
 STATUSES={'CANDIDATE','NEEDS_REVIEW','CONFIRMED_OPEN','FIXED_UNVERIFIED','BLOCKED','DEFERRED','ACCEPTED_RISK'}
 LEVELS={'CRITICAL':'error','HIGH':'error','MEDIUM':'warning','LOW':'note','INFO':'note','UNKNOWN':'warning'}
+WINDOWS_RESERVED={'CON','PRN','AUX','NUL',*(f'COM{i}' for i in range(1,10)),*(f'LPT{i}' for i in range(1,10))}
 SCHEMA='https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json'
 
 def reviewed_locations(sidecar,source_sha256):
@@ -24,7 +25,7 @@ def reviewed_locations(sidecar,source_sha256):
         path,line=location['path'],location['line']
         if (not isinstance(path,str) or len(path)>240 or
             not re.fullmatch(r'[A-Za-z0-9_-][A-Za-z0-9_.-]*(?:/[A-Za-z0-9_-][A-Za-z0-9_.-]*)*',path)
-            or any(p.lower() in {'node_modules','vendor','secrets','credentials'} or p.endswith('.') or
+            or any(p.lower() in {'node_modules','vendor','secrets','credentials'} or p.endswith('.') or p.split('.',1)[0].upper() in WINDOWS_RESERVED or
                    p.lower().split('.')[-1] in {'pem','key','p12','pfx','env','crt','cer'}
                    for p in path.split('/'))
             or type(line) is not int or not 1<=line<=10_000_000):
