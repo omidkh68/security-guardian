@@ -35,6 +35,17 @@ class DocumentationAuditTests(unittest.TestCase):
             self.assertEqual(r["pairs"], 1)
             self.assertEqual(r["missing_persian"], ["docs/guide.md"])
 
+    def test_structural_gate_rejects_each_defect_and_empty_inventory(self):
+        baseline = dict(documents=2, pairs=1, missing_persian=[],
+                        orphan_persian=[], problems=[])
+        self.assertTrue(audit.structural_ok(baseline))
+        for field, value in [('documents', 0), ('pairs', 0),
+                             ('missing_persian', ['docs/a.md']),
+                             ('orphan_persian', ['docs/b-FA.md']),
+                             ('problems', [{'kind': 'UNCLOSED_FENCE'}])]:
+            with self.subTest(field=field):
+                self.assertFalse(audit.structural_ok({**baseline, field: value}))
+
 
 if __name__ == "__main__":
     unittest.main()

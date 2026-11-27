@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import time
 import urllib.request
 from benchmark_scanner import ROOT, SKILL, digest
 import security_js_flow as dom
@@ -30,6 +31,7 @@ def fetch(name):
     return raw
 
 def evaluate(parser):
+    started=time.monotonic()
     rows=[]
     files=[]
     for name,blob in FILES.items():
@@ -65,6 +67,8 @@ def evaluate(parser):
             'positive_labels':len(rows),'matched':hits,'missed':len(rows)-hits,
             'candidate_overlap':{'numerator':hits,'denominator':len(rows),'value':hits/len(rows)},
             'precision':None,'negative_labels':0,'independent_blind_holdout':'NOT_RUN',
+            'elapsed_seconds':round(time.monotonic()-started,6),
+            'scope_isolation':{'passed':len(files),'total':len(FILES)},
             'limitations':['External author labels, not independent adjudication of this scanner.',
                            'Includes out-of-model sources and whole-file context; misses remain misses.',
                            'No labels for negatives; no precision/F1 or general accuracy claim.',

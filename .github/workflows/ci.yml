@@ -41,7 +41,8 @@ jobs:
         if: matrix.python-version == '3.12'
         run: |
           python -m unittest discover -s scripts -p test_documentation_audit.py -v
-          python scripts/audit_documentation.py | tee "$RUNNER_TEMP/documentation-audit.json"
+          set -o pipefail
+          python scripts/audit_documentation.py --require-clean | tee "$RUNNER_TEMP/documentation-audit.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: matrix.python-version == '3.12'
         with:
@@ -154,8 +155,9 @@ jobs:
           PARSER="$RUNNER_TEMP/sg-evidence-typescript/node_modules/typescript/lib/typescript.js"
           python scripts/benchmark_scanner.py > "$REPORTS/indicator.json"
           python scripts/benchmark_holdout.py --synthetic all --require-synthetic-regression --typescript-module "$PARSER" > "$REPORTS/semantic.json"
+          python scripts/benchmark_external_dom.py --typescript-module "$PARSER" | tee "$REPORTS/external_dom.json"
+          cp "$REPORTS/external_dom.json" "$RUNNER_TEMP/external-dom-probe.json"
           python scripts/benchmark_release_evidence.py --reports "$REPORTS" --typescript-module "$PARSER" | tee "$RUNNER_TEMP/benchmark-evidence.json"
-          python scripts/benchmark_external_dom.py --typescript-module "$PARSER" | tee "$RUNNER_TEMP/external-dom-probe.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: matrix.python-version == '3.12'
         with:
