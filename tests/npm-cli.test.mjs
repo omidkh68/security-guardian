@@ -14,7 +14,7 @@ function fixture(t) {
   const project = path.join(root, 'project');
   const home = path.join(root, 'home');
   fs.mkdirSync(project); fs.mkdirSync(home);
-  const run = (...args) => spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8', env: { ...process.env, HOME: home }, timeout: 15000 });
+  const run = (...args) => spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home }, timeout: 15000 });
   return { root, project, home, run };
 }
 function ok(result) { assert.equal(result.status, 0, result.stderr); return result.stdout; }

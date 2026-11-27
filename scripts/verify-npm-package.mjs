@@ -7,11 +7,21 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const prefix = 'plugins/security-guardian/skills/security-guardian/';
+const python = process.platform === 'win32' ? 'python' : 'python3';
 const tmp = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'sg-pack-'));
 const env = { ...process.env, npm_config_cache: path.join(tmp, 'cache'), npm_config_offline: 'true',
   npm_config_ignore_scripts: 'true', npm_config_audit: 'false', npm_config_fund: 'false' };
+function invoke(command, args, cwd = root, extra = {}) {
+  // Invoke npm's JavaScript entrypoints directly; avoid cmd.exe interpolation.
+  const npmCommand = ['npm', 'npx'].includes(command);
+  if (process.platform === 'win32' && npmCommand) {
+    const entry = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', command + '-cli.js');
+    return spawnSync(process.execPath, [entry, ...args], { cwd, env: { ...env, ...extra }, encoding: 'utf8', timeout: 90000 });
+  }
+  return spawnSync(command, args, { cwd, env: { ...env, ...extra }, encoding: 'utf8', timeout: 90000 });
+}
 function run(command, args, cwd = root, extra = {}) {
-  const r = spawnSync(command, args, { cwd, env: { ...env, ...extra }, encoding: 'utf8', timeout: 90000 });
+  const r = invoke(command, args, cwd, extra);
   assert.equal(r.status, 0, r.stderr || String(r.error || 'command failed'));
   return r.stdout;
 }
@@ -22,7 +32,7 @@ try {
   assert.equal(pkg.version, fs.readFileSync(path.join(root, prefix, 'VERSION'), 'utf8').trim());
   assert.deepEqual(pkg.dependencies ?? {}, {});
   for (const key of ['preinstall', 'install', 'postinstall', 'prepare', 'prepack', 'postpack']) assert.ok(!pkg.scripts?.[key]);
-  const tracked = run('git', ['ls-files']).trim().split('\n');
+  const tracked = run('git', ['ls-files']).trim().split(/\r?\n/);
   const runtime = tracked.filter(p => p.startsWith(prefix) && (
     /^(SKILL\.md|VERSION|LICENSE)$/.test(p.slice(prefix.length)) ||
     /^references\/.+\.(md|json|yaml)$/.test(p.slice(prefix.length)) ||
@@ -49,7 +59,7 @@ try {
     }
     // Exercise the packed executable, not just the source CLI, on repeat and upgrade.
     const installArgs = [...args, '--agent', 'all', '--project', project, '--yes'];
-    const repeated = spawnSync('npx', installArgs, { cwd: project, env, encoding: 'utf8', timeout: 90000 });
+    const repeated = invoke('npx', installArgs, project);
     assert.equal(repeated.status, 2, repeated.stderr);
     for (const config of ['.claude', '.agents']) {
       const installed = path.join(project, config, 'skills/security-guardian');
@@ -68,7 +78,7 @@ try {
     }
     const home = path.join(tmp, 'isolated-home');
     fs.mkdirSync(home);
-    const userEnv = { HOME: home };
+    const userEnv = { HOME: home, USERPROFILE: home };
     run('npx', [...args, '--agent', 'all', '--user', '--yes'], project, userEnv);
     for (const config of ['.claude', '.agents']) {
       for (const p of runtime) assert.deepEqual(fs.readFileSync(path.join(home, config, 'skills/security-guardian', p.slice(prefix.length))), fs.readFileSync(path.join(root, p)));
@@ -77,11 +87,11 @@ try {
     const skill = path.join(project, '.agents/skills/security-guardian');
     fs.writeFileSync(path.join(project, 'package.json'), '{"dependencies":{"react":"19"}}');
     fs.writeFileSync(path.join(project, 'app.ts'), 'const safe = true;\n');
-    const scan = JSON.parse(run('python3', [path.join(skill, 'scripts/security_scan.py'), '--root', project, '--discover', '--profile', 'frontend'], project));
+    const scan = JSON.parse(run(python, [path.join(skill, 'scripts/security_scan.py'), '--root', project, '--discover', '--profile', 'frontend'], project));
     assert.equal(scan.status, 'RESOLVED');
     const tracker = path.join(skill, 'scripts/security_tracker.py');
-    const begin = JSON.parse(run('python3', [tracker, 'begin', '--root', project, '--mode', 'audit', '--profile', 'frontend'], project));
-    run('python3', [tracker, 'finish', '--root', project, '--run', begin.run_id, '--result', 'PARTIAL', '--notes', 'Synthetic install smoke; no independent security verification.'], project);
+    const begin = JSON.parse(run(python, [tracker, 'begin', '--root', project, '--mode', 'audit', '--profile', 'frontend'], project));
+    run(python, [tracker, 'finish', '--root', project, '--run', begin.run_id, '--result', 'PARTIAL', '--notes', 'Synthetic install smoke; no independent security verification.'], project);
     assert.ok(fs.existsSync(path.join(project, '.security-guardian', 'runs', begin.run_id, 'RUN.md')));
     assert.ok(fs.existsSync(path.join(project, '.security-guardian', 'CURRENT.md')));
     console.log('Verified exact bundled runtime assets, offline local npx, discovery and PARTIAL audit report.');
