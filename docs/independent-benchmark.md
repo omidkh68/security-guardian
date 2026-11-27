@@ -59,3 +59,7 @@ flowchart LR
 ```
 
 This is an evidence-integrity increment, not a newly independent benchmark. Fresh blind holdout, independent human adjudication, agent behavior and fix rates, time to first actionable finding and CodeQL/Semgrep comparisons remain NOT_RUN. The existing real framework verification fixtures are separate evidence, not agent fix rates. No release threshold is established. Offline tests reject stale engine hashes, missing or duplicate cases, scope failures and inconsistent labels, and preserve partial misses and undefined denominators. The CI artifact must be actually generated successfully before claiming this step passed.
+
+## External DOM evidence integrity (#34 / #37)
+
+The positive-only probe uses four author-labeled innerHTML assignments in two pinned public CodeQL fixture files. The release bundle now binds the report to the current engine and parser hashes, source blob identities, case identity, scope isolation and elapsed wall time. It preserves every miss, including partial misses, and recomputes the positive-only denominator. Negative labels are absent; precision is null, and running CodeQL or independently adjudicating the probe remains NOT_RUN. No combined score or independent accuracy claim. CI must pass the new integrity checks before acceptance.

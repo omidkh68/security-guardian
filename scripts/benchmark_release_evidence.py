@@ -3,6 +3,7 @@
 import argparse
 from collections import Counter
 import json
+import math
 from pathlib import Path
 import re
 import subprocess
@@ -11,6 +12,7 @@ import sys
 from benchmark_scanner import ROOT, SKILL, MANIFEST, digest, metrics, validate_manifest
 from benchmark_holdout import load_manifest, require_synthetic_regression, summarize
 from check_sql_regressions import validate as validate_sql
+from benchmark_external_dom import FILES as DOM_FILES, REV as DOM_REV
 
 SQL_NAMES=('isolated','contextual','fresh_pair','external_lab','route_pairs','boundary','post_v12')
 SQL_LABELS={
@@ -87,13 +89,65 @@ def sql_summary(reports,commit,engine_hashes):
             'independent_human_adjudication':'NOT_RUN','safety_claim':'NONE'}
 
 
+def dom_summary(report,commit,engine_hashes,parser_hash):
+    """Validate the separate positive-only probe; never invent negative labels."""
+    expected_engine={name:engine_hashes[name] for name in
+                     ('security_js_flow.py','js_dom_flow.mjs')}
+    if (report.get('schema_version')!=1
+            or report.get('kind')!='EXTERNAL_AUTHOR_LABELED_DOM_POSITIVE_PROBE'
+            or report.get('revision')!=DOM_REV or report.get('engine_commit')!=commit
+            or report.get('engine_sha256')!=expected_engine
+            or report.get('parser_sha256')!=parser_hash
+            or report.get('precision') is not None or report.get('negative_labels')!=0
+            or report.get('scope_isolation')!={'passed':len(DOM_FILES),'total':len(DOM_FILES)}):
+        raise ValueError('External DOM provenance or scope mismatch')
+    files=report['files']
+    if (len(files)!=len(DOM_FILES) or
+            {row['file']:row['source_git_blob'] for row in files}!=DOM_FILES):
+        raise ValueError('External DOM source identity mismatch')
+    coverage={}
+    for row in files:
+        if (not re.fullmatch(r'[0-9a-f]{64}',row['source_sha256'])
+                or row['coverage_status'] not in ('PARTIAL','HEURISTIC_REVIEW_ONLY')
+                or type(row['unlabeled_candidate_count']) is not int
+                or row['unlabeled_candidate_count']<0):
+            raise ValueError('Invalid external DOM source evidence')
+        coverage[row['file']]=row['coverage_status']
+    seen=set()
+    hits=partial_misses=0
+    for row in report['cases']:
+        key=(row['file'],row['line'])
+        hit=row['observed_candidate']
+        if (key in seen or key[0] not in coverage or type(key[1]) is not int or key[1]<1
+                or row['expected']!='AUTHOR_ALERT' or type(hit) is not bool
+                or row['classification']!=('tp' if hit else 'fn')
+                or row['coverage_status']!=coverage[key[0]]):
+            raise ValueError('Invalid external DOM case evidence')
+        seen.add(key)
+        hits+=hit
+        partial_misses+=not hit and row['coverage_status']=='PARTIAL'
+    elapsed=report['elapsed_seconds']
+    if (len(seen)!=4 or {key[0] for key in seen}!=set(DOM_FILES)
+            or report['positive_labels']!=4 or report['matched']!=hits
+            or report['missed']!=4-hits
+            or report['candidate_overlap']!={'numerator':hits,'denominator':4,'value':hits/4}
+            or type(elapsed) not in (float,int) or not math.isfinite(elapsed) or elapsed<0):
+        raise ValueError('External DOM denominator or observation mismatch')
+    return {'evidence_kind':'EXPOSED_EXTERNAL_POSITIVE_ONLY_PROBE',
+            'positive_labels':4,'matched':hits,'missed':4-hits,
+            'partial_misses':partial_misses,'negative_labels':0,'precision':None,
+            'candidate_overlap':{'numerator':hits,'denominator':4,'value':hits/4},
+            'scope_isolation':report['scope_isolation'],'elapsed_seconds':elapsed,
+            'codeql_execution':'NOT_RUN','independent_adjudication':'NOT_RUN'}
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--reports',required=True,type=Path)
     parser.add_argument('--typescript-module',required=True,type=Path)
     args=parser.parse_args()
     folder=args.reports
-    names=('indicator','semantic',*SQL_NAMES)
+    names=('indicator','semantic','external_dom',*SQL_NAMES)
     paths={name:folder/(name+'.json') for name in names}
     data={name:json.loads(path.read_text(encoding='utf-8')) for name,path in paths.items()}
     commit=subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip()
@@ -111,6 +165,7 @@ def main():
             'indicator':indicator_summary(data['indicator'],pairs,commit,engine['security_scan.py'],digest(MANIFEST)),
             'semantic':semantic_summary(data['semantic'],load_manifest(),commit,engine,parser_hash),
             'external_sql':sql_summary(data,commit,engine),
+            'external_dom':dom_summary(data['external_dom'],commit,engine,parser_hash),
             'fresh_blind_holdout':'NOT_RUN','agent_evaluation':'NOT_RUN',
             'agent_fix_rate':'NOT_RUN','time_to_first_actionable_finding':'NOT_RUN',
             'codeql_comparison':'NOT_RUN','semgrep_comparison':'NOT_RUN',
