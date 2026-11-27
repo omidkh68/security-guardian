@@ -218,7 +218,7 @@ test('SSR v5 server entry path-local taint and conservative incomplete paths',{s
     ]){
       const r=run(fixture(t,g.wrap(g.pre+body),g.dep,g.file));
       const name=g.name+'/'+label;
-      assert.equal(r.pack_version,5,name);
+      assert.equal(r.pack_version,6,name);
       assert.equal(r.signals.length,count,name);
       assert.equal(r.status==='PARTIAL',partial,name);
       assert.ok(r.signals.every(x=>x.status==='HEURISTIC_REVIEW_ONLY'&&x.path==='web/'+g.file),name);
