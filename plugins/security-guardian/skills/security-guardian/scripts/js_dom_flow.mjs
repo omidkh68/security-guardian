@@ -33,10 +33,13 @@ function analyze(ts, file) {
       // Allow only the explicitly modeled global property receiver; all other
       // occurrences (including bindings, imports and writes) are conservative.
       if(!p||!ts.isPropertyAccessExpression(p)||p.expression!==n||
-          (n.text==='window'&&p.name.text!=='location')||
-          (n.text==='document'&&!['getElementById','querySelector'].includes(p.name.text))) shadow=true;
+          (n.text==='window'&&!['location','name'].includes(p.name.text))||
+          (n.text==='document'&&!['getElementById','querySelector','location'].includes(p.name.text))) shadow=true;
       if(p&&ts.isPropertyAccessExpression(p)&&p.expression===n){
         const q=p.parent;
+        const writes=x=>x&&((ts.isPrefixUnaryExpression(x)||ts.isPostfixUnaryExpression(x))&&
+          [ts.SyntaxKind.PlusPlusToken,ts.SyntaxKind.MinusMinusToken].includes(x.operator)||ts.isDeleteExpression(x));
+        if(writes(q)||q&&ts.isPropertyAccessExpression(q)&&writes(q.parent))shadow=true;
         if(q&&ts.isBinaryExpression(q)&&q.left===p&&![ts.SyntaxKind.EqualsEqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(q.operatorToken.kind)) shadow=true;
         if(q&&ts.isPropertyAccessExpression(q)&&q.expression===p&&q.parent&&ts.isBinaryExpression(q.parent)&&q.parent.left===q&&![ts.SyntaxKind.EqualsEqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(q.parent.operatorToken.kind)) shadow=true;
       }
@@ -66,7 +69,17 @@ function analyze(ts, file) {
     if(ts.isParenthesizedExpression(n)) return value(n.expression,env,depth+1,helpers);
     if(literal(n)) return {lines:[],element:false};
     if(ts.isIdentifier(n)) return env.get(n.text)||null;
-    if((prop(n,'hash')||prop(n,'search'))&&prop(n.expression,'location')&&name(n.expression.expression,'window')) return {lines:[line(n)],element:false};
+    const location=x=>prop(x,'location')&&(name(x.expression,'window')||name(x.expression,'document'));
+    if((prop(n,'hash')||prop(n,'search')||prop(n,'href'))&&location(n.expression))return {lines:[line(n)],element:false};
+    if(prop(n,'name')&&name(n.expression,'window'))return {lines:[line(n)],element:false};
+    if(ts.isCallExpression(n)&&!n.questionDotToken&&prop(n.expression,'toString')&&location(n.expression.expression)&&n.arguments.length===0)return {lines:[line(n)],element:false};
+    if(ts.isElementAccessExpression(n)&&!n.questionDotToken&&ts.isNumericLiteral(n.argumentExpression)&&
+       /^(0|[1-9][0-9]{0,3})$/.test(n.argumentExpression.text)&&ts.isCallExpression(n.expression)&&
+       !n.expression.questionDotToken&&prop(n.expression.expression,'getElementsByTagName')&&
+       n.expression.arguments.length===1&&ts.isStringLiteral(n.expression.arguments[0])){
+      const parent=value(n.expression.expression.expression,env,depth+1,helpers);
+      if(parent?.element)return {lines:[],element:true};
+    }
     if(ts.isCallExpression(n)&&!n.questionDotToken&&
       (prop(n.expression,'getElementById')||prop(n.expression,'querySelector'))&&name(n.expression.expression,'document')&&
       n.arguments.length===1&&ts.isStringLiteral(n.arguments[0])) return {lines:[],element:true};
@@ -222,9 +235,50 @@ function analyze(ts, file) {
         path_without_observed_sanitizer:evidence.withoutObservedSanitizer});
     }
   }
+  // A limited candidate-only segment pass may recover independently established
+  // receiver/source pairs after unknown statements. Never carry any binding
+  // across a gap, never enter a branch, never treat a segment as complete.
+  function recoverSegments(fn){
+    if(!moduleSimple||!result.partial)return;
+    let env=new Map(),gap=false;
+    const existing=new Set(result.hits.map(h=>h.line));
+    for(const stmt of fn.body.statements){
+      if(ts.isEmptyStatement(stmt))continue;
+      if(ts.isVariableStatement(stmt)&&(stmt.declarationList.flags&(ts.NodeFlags.Let|ts.NodeFlags.Const))){
+        let ok=true;
+        for(const d of stmt.declarationList.declarations){
+          if(!ts.isIdentifier(d.name)||!d.initializer||env.has(d.name.text)){ok=false;break;}
+          const v=value(d.initializer,env,0,new Map());
+          if(!v||!v.element){ok=false;break;}
+          env.set(d.name.text,v);
+        }
+        if(ok)continue;
+      }
+      if(ts.isExpressionStatement(stmt)&&ts.isBinaryExpression(stmt.expression)&&stmt.expression.operatorToken.kind===ts.SyntaxKind.EqualsToken){
+        const {left,right}=stmt.expression;
+        if(prop(left,'innerHTML')||prop(left,'textContent')){
+          const receiver=value(left.expression,env,0,new Map()),v=value(right,new Map(),0,new Map());
+          if(receiver?.element&&v&&!v.element){
+            const l=line(left);
+            if(gap&&left.name.text==='innerHTML'&&v.lines.length&&!existing.has(l)){
+              const src=v.lines,ss=v.sanitizers||[];
+              result.hits.push({line:l,source_lines:src.slice(0,MAX_LINES),source_lines_truncated:src.length>MAX_LINES,
+                sanitizer_lines:ss.slice(0,MAX_LINES),sanitizer_lines_truncated:ss.length>MAX_LINES,
+                sanitizer_evidence:ss.length?'OBSERVED_CALL_REVIEW_REQUIRED':'NONE_OBSERVED',path_without_observed_sanitizer:!ss.length});
+              existing.add(l);
+            }
+            continue;
+          }
+        }
+      }
+      // Do not restart beyond a control transfer or unsupported control structure.
+      if(!ts.isVariableStatement(stmt)&&!ts.isExpressionStatement(stmt))break;
+      env=new Map();gap=true;
+    }
+  }
   for(const s of sf.statements){
     if(ts.isFunctionDeclaration(s)&&supportedFn(s)){
-      if(!helpers.has(s.name?.text)) body(s);
+      if(!helpers.has(s.name?.text)){body(s);recoverSegments(s);}
     } else if(!ts.isEmptyStatement(s)&&!(ts.isImportDeclaration(s)&&sanitizerModule&&s.importClause?.name&&sanitizerImports.get(s.importClause.name.text)===s.importClause.name)) result.partial=true;
   }
   return result;
