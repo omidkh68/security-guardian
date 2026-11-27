@@ -1,0 +1,38 @@
+name: Real Semgrep adapter evidence
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/real-semgrep.yml'
+      - 'scripts/verify_real_semgrep.py'
+      - 'plugins/security-guardian/skills/security-guardian/scripts/security_semgrep.py'
+      - 'plugins/security-guardian/skills/security-guardian/references/semgrep/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  semgrep-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Install optional pinned scanner in runner-only environment
+        run: |
+          python -m venv "$RUNNER_TEMP/sg-semgrep"
+          "$RUNNER_TEMP/sg-semgrep/bin/python" -m pip install 'semgrep==1.140.0'
+      - name: Execute local rules with no outbound network or inherited credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/sg-semgrep-home"
+          sudo unshare --net -- setpriv --reuid "$(id -u)" --regid "$(id -g)" --clear-groups env -i PATH="$RUNNER_TEMP/sg-semgrep/bin:/usr/bin:/bin" HOME="$RUNNER_TEMP/sg-semgrep-home" LANG=C.UTF-8 SEMGREP_ENABLE_VERSION_CHECK=0 SEMGREP_SEND_METRICS=off "$RUNNER_TEMP/sg-semgrep/bin/python" scripts/verify_real_semgrep.py | tee "$RUNNER_TEMP/semgrep-evidence.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: real-semgrep-synthetic-evidence
+          path: ${{ runner.temp }}/semgrep-evidence.json
+          if-no-files-found: error
+          retention-days: 7
