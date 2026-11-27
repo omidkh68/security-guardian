@@ -256,7 +256,7 @@ function analyzeServerEntry(ts,file,sf,r){
   const p=handler.parameters[0],param=id(p.name);
   if(!param||names.has(param)||param===id(handler.name)||p.initializer||p.dotDotDotToken)return fail();
   if(handler.name)names.add(id(handler.name));
-  const env=new Map(),objects=new Set(),bindings=new Set([param]);
+  let env=new Map(),objects=new Set(),bindings=new Set([param]),mutable=new Set();
   const union=xs=>[...new Set(xs.flat())].sort((a,b)=>a-b);
   function fields(n){
     if(!n||!ts.isObjectLiteralExpression(n))return null;
@@ -326,27 +326,83 @@ function analyzeServerEntry(ts,file,sf,r){
     }
     return null;
   }
-  const ss=handler.body.statements;
-  for(let i=0;i<ss.length;i++){
-    const s=ss[i];
-    if(ts.isEmptyStatement(s))continue;
-    if(ts.isVariableStatement(s)&&(s.declarationList.flags&ts.NodeFlags.Const)){
-      for(const d of s.declarationList.declarations){
-        const n=id(d.name),v=d.initializer;if(!n||!v||names.has(n)||bindings.has(n))return fail();
-        bindings.add(n);
-        if(sourceObject(v)){objects.add(n);continue;}
-        const a=value(v);if(a===null)return fail();env.set(n,a);
-      }
-      continue;
+  // Bounded independent path states; unknown effects cannot certify a clean path.
+  const snapshot=()=>({env:new Map(env),objects:new Set(objects),bindings:new Set(bindings),mutable:new Set(mutable)});
+  let paths=1,steps=0,limited=false;
+  const partial=()=>{r.partial=true;r.reason??='unmodeled_server_entry';};
+  const limit=()=>{limited=true;r.partial=true;r.reason='path_limit';return [];};
+  function condition(n,depth=0){
+    if(!n||depth>16)return null;
+    if(ts.isParenthesizedExpression(n))return condition(n.expression,depth+1);
+    if(n.kind===ts.SyntaxKind.TrueKeyword)return {truth:true};
+    if(n.kind===ts.SyntaxKind.FalseKeyword)return {truth:false};
+    if(ts.isPrefixUnaryExpression(n)&&n.operator===ts.SyntaxKind.ExclamationToken){
+      const inner=condition(n.operand,depth+1);
+      return inner?{truth:inner.truth===null?null:!inner.truth}:null;
     }
-    if(ts.isReturnStatement(s)&&s.expression&&i===ss.length-1){
-      const a=result(s.expression);if(a===null)return fail();
-      r.hits=a.length?[{rule_id:rules[mode],line:line(s.expression),source_lines:a.slice(0,16),source_lines_truncated:a.length>16}]:[];
-      return r;
-    }
-    return fail();
+    if(ts.isBinaryExpression(n)&&[ts.SyntaxKind.EqualsEqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(n.operatorToken.kind)
+      &&value(n.left)!==null&&value(n.right)!==null)return {truth:null};
+    return value(n)!==null?{truth:null}:null;
   }
-  return fail();
+  function scoped(statement,state,depth){
+    const before=new Set(state.bindings);
+    const out=walk(ts.isBlock(statement)?statement.statements:[statement],[state],depth);
+    for(const next of out)for(const key of next.bindings)if(!before.has(key)){
+      next.bindings.delete(key);next.env.delete(key);next.objects.delete(key);next.mutable.delete(key);
+    }
+    return out;
+  }
+  function walk(statements,states,depth=0){
+    if(depth>32)return limit();
+    for(const s of statements){
+      const next=[];
+      for(const state of states){
+        if(limited||++steps>4096)return limit();
+        ({env,objects,bindings,mutable}=state);
+        if(ts.isEmptyStatement(s)){next.push(state);continue;}
+        if(ts.isIfStatement(s)){
+          const test=condition(s.expression);
+          if(!test){partial();continue;}
+          if(test.truth===null&&++paths>64)return limit();
+          const yes=snapshot(),no=snapshot();
+          if(test.truth!==false)next.push(...scoped(s.thenStatement,yes,depth+1));
+          if(test.truth!==true)next.push(...(s.elseStatement?scoped(s.elseStatement,no,depth+1):[no]));
+          continue;
+        }
+        if(ts.isBlock(s)){next.push(...scoped(s,snapshot(),depth+1));continue;}
+        if(ts.isVariableStatement(s)&&(s.declarationList.flags&(ts.NodeFlags.Const|ts.NodeFlags.Let))){
+          let ok=true;
+          for(const d of s.declarationList.declarations){
+            const n=id(d.name),v=d.initializer;
+            if(!n||!v||names.has(n)||bindings.has(n)){ok=false;break;}
+            bindings.add(n);
+            if(sourceObject(v)&&(s.declarationList.flags&ts.NodeFlags.Const)){objects.add(n);continue;}
+            const a=value(v);if(a===null){ok=false;break;}
+            env.set(n,a);if(s.declarationList.flags&ts.NodeFlags.Let)mutable.add(n);
+          }
+          if(ok){next.push(state);continue;}
+        }
+        if(ts.isExpressionStatement(s)){
+          const e=s.expression;
+          if(ts.isBinaryExpression(e)&&e.operatorToken.kind===ts.SyntaxKind.EqualsToken&&mutable.has(id(e.left))){
+            const a=value(e.right);if(a!==null){env.set(id(e.left),a);next.push(state);continue;}
+          }
+        }
+        if(ts.isReturnStatement(s)&&s.expression){
+          const a=result(s.expression);
+          if(a===null)partial();
+          else if(a.length)r.hits.push({rule_id:rules[mode],line:line(s.expression),source_lines:a.slice(0,16),source_lines_truncated:a.length>16});
+          continue;
+        }
+        partial();
+      }
+      states=next;
+      if(limited||!states.length)break;
+    }
+    return states;
+  }
+  if(walk(handler.body.statements,[snapshot()]).length)partial();
+  return r;
 }
 
 function analyze(ts,file){
