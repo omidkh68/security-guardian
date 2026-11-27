@@ -195,3 +195,35 @@ test('SSR app router, Nitro/H3 and SvelteKit server endpoints: separate syntheti
     assert.equal(outside.status,'PARTIAL');assert.deepEqual(outside.signals,[]);
   }
 });
+
+test('SSR v5 server entry path-local taint and conservative incomplete paths',{skip:!parser},t=>{
+  const groups=[
+    {name:'next',dep:'next',file:'app/page.tsx',wrap:app,pre:appStart,source:'q.name',sink:x=>'return <div dangerouslySetInnerHTML={{__html:'+x+'}} />;'},
+    {name:'nuxt',dep:'nuxt',file:'server/routes/example.ts',wrap:nuxt,pre:nuxtStart,source:'q.name',sink:x=>'return reply(event,'+x+',"text/html");'},
+    {name:'kit',dep:'@sveltejs/kit',file:'src/routes/example/+server.ts',wrap:kit,pre:kitStart,source:'q',sink:kitHTML}
+  ];
+  for(const g of groups){
+    const s=g.source,ret=g.sink;
+    for(const [label,body,count,partial] of [
+      ['branch positive','let html="fixed"; if('+s+'){html='+s+';} '+ret('html'),1,false],
+      ['both safe','let html='+s+'; if('+s+'){html="a";}else{html="b";} '+ret('html'),0,false],
+      ['early safe return','if('+s+'){'+ret('"fixed"')+'} '+ret(s),1,false],
+      ['dead branch','if(false){'+ret(s)+'} '+ret('"fixed"'),0,false],
+      ['unknown effect','if('+s+'){mutate();}else{'+ret(s)+'}',1,true],
+      ['unknown condition','if(mutate()){'+ret(s)+'}else{'+ret('"fixed"')+'}',0,true],
+      ['scope','if('+s+'){const html='+s+';} '+ret('html'),0,true],
+      ['duplicate','if('+s+'){}else{} '+ret(s),1,false],
+      ['missing return','if('+s+'){'+ret(s)+'}',1,true],
+      ['budget',Array.from({length:8},()=> 'if('+s+'){}').join(' ')+ret(s),0,true]
+    ]){
+      const r=run(fixture(t,g.wrap(g.pre+body),g.dep,g.file));
+      const name=g.name+'/'+label;
+      assert.equal(r.pack_version,5,name);
+      assert.equal(r.signals.length,count,name);
+      assert.equal(r.status==='PARTIAL',partial,name);
+      assert.ok(r.signals.every(x=>x.status==='HEURISTIC_REVIEW_ONLY'&&x.path==='web/'+g.file),name);
+      if(label==='budget')assert.equal(r.coverage.path_limited_files,1,name);
+    }
+  }
+  console.log('SSR_SERVER_CONTROL_FLOW_CASES=30');
+});
