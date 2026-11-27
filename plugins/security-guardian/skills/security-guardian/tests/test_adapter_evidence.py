@@ -103,6 +103,24 @@ class EvidenceTests(unittest.TestCase):
         (self.root/'app.ts').write_text('const changed = 2;\n')
         self.call('link-evidence','--run',run,'--report',str(report),'--plan',str(plan),expected=2)
         self.assertEqual(self.get_ledger(),state)
+    def test_stable_owner_across_runs_and_stale_digest(self):
+        row={'control_id':'API-07','title':'Reviewed','location':'app.ts',
+             'status':'NEEDS_REVIEW','reason':'Synthetic review'}
+        one=self.call('begin','--profile','custom','--component','.')['run_id']
+        fid=self.call('record','--run',one,payload={**row,'finding_key':'first'})['finding_ids'][0]
+        report,plan,body=self.report_files(one,fid)
+        body['report_sha256']='0'*64;plan.write_text(json.dumps(body))
+        self.call('link-evidence','--run',one,'--report',str(report),'--plan',str(plan),expected=2)
+        report,plan,body=self.report_files(one,fid)
+        self.call('link-evidence','--run',one,'--report',str(report),'--plan',str(plan))
+        two=self.call('begin','--profile','custom','--component','.')['run_id']
+        other=self.call('record','--run',two,payload={**row,'finding_key':'second'})['finding_ids'][0]
+        report,plan,body=self.report_files(two,other)
+        self.call('link-evidence','--run',two,'--report',str(report),'--plan',str(plan),expected=2)
+        self.assertNotIn('adapter_observations',self.get_ledger()['findings'][other])
+        report,plan,body=self.report_files(two,fid)
+        self.assertEqual(self.call('link-evidence','--run',two,'--report',str(report),'--plan',str(plan))['linked'],1)
+        self.assertEqual(len(self.get_ledger()['findings'][fid]['adapter_observations']),2)
     def test_reject_cross_component(self):
         (self.root/'other').mkdir()
         (self.root/'other'/'package.json').write_text('{"dependencies":{"react":"1.0.0"}}')
