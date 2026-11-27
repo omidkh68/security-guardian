@@ -60,7 +60,7 @@ def framework_row(name):
         heuristic(scan.WEB_CORE_PACK,scan.WEB_CORE_VERSION,
                   [(r,c) for (c,_),r in scan.WEB_CORE_RULES.items()],
                   'JS/TS browser DOM, storage and navigation indicators')
-        ast('js-dom-flow',5,[(dom.RULE,'ANG-01')],'security_js_flow.py',
+        ast('js-dom-flow',6,[(dom.RULE,'ANG-01')],'security_js_flow.py',
             'Browser location to recognized DOM innerHTML; local paths/helpers, URI transformations and observed sanitizer calls')
     if name in NODE:
         heuristic(scan.BACKEND_CORE_PACK,scan.BACKEND_CORE_VERSION,
