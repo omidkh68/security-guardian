@@ -181,7 +181,6 @@ try {
   if (options.info) {
     console.log(['--version', '-v'].includes(options.info) ? metadata.version : HELP);
   } else {
-    if (process.platform === 'win32') fail('This initial installer supports Linux/macOS POSIX paths only.');
     if (Number(process.versions.node.split('.')[0]) < 22) fail('Node.js 22 or newer required.');
     const base = path.resolve(options.user ? os.homedir() : options.project);
     checkAncestors(base);
