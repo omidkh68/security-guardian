@@ -50,7 +50,7 @@ function analyzeAngular(ts,file,sf,r){
   if(!routes.length||(!engines.size&&!nodeEngines.size))return fail();
   const hits=[];
   for(const fn of routes){
-    const params=new Set(),env=new Map(),responses=new Set(),guarded=new Set();
+    const params=new Set(); let env=new Map(),responses=new Set(),guarded=new Set(),mutable=new Set();
     if(fn.parameters.length<1||fn.parameters.length>3){r.partial=true;continue;}
     let valid=true;
     for(const p of fn.parameters){
@@ -107,23 +107,76 @@ function analyzeAngular(ts,file,sf,r){
       if(v.length)hits.push({rule_id:'JS.ANGULAR.SSR.REQUEST_TO_DOCUMENT',line:line(n),source_lines:v.slice(0,16),source_lines_truncated:v.length>16});
       return true;
     }
-    for(const s of fn.body.statements){
-      if(ts.isEmptyStatement(s))continue;
-      if(ts.isVariableStatement(s)&&(s.declarationList.flags&ts.NodeFlags.Const)){
-        let ok=true;
-        for(const d of s.declarationList.declarations){
-          const n=id(d.name),init=d.initializer;
-          if(!n||names.has(n)||params.has(n)||env.has(n)||responses.has(n)||!init){ok=false;break;}
-          if(ts.isAwaitExpression(init)&&directCall(init.expression,'handle',nodeEngines)&&init.expression.arguments.length===1&&id(init.expression.arguments[0])===req){responses.add(n);continue;}
-          const v=value(init);if(v===null){ok=false;break;}env.set(n,v);
-        }
-        if(ok)continue;
+    const snapshot=()=>({env:new Map(env),responses:new Set(responses),guarded:new Set(guarded),mutable:new Set(mutable)});
+    let paths=1,steps=0,limited=false;
+    const partial=()=>{r.partial=true;r.reason??='unmodeled_angular_server';};
+    const limit=()=>{limited=true;r.partial=true;r.reason='path_limit';return [];};
+    function condition(n,depth=0){
+      if(!n||depth>16)return null;
+      if(ts.isParenthesizedExpression(n))return condition(n.expression,depth+1);
+      if(n.kind===ts.SyntaxKind.TrueKeyword)return {truth:true};
+      if(n.kind===ts.SyntaxKind.FalseKeyword)return {truth:false};
+      if(ts.isPrefixUnaryExpression(n)&&n.operator===ts.SyntaxKind.ExclamationToken){
+        const inner=condition(n.operand,depth+1);return inner?{truth:inner.truth===null?null:!inner.truth}:null;
       }
-      if(ts.isIfStatement(s)&&!s.elseStatement&&ts.isPrefixUnaryExpression(s.expression)&&s.expression.operator===ts.SyntaxKind.ExclamationToken&&responses.has(id(s.expression.operand))&&ts.isReturnStatement(s.thenStatement)&&!s.thenStatement.expression){guarded.add(id(s.expression.operand));continue;}
-      if(ts.isReturnStatement(s)&&s.expression&&sink(s.expression))break;
-      if(ts.isExpressionStatement(s)&&sink(s.expression))continue;
-      r.partial=true;break;
+      return value(n)!==null?{truth:null}:null;
     }
+    function scoped(statement,state,depth){
+      const before=new Set([...state.env.keys(),...state.responses]);
+      const out=walk(ts.isBlock(statement)?statement.statements:[statement],[state],depth);
+      for(const x of out)for(const k of [...x.env.keys(),...x.responses])if(!before.has(k)){
+        x.env.delete(k);x.responses.delete(k);x.guarded.delete(k);x.mutable.delete(k);
+      }
+      return out;
+    }
+    function walk(statements,states,depth=0){
+      if(depth>32)return limit();
+      for(const s of statements){
+        const next=[];
+        for(const state of states){
+          if(limited||++steps>4096)return limit();
+          ({env,responses,guarded,mutable}=state);
+          if(ts.isEmptyStatement(s)){next.push(state);continue;}
+          // Preserve the existing exact nullable-response early-return idiom.
+          if(ts.isIfStatement(s)&&!s.elseStatement&&ts.isPrefixUnaryExpression(s.expression)&&s.expression.operator===ts.SyntaxKind.ExclamationToken&&responses.has(id(s.expression.operand))&&ts.isReturnStatement(s.thenStatement)&&!s.thenStatement.expression){
+            guarded.add(id(s.expression.operand));next.push(state);continue;
+          }
+          if(ts.isIfStatement(s)){
+            const test=condition(s.expression);
+            if(!test){partial();continue;}
+            if(test.truth===null&&++paths>64)return limit();
+            const yes=snapshot(),no=snapshot();
+            if(test.truth!==false)next.push(...scoped(s.thenStatement,yes,depth+1));
+            if(test.truth!==true)next.push(...(s.elseStatement?scoped(s.elseStatement,no,depth+1):[no]));
+            continue;
+          }
+          if(ts.isBlock(s)){next.push(...scoped(s,snapshot(),depth+1));continue;}
+          if(ts.isVariableStatement(s)&&(s.declarationList.flags&(ts.NodeFlags.Const|ts.NodeFlags.Let))){
+            let ok=true;
+            for(const d of s.declarationList.declarations){
+              const n=id(d.name),init=d.initializer;
+              if(!n||names.has(n)||params.has(n)||env.has(n)||responses.has(n)||!init){ok=false;break;}
+              if((s.declarationList.flags&ts.NodeFlags.Const)&&ts.isAwaitExpression(init)&&directCall(init.expression,'handle',nodeEngines)&&init.expression.arguments.length===1&&id(init.expression.arguments[0])===req){responses.add(n);continue;}
+              const v=value(init);if(v===null){ok=false;break;}env.set(n,v);
+              if(s.declarationList.flags&ts.NodeFlags.Let)mutable.add(n);
+            }
+            if(ok){next.push(state);continue;}
+          }
+          if(ts.isReturnStatement(s)){if(s.expression&&!sink(s.expression))partial();continue;}
+          if(ts.isExpressionStatement(s)){
+            const e=s.expression;
+            if(sink(e)){next.push(state);continue;}
+            if(ts.isBinaryExpression(e)&&e.operatorToken.kind===ts.SyntaxKind.EqualsToken&&mutable.has(id(e.left))){
+              const v=value(e.right);if(v!==null){env.set(id(e.left),v);next.push(state);continue;}
+            }
+          }
+          partial();
+        }
+        states=next;if(limited||!states.length)break;
+      }
+      return states;
+    }
+    walk(fn.body.statements,[snapshot()]);
   }
   r.hits=hits;
   return r;
@@ -459,8 +512,8 @@ function analyze(ts,file){
   }
   function body(fn,read,finish){
     const p=fn.parameters[0],param=id(p.name);
-    if(!param||names.has(param)||p.initializer||p.dotDotDotToken)return null;
-    const env=new Map();
+    if(!param||names.has(param)||p.initializer||p.dotDotDotToken)return [];
+    let env=new Map(),mutable=new Set();
     function value(n,depth=0){
       if(!n||depth>64)return null;
       if(ts.isParenthesizedExpression(n))return value(n.expression,depth+1);
@@ -478,26 +531,75 @@ function analyze(ts,file){
       const vals=children.map(c=>value(c,depth+1));
       return vals.some(v=>v===null)?null:union(vals);
     }
-    const statements=fn.body.statements;
-    for(let i=0;i<statements.length;i++){
-      const s=statements[i];
-      if(ts.isEmptyStatement(s))continue;
-      if(ts.isVariableStatement(s)&&(s.declarationList.flags&ts.NodeFlags.Const)){
-        for(const d of s.declarationList.declarations){
-          const n=id(d.name);
-          if(!n||n===param||names.has(n)||env.has(n))return null;
-          const v=value(d.initializer);if(v===null)return null;env.set(n,v);
-        }
-        continue;
+    const outputs=[];
+    let paths=1,steps=0,limited=false;
+    const snapshot=()=>({env:new Map(env),mutable:new Set(mutable)});
+    const partial=()=>{r.partial=true;r.reason??='unmodeled_page';};
+    const limit=()=>{limited=true;r.partial=true;r.reason='path_limit';return [];};
+    function condition(n,depth=0){
+      if(!n||depth>16)return null;
+      if(ts.isParenthesizedExpression(n))return condition(n.expression,depth+1);
+      if(n.kind===ts.SyntaxKind.TrueKeyword)return {truth:true};
+      if(n.kind===ts.SyntaxKind.FalseKeyword)return {truth:false};
+      if(ts.isPrefixUnaryExpression(n)&&n.operator===ts.SyntaxKind.ExclamationToken){
+        const inner=condition(n.operand,depth+1);return inner?{truth:inner.truth===null?null:!inner.truth}:null;
       }
-      if(ts.isReturnStatement(s)&&s.expression&&i===statements.length-1)return finish(s.expression,value);
-      return null;
+      return value(n)!==null?{truth:null}:null;
     }
-    return null;
+    function scoped(statement,state,depth){
+      const before=new Set(state.env.keys());
+      const out=walk(ts.isBlock(statement)?statement.statements:[statement],[state],depth);
+      for(const x of out)for(const k of x.env.keys())if(!before.has(k)){x.env.delete(k);x.mutable.delete(k);}
+      return out;
+    }
+    function walk(statements,states,depth=0){
+      if(depth>32)return limit();
+      for(const s of statements){
+        const next=[];
+        for(const state of states){
+          if(limited||++steps>4096)return limit();
+          ({env,mutable}=state);
+          if(ts.isEmptyStatement(s)){next.push(state);continue;}
+          if(ts.isIfStatement(s)){
+            const test=condition(s.expression);if(!test){partial();continue;}
+            if(test.truth===null&&++paths>64)return limit();
+            const yes=snapshot(),no=snapshot();
+            if(test.truth!==false)next.push(...scoped(s.thenStatement,yes,depth+1));
+            if(test.truth!==true)next.push(...(s.elseStatement?scoped(s.elseStatement,no,depth+1):[no]));
+            continue;
+          }
+          if(ts.isBlock(s)){next.push(...scoped(s,snapshot(),depth+1));continue;}
+          if(ts.isVariableStatement(s)&&(s.declarationList.flags&(ts.NodeFlags.Const|ts.NodeFlags.Let))){
+            let ok=true;
+            for(const d of s.declarationList.declarations){
+              const n=id(d.name),v=value(d.initializer);
+              if(!n||n===param||names.has(n)||env.has(n)||v===null){ok=false;break;}
+              env.set(n,v);if(s.declarationList.flags&ts.NodeFlags.Let)mutable.add(n);
+            }
+            if(ok){next.push(state);continue;}
+          }
+          if(ts.isExpressionStatement(s)){
+            const e=s.expression;
+            if(ts.isBinaryExpression(e)&&e.operatorToken.kind===ts.SyntaxKind.EqualsToken&&mutable.has(id(e.left))){
+              const v=value(e.right);if(v!==null){env.set(id(e.left),v);next.push(state);continue;}
+            }
+          }
+          if(ts.isReturnStatement(s)&&s.expression){
+            const v=finish(s.expression,value);if(v===null)partial();else outputs.push(v);
+            continue;
+          }
+          partial();
+        }
+        states=next;if(limited||!states.length)break;
+      }
+      return states;
+    }
+    if(walk(fn.body.statements,[snapshot()]).length)partial();
+    return outputs;
   }
   const key=n=>prop(n)??(n&&ts.isElementAccessExpression(n)&&!n.questionDotToken&&str(n.argumentExpression)?n.argumentExpression.text:null);
   const receiver=n=>n&&(ts.isPropertyAccessExpression(n)||ts.isElementAccessExpression(n))?n.expression:null;
-  const props=body(server,(n,p)=>{
+  const propPaths=body(server,(n,p)=>{
     const k=key(n),base=receiver(n);
     return k&&['query','params'].includes(prop(base))&&id(base.expression)===p?[line(n)]:null;
   },(n,value)=>{
@@ -508,7 +610,11 @@ function analyze(ts,file){
     for(const [k,v] of data){const a=value(v);if(a===null)return null;out.set(k,a);}
     return out;
   });
-  if(!props)return fail();
+  if(!propPaths.length)return fail();
+  const all=[];
+  // Bound the cross-product of server and render paths.
+  if(propPaths.length>16){r.partial=true;r.reason='path_limit';return r;}
+  for(const props of propPaths){
   const result=body(page,(n,p)=>{
     const k=key(n);
     return k&&id(receiver(n))===p&&props.has(k)?props.get(k):null;
@@ -543,8 +649,10 @@ function analyze(ts,file){
     const v=value(f.get('__html'));if(v===null)return null;
     return v.length?[{line:line(raw),source_lines:v.slice(0,16),source_lines_truncated:v.length>16}]:[];
   });
-  if(result===null)return fail();
-  r.hits=result;
+  if(!result.length)r.partial=true;
+  all.push(...result.flat());
+  }
+  r.hits=all;
   return r;
 }
 try{
