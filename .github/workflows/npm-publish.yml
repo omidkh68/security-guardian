@@ -31,13 +31,13 @@ jobs:
           python -m pip install -r requirements-pdf.txt
           python -m unittest discover -s plugins/security-guardian/skills/security-guardian/tests -v
           npm test
-          node scripts/verify-npm-package.mjs
-      - name: Pack release artifact
+          node --test tests/npm-artifact-evidence.test.mjs
+          node scripts/verify-npm-package.mjs --artifact-dir "$RUNNER_TEMP/npm-release"
+      - name: Check exact tested release artifact
         run: |
-          mkdir -p "$RUNNER_TEMP/npm-release"
-          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/npm-release"
+          set -euo pipefail
           cd "$RUNNER_TEMP/npm-release"
-          sha256sum -- *.tgz > SHA256SUMS
+          sha256sum --check SHA256SUMS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: npm-release
@@ -69,6 +69,21 @@ jobs:
           shopt -s nullglob
           packages=(*.tgz)
           test "${#packages[@]}" -eq 1
+          node --input-type=module -e '
+            import fs from "node:fs";
+            import assert from "node:assert/strict";
+            import { createHash } from "node:crypto";
+            const r=JSON.parse(fs.readFileSync("tested-artifact.json","utf8"));
+            const bytes=fs.readFileSync(process.argv[1]);
+            assert.equal(r.kind,"TESTED_NPM_ARTIFACT");
+            assert.equal(r.private,false);
+            assert.equal(r.package,"@omidkh68/security-guardian");
+            assert.equal("v"+r.version,process.env.GITHUB_REF_NAME);
+            assert.equal(r.source_commit,process.env.GITHUB_SHA);
+            assert.equal(r.tarball,process.argv[1]);
+            assert.equal(r.bytes,bytes.length);
+            assert.equal(r.sha256,createHash("sha256").update(bytes).digest("hex"));
+          ' "${packages[0]}"
           npm publish "./${packages[0]}" --access public --tag latest --ignore-scripts
   registry-smoke:
     needs: publish

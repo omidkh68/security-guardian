@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { writeTestedArtifact } from './npm-artifact-evidence.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -8,6 +10,9 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const prefix = 'plugins/security-guardian/skills/security-guardian/';
 const python = process.platform === 'win32' ? 'python' : 'python3';
+const argv = process.argv.slice(2);
+assert.ok(argv.length === 0 || (argv.length === 2 && argv[0] === '--artifact-dir' && path.isAbsolute(argv[1])), 'Expected --artifact-dir ABSOLUTE_NEW_DIRECTORY');
+const artifactDir = argv[1];
 const tmp = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'sg-pack-'));
 const env = { ...process.env, npm_config_cache: path.join(tmp, 'cache'), npm_config_offline: 'true',
   npm_config_ignore_scripts: 'true', npm_config_audit: 'false', npm_config_fund: 'false' };
@@ -45,6 +50,7 @@ try {
     assert.deepEqual(pack.files.map(x => x.path).sort(), expected, 'tarball manifest mismatch');
     if (dry) continue;
     const tgz = path.join(tmp, pack.filename);
+    const originalDigest = createHash('sha256').update(fs.readFileSync(tgz)).digest('hex');
     const project = path.join(tmp, 'project');
     fs.mkdirSync(project);
     const args = ['--offline', '--yes', '--package', tgz, '--', 'security-guardian'];
@@ -119,6 +125,18 @@ try {
     run(python, [tracker, 'finish', '--root', project, '--run', begin.run_id, '--result', 'PARTIAL', '--notes', 'Synthetic install smoke; no independent security verification.'], project);
     assert.ok(fs.existsSync(path.join(project, '.security-guardian', 'runs', begin.run_id, 'RUN.md')));
     assert.ok(fs.existsSync(path.join(project, '.security-guardian', 'CURRENT.md')));
+    const tested = fs.readFileSync(tgz);
+    assert.equal(createHash('sha256').update(tested).digest('hex'), originalDigest, 'tested tarball changed');
+    if (artifactDir) {
+      const commit = run('git', ['rev-parse', 'HEAD']).trim();
+      const receipt = writeTestedArtifact(artifactDir, tested, {
+        filename: pack.filename, name: pkg.name, version: pkg.version,
+        private: pkg.private, commit, sha256: originalDigest,
+        node: process.version, npm: run('npm', ['--version']).trim(),
+        runtime_files: runtime.length
+      });
+      console.log('TESTED_NPM_ARTIFACT=' + JSON.stringify(receipt));
+    }
     console.log('Verified exact bundled runtime assets, offline local npx, discovery and PARTIAL audit report.');
   }
 } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
