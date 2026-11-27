@@ -356,18 +356,40 @@ function completedClaim(base, root) {
       value.phase !== 'verified') fail('Invalid recovery completion receipt.');
   return true;
 }
+// Retry only the rename syscall, not a directory flush or an ambiguous move.
+// The owner already holds the recovery claim; recheck identities before each retry.
+function recoveryRename(step) {
+  for (let attempt = 0; ; attempt++) {
+    if (!checkRecoveryPath(step.from) || !matches(step.from, step.expected) || stat(step.to))
+      fail('Recovery state changed; refusing overwrite.');
+    checkAncestors(path.dirname(step.to));
+    try { fs.renameSync(step.from, step.to); break; }
+    catch (error) {
+      if (attempt >= 5 || !['EPERM', 'EACCES', 'EBUSY'].includes(error.code)) throw error;
+      if (!stat(step.from) || stat(step.to) || !matches(step.from, step.expected)) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25 * (2 ** attempt));
+    }
+  }
+  syncDirectory(path.dirname(step.from));
+  if (path.dirname(step.to) !== path.dirname(step.from)) syncDirectory(path.dirname(step.to));
+}
+
 function recover(options, base) {
   const lock = path.join(base, '.security-guardian-install.lock');
   const guard = path.join(base, '.security-guardian-recovery.lock');
   const prior = stat(guard) ? latestClaim(base, guard) : null;
   if (prior) ownerGone(prior.latest);
   if (!stat(lock) && !prior) return { action: 'NO_RECOVERY_NEEDED', actions: [] };
-  const initial = stat(lock) ? recoveryPlan(base, lock) : null;
+  // Only read the journal before claiming; losing contenders must not walk target trees.
+  const initial = stat(lock) ? readJournal(base, lock) : null;
   if (prior && initial && prior.root.transaction !== initial.transaction) fail('Recovery claim does not match journal.');
   if (!initial && !prior) return { action: 'NO_RECOVERY_NEEDED', actions: [] };
   if (!initial && !completedClaim(base, prior.root)) fail('Journal missing without verified recovery receipt.');
-  const plan = initial || { transaction: prior.root.transaction, actions: [], preservedStages: [] };
-  if (options['dry-run']) return { action: 'RECOVERY_PREVIEW', ...plan };
+  let plan = { transaction: initial ? initial.transaction : prior.root.transaction, actions: [], preservedStages: [] };
+  if (options['dry-run']) {
+    if (initial) plan = recoveryPlan(base, lock);
+    return { action: 'RECOVERY_PREVIEW', ...plan };
+  }
   const owner = { schema: 1, guardId: prior ? prior.root.guardId : randomUUID(),
     transaction: plan.transaction, base, pid: process.pid, host: os.hostname(),
     generation: prior ? prior.latest.generation + 1 : 0 };
@@ -386,18 +408,22 @@ function recover(options, base) {
     return { action: 'NO_RECOVERY_NEEDED', actions: [] };
   }
   let complete = false;
+  let mutationStarted = false;
   try {
     if (stat(lock)) {
       const current = recoveryPlan(base, lock);
       if (current.transaction !== owner.transaction) fail('Recovery journal changed.');
+      plan = current;
       for (const step of current.actions) {
         if (!checkRecoveryPath(step.from) || !matches(step.from, step.expected) || stat(step.to))
           fail('Recovery state changed; refusing overwrite.');
         checkAncestors(path.dirname(step.to));
-        syncRename(step.from, step.to);
+        mutationStarted = true;
+        recoveryRename(step);
       }
       const verified = recoveryPlan(base, lock);
       if (verified.transaction !== owner.transaction || verified.actions.length) fail('Recovery verification incomplete.');
+      mutationStarted = true;
       if (!completedClaim(base, owner)) publishClaim(completionPath(base, owner), { ...owner, phase: 'verified' });
       fs.unlinkSync(lock);
       syncDirectory(base);
@@ -407,6 +433,14 @@ function recover(options, base) {
   } finally {
     // On handled failure, leave the immutable claim chain: the next process can
     // safely take ownership after this process exits. Never remove an active claim.
+    if (!complete && !prior && !mutationStarted) {
+      // A newly published claim that failed preflight has no mutations to preserve.
+      const current = latestClaim(base, guard);
+      if (current.root.guardId === owner.guardId && current.latest.pid === process.pid && current.latest.generation === 0) {
+        fs.unlinkSync(guard);
+        syncDirectory(base);
+      }
+    }
     if (complete) {
       fs.unlinkSync(guard);
       syncDirectory(base);

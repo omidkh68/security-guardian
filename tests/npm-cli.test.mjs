@@ -373,6 +373,28 @@ test('simultaneous recovery contenders cannot both mutate the same transaction',
   assert.equal(JSON.parse(ok(run(...recover))).action, 'NO_RECOVERY_NEEDED');
 });
 
+
+test('recovery retries transient rename only while original directory identity is preserved', t => {
+  const { root, project, home, run } = fixture(t);
+  const args = ['--agent', 'all', '--project', project, '--yes'];
+  ok(run(...args));
+  const targets = ['.claude', '.agents'].map(config => path.join(project, config, 'skills', 'security-guardian'));
+  for (const target of targets) fs.writeFileSync(path.join(target, 'local-note.txt'), target);
+  const crash = path.join(root, 'crash-retry.cjs');
+  fs.writeFileSync(crash, "const fs=require('node:fs'); const rename=fs.renameSync; let n=0; fs.renameSync=function(...args){rename.apply(fs,args); if(++n===4)process.exit(86);};");
+  const env={...process.env,HOME:home,USERPROFILE:home};
+  assert.equal(spawnSync(process.execPath,['--require',crash,cli,...args,'--upgrade'],{env,timeout:15000}).status,86);
+  const hook=path.join(root,'transient-rename.cjs');
+  const marker=path.join(root,'retry-hit');
+  fs.writeFileSync(hook,"const fs=require('node:fs'); const rename=fs.renameSync; let first=true; fs.renameSync=function(...args){if(first){first=false;fs.writeFileSync("+JSON.stringify(marker)+",'hit');const e=new Error('synthetic transient rename');e.code='EPERM';throw e;}return rename.apply(fs,args);};");
+  const r=spawnSync(process.execPath,['--require',hook,cli,'--recover','--project',project,'--yes'],{env,encoding:'utf8',timeout:15000});
+  assert.equal(r.status,0,r.stderr);
+  assert.equal(JSON.parse(r.stdout).action,'RECOVERED');
+  assert.ok(fs.existsSync(marker));
+  for(const target of targets) assert.equal(fs.readFileSync(path.join(target,'local-note.txt'),'utf8'),target);
+  assert.equal(JSON.parse(ok(run('--recover','--project',project,'--yes'))).action,'NO_RECOVERY_NEEDED');
+});
+
 for (const phase of ['begin', 'stage-intent', 'stage-created', 'backup-intent', 'backup-moved', 'install-intent', 'installed', 'committed']) {
   test('recover after durable journal phase ' + phase, t => {
     const { root, project, home, run } = fixture(t);
