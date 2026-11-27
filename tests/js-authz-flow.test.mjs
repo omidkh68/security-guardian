@@ -100,3 +100,31 @@ test('TypeORM direct and injected repository resource scope, and unfiltered coll
   }
   console.log(JSON.stringify({kind:'SYNTHETIC_AUTHORIZATION_TYPEORM_MATRIX',classified:8,unsupported:4,matched:12}));
 });
+
+test('authorization v2 retains path-local selector evidence, never verifies policy',{skip:!parser},t=>{
+  const missing='MISSING_LOCAL_SCOPE_REVIEW',principal='PRINCIPAL_SCOPE_EVIDENCE',caller='CALLER_SCOPE_REVIEW';
+  const cases=[
+    ['branch tenant','let tenant=req.user.tenantId; if(req.query.flag){tenant=req.query.tenantId;} return db.item.findFirst({where:{id:req.params.id,tenantId:tenant}});',[caller,principal],1,'HEURISTIC_REVIEW_ONLY'],
+    ['early return','let tenant=req.query.tenantId; if(req.query.flag){return;}else{tenant=req.user.tenantId;} return db.item.findFirst({where:{id:req.params.id,tenantId:tenant}});',[principal],0,'HEURISTIC_REVIEW_ONLY'],
+    ['literal dead path','if(false){return db.item.findUnique({where:{id:req.params.id}});} return db.item.findFirst({where:{id:req.params.id,ownerId:req.user.id}});',[principal],0,'HEURISTIC_REVIEW_ONLY'],
+    ['branch is not policy','if(req.query.tenantId===req.user.tenantId){return db.item.findUnique({where:{id:req.params.id}});}',[missing],1,'HEURISTIC_REVIEW_ONLY'],
+    ['unsupported call branch','if(mutate()){return db.item.findUnique({where:{id:req.params.id}});}',[],0,'PARTIAL'],
+    ['unsupported side path','if(req.query.flag){mutate();}else{return db.item.findUnique({where:{id:req.params.id}});}',[missing],1,'PARTIAL'],
+    ['block binding','if(req.query.flag){const tenant=req.user.tenantId;} return db.item.findFirst({where:{id:req.params.id,tenantId:tenant}});',[],0,'PARTIAL'],
+    ['dedup','if(req.query.flag){}else{} return db.item.findUnique({where:{id:req.params.id}});',[missing],1,'HEURISTIC_REVIEW_ONLY'],
+    ['budget',Array.from({length:8},()=> 'if(req.query.flag){}').join(' ')+' return db.item.findUnique({where:{id:req.params.id}});',[],0,'PARTIAL']
+  ];
+  for(const [label,body,expected,signals,status] of cases){
+    const r=run(fixture(t,route('express',body)));
+    assert.equal(r.pack_version,2,label);
+    assert.deepEqual(r.authorization_matrix.map(x=>x.scope_status).sort(),expected.sort(),label);
+    assert.equal(r.signals.length,signals,label);
+    assert.equal(r.status,status,label);
+    assert.ok(r.authorization_matrix.every(x=>x.verification==='UNVERIFIED'),label);
+    if(label==='budget')assert.equal(r.coverage.path_limited_files,1,label);
+  }
+  const n=run(fixture(t,ormNest('if(id){return this.items.findOneBy({id});} return this.items.findOneBy({id,tenantId:req.user.tenantId});'),'@nestjs/core'));
+  assert.deepEqual(n.authorization_matrix.map(x=>x.scope_status).sort(),[missing,principal].sort());
+  assert.ok(n.authorization_matrix.every(x=>x.verification==='UNVERIFIED'));
+  console.log('AUTHZ_CONTROL_FLOW_CASES=10');
+});
