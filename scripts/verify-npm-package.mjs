@@ -47,6 +47,33 @@ try {
       const installed = path.join(project, config, 'skills/security-guardian');
       for (const p of runtime) assert.deepEqual(fs.readFileSync(path.join(installed, p.slice(prefix.length))), fs.readFileSync(path.join(root, p)));
     }
+    // Exercise the packed executable, not just the source CLI, on repeat and upgrade.
+    const installArgs = [...args, '--agent', 'all', '--project', project, '--yes'];
+    const repeated = spawnSync('npx', installArgs, { cwd: project, env, encoding: 'utf8', timeout: 90000 });
+    assert.equal(repeated.status, 2, repeated.stderr);
+    for (const config of ['.claude', '.agents']) {
+      const installed = path.join(project, config, 'skills/security-guardian');
+      fs.writeFileSync(path.join(installed, 'local-note.txt'), config);
+    }
+    const upgraded = JSON.parse(run('npx', [...installArgs, '--upgrade'], project));
+    assert.equal(upgraded.installed.length, 2);
+    for (const config of ['.claude', '.agents']) {
+      const target = path.join(project, config, 'skills/security-guardian');
+      const item = upgraded.installed.find(x => x.target === target);
+      assert.ok(item?.backup);
+      assert.equal(path.dirname(item.backup), path.join(project, config, 'skill-backups'));
+      assert.equal(fs.readFileSync(path.join(item.backup, 'local-note.txt'), 'utf8'), config);
+      assert.ok(!fs.existsSync(path.join(target, 'local-note.txt')));
+      for (const p of runtime) assert.deepEqual(fs.readFileSync(path.join(target, p.slice(prefix.length))), fs.readFileSync(path.join(root, p)));
+    }
+    const home = path.join(tmp, 'isolated-home');
+    fs.mkdirSync(home);
+    const userEnv = { HOME: home };
+    run('npx', [...args, '--agent', 'all', '--user', '--yes'], project, userEnv);
+    for (const config of ['.claude', '.agents']) {
+      for (const p of runtime) assert.deepEqual(fs.readFileSync(path.join(home, config, 'skills/security-guardian', p.slice(prefix.length))), fs.readFileSync(path.join(root, p)));
+    }
+    assert.ok(!fs.existsSync(path.join(home, '.security-guardian-install.lock')));
     const skill = path.join(project, '.agents/skills/security-guardian');
     fs.writeFileSync(path.join(project, 'package.json'), '{"dependencies":{"react":"19"}}');
     fs.writeFileSync(path.join(project, 'app.ts'), 'const safe = true;\n');
