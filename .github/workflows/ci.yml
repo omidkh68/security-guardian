@@ -232,8 +232,8 @@ jobs:
           SG_TEST_TYPESCRIPT="$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js" npm test
       - name: Enforce exposed JS semantic regression labels (not independent accuracy)
         run: python scripts/benchmark_holdout.py --synthetic js --require-synthetic-regression --typescript-module "$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js"
-      - name: Test artifact receipt export
-        run: node --test tests/npm-artifact-evidence.test.mjs
+      - name: Test artifact receipt export and release checklist gate
+        run: node --test tests/npm-artifact-evidence.test.mjs tests/release-gate.test.mjs
       - name: Verify exact tarball manifest and offline npx install-to-report
         run: node scripts/verify-npm-package.mjs --artifact-dir "$RUNNER_TEMP/sg-tested-npm"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
