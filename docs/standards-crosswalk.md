@@ -104,3 +104,7 @@ flowchart LR
  D --> E[New control or extension backlog]
  E --> F[Authorized tests still NOT_RUN]
 ```
+
+## Publisher inventory reconciliation (#150–154)
+
+Mapped MASVS, MASTG and MASWE references now require exact path and Git blob identity in the pinned publisher inventory. Missing mapped mobile or CWE IDs fail; WSTG checklist omissions and duplicated identities remain explicit review-required cases rather than being silently dropped. The report records matched identities and reconciliation status for each standard. ASVS retains its existing exact leaf/artifact validation. This strengthens identity evidence only, not semantic mapping, project applicability or executed tests. CI must be observed before acceptance.
