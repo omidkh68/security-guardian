@@ -7,11 +7,13 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const prefix = 'plugins/security-guardian/skills/security-guardian/';
+const python = process.platform === 'win32' ? 'python' : 'python3';
 const tmp = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'sg-pack-'));
 const env = { ...process.env, npm_config_cache: path.join(tmp, 'cache'), npm_config_offline: 'true',
   npm_config_ignore_scripts: 'true', npm_config_audit: 'false', npm_config_fund: 'false' };
 function run(command, args, cwd = root, extra = {}) {
-  const r = spawnSync(command, args, { cwd, env: { ...env, ...extra }, encoding: 'utf8', timeout: 90000 });
+  const executable = process.platform === 'win32' && command === 'npx' ? 'npx.cmd' : command;
+  const r = spawnSync(executable, args, { shell: process.platform === 'win32' && command === 'npx', cwd, env: { ...env, ...extra }, encoding: 'utf8', timeout: 90000 });
   assert.equal(r.status, 0, r.stderr || String(r.error || 'command failed'));
   return r.stdout;
 }
@@ -77,7 +79,7 @@ try {
     const skill = path.join(project, '.agents/skills/security-guardian');
     fs.writeFileSync(path.join(project, 'package.json'), '{"dependencies":{"react":"19"}}');
     fs.writeFileSync(path.join(project, 'app.ts'), 'const safe = true;\n');
-    const scan = JSON.parse(run('python3', [path.join(skill, 'scripts/security_scan.py'), '--root', project, '--discover', '--profile', 'frontend'], project));
+    const scan = JSON.parse(run(python, [path.join(skill, 'scripts/security_scan.py'), '--root', project, '--discover', '--profile', 'frontend'], project));
     assert.equal(scan.status, 'RESOLVED');
     const tracker = path.join(skill, 'scripts/security_tracker.py');
     const begin = JSON.parse(run('python3', [tracker, 'begin', '--root', project, '--mode', 'audit', '--profile', 'frontend'], project));
