@@ -103,7 +103,7 @@ class EvidenceTests(unittest.TestCase):
         (self.root/'app.ts').write_text('const changed = 2;\n')
         self.call('link-evidence','--run',run,'--report',str(report),'--plan',str(plan),expected=2)
         self.assertEqual(self.get_ledger(),state)
-    def test_reject_cross_component_and_symlink(self):
+    def test_reject_cross_component(self):
         (self.root/'other').mkdir()
         (self.root/'other'/'package.json').write_text('{"dependencies":{"react":"1.0.0"}}')
         (self.root/'other'/'app.ts').write_text('const synthetic = 1;\n')
@@ -113,6 +113,21 @@ class EvidenceTests(unittest.TestCase):
         fid=self.call('record','--run',run,payload=row)['finding_ids'][0]
         report,plan,body=self.report_files(run,fid)
         r=ast_report();r['signals'][0]['path']='other/app.ts';report.write_text(json.dumps(r))
+        raw,digest=e.read_json(report)
+        body['report_sha256']=digest;body['links'][0]['evidence_id']=e.normalize(raw,digest)['observations'][0]['evidence_id']
+        plan.write_text(json.dumps(body))
+        self.call('link-evidence','--run',run,'--report',str(report),'--plan',str(plan),expected=2)
+        self.assertNotIn('adapter_observations',self.get_ledger()['findings'][fid])
+    def test_reject_symlinked_evidence_path(self):
+        try:
+            (self.root/'alias.ts').symlink_to(self.root/'app.ts')
+        except (OSError,NotImplementedError):
+            self.skipTest('Symlink creation not supported')
+        run=self.call('begin','--profile','custom','--component','.')['run_id']
+        fid=self.call('record','--run',run,payload={'control_id':'API-07','finding_key':'alias',
+            'title':'Alias','location':'alias.ts','status':'NEEDS_REVIEW','reason':'Synthetic'})['finding_ids'][0]
+        report,plan,body=self.report_files(run,fid)
+        r=ast_report();r['signals'][0]['path']='alias.ts';report.write_text(json.dumps(r))
         raw,digest=e.read_json(report)
         body['report_sha256']=digest;body['links'][0]['evidence_id']=e.normalize(raw,digest)['observations'][0]['evidence_id']
         plan.write_text(json.dumps(body))
