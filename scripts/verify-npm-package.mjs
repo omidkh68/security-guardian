@@ -84,7 +84,7 @@ try {
     const recoveryTargets = ['.claude', '.agents'].map(config => path.join(recoveryRoot, config, 'skills/security-guardian'));
     for (const target of recoveryTargets) fs.writeFileSync(path.join(target, 'local-note.txt'), target);
     const hook = path.join(tmp, 'packed-crash.cjs');
-    fs.writeFileSync(hook, "const fs = require('node:fs'); const path = require('node:path'); if (path.basename(process.argv[1] || '') === 'security-guardian.mjs') { const rename = fs.renameSync; let n = 0; fs.renameSync = function(...args) { rename.apply(fs,args); if (++n === 2) process.exit(86); }; }");
+    fs.writeFileSync(hook, "const fs = require('node:fs'); const path = require('node:path'); if (['security-guardian.mjs', 'security-guardian'].includes(path.basename(process.argv[1] || '')) && path.basename(fs.realpathSync(process.argv[1])) === 'security-guardian.mjs') { const rename = fs.renameSync; let n = 0; fs.renameSync = function(...args) { rename.apply(fs,args); if (++n === 2) process.exit(86); }; }");
     const crash = invoke('npx', [...recoveryInstall, '--upgrade'], recoveryRoot, { NODE_OPTIONS: '--require ' + JSON.stringify(hook) });
     assert.equal(crash.status, 86, crash.stderr || crash.stdout);
     const journal = path.join(recoveryRoot, '.security-guardian-install.lock');
