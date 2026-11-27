@@ -315,6 +315,12 @@ def make_run_report(run, ledger, scan):
             f"- AST size/complexity-limited files: {flow['size_limited_files']}/{flow['complexity_limited_files']}; path-budget-limited functions: {flow.get('path_limited_functions', 0)}",
         ])
     coverage_lines.extend(['- Workflow completion does not establish complete scanner coverage or verified safety.',''])
+    linked = run.get('adapter_observations_linked',0)
+    if linked:
+        coverage_lines.extend(['## Linked adapter observations','',
+            f'- Explicit evidence links in this run: {linked}',
+            '- Imported adapter observations are unverified; no automatic finding transition or execution attestation.',
+            '- Full structured observations: findings.json (private audit history).',''])
     marker=lines.index('## Status snapshot (entire project, not just this run)')
     lines[marker:marker]=coverage_lines
     if run.get('scope_resolution'):
