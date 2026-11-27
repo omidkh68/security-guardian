@@ -81,6 +81,17 @@ class SemgrepContractTests(unittest.TestCase):
             self.assertEqual(r['rejected_results'], 2)
             self.assertFalse(r['findings'])
 
+    def test_canonical_rule_ids_and_version_check_disabled(self):
+        raw=json.dumps({'results':[self.row()],'errors':[],'paths':{'scanned':['app.ts']}})
+        with patch.object(sg.shutil,'which',return_value='/trusted/semgrep'):
+            with patch.object(sg.subprocess,'run',return_value=subprocess.CompletedProcess([],0,stdout=raw,stderr='')) as runner:
+                result=sg.run(self.root)
+        command=runner.call_args.args[0]
+        self.assertIn('--no-rewrite-rule-ids',command)
+        self.assertIn('--disable-version-check',command)
+        self.assertIn('--metrics=off',command)
+        self.assertEqual(result['findings'][0]['rule_id'],'test.rule')
+
     def test_tool_absence_timeout_and_execution_failure(self):
         with patch.object(sg.shutil, 'which', return_value=None):
             self.assertEqual(sg.run(self.root)['status'], 'NOT_AVAILABLE')

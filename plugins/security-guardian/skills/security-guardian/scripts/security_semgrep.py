@@ -89,7 +89,8 @@ def run(root: Path, *, executable='semgrep', timeout=120, config=DEFAULT_CONFIG)
     if not shutil.which(executable):
         return {'status': 'NOT_AVAILABLE', 'findings': [], 'limitations': ['Semgrep CLI is not installed; AST scan not performed.']}
     command = [executable, 'scan', '--config', str(config), '--metrics=off',
-               '--json', '--quiet', '--timeout=15', '--max-target-bytes=900000',
+               '--json', '--quiet', '--disable-version-check', '--no-rewrite-rule-ids',
+               '--timeout=15', '--max-target-bytes=900000',
                '--exclude=.security-guardian', '--exclude=.git', str(root)]
     try:
         completed = subprocess.run(command, cwd=root, capture_output=True,

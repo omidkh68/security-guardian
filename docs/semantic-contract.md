@@ -58,3 +58,9 @@ Expansion #107: see [semantic coverage expansion](semantic-expansion.md) for cur
 ## Shared parser contract hardening (#94)
 
 Validate input source and byte/line budgets inside the common parser boundary, reject duplicate JSON keys and malformed reason types. No expanded detection model; trusted external parser remains required, process is not a sandbox. Added offline negative tests; all existing optional real parser suites remain required. CI pending.
+
+## Real optional Semgrep replay (#34)
+
+The dedicated CI workflow installs Semgrep 1.140.0 in a disposable runner virtual environment and executes the existing local rules over six synthetic positive files and one negative file in a separate network namespace without inherited credentials. It checks exact rule/path/line identities, candidate-only status, private audit directory exclusion, redaction and byte integrity of fixture files. This is a structural-rule replay, not independent semantic accuracy or an OS sandbox for the installed user-facing adapter. The optional tool is not installed automatically by the product. Acceptance requires observed successful CI.
+
+Real CLI replay exposed path-prefixed rule IDs that exceeded the adapter's existing ID bound. The adapter now explicitly disables rule ID rewriting and version checks. New outputs use canonical configured rule IDs; historical prefixed reports are unchanged. The test-only environment pins Pydantic 2.12.5 for the selected Semgrep/MCP startup combination and runs `pip check`; this does not change installed product dependencies or establish a sandbox for arbitrary external tools.
