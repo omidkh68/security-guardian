@@ -151,6 +151,10 @@ def plan_links(root,run,ledger,bundle,plan):
     rows={x['evidence_id']:x for x in bundle['observations']}
     seen=set()
     additions=[]
+    evidence_owners={}
+    for owner,stored in ledger['findings'].items():
+        for observation in stored.get('adapter_observations',{}).values():
+            evidence_owners.setdefault(observation['evidence_id'],set()).add(owner)
     for link in links:
         if not isinstance(link,dict) or set(link)!={'evidence_id','finding_id'}:raise ValueError('Invalid explicit link')
         ident=link['evidence_id']; fid=link['finding_id']
@@ -170,8 +174,8 @@ def plan_links(root,run,ledger,bundle,plan):
              'current_file_digest':fp['digest'],'trust':bundle['trust']}
         key=hash_json([run['id'],bundle['report_sha256'],ident])
         # A report observation must not be linked to two findings, even on retries.
-        owners=[k for k,f in ledger['findings'].items() if key in f.get('adapter_observations',{})]
-        if owners and owners!=[fid]:raise ValueError('Evidence already linked elsewhere')
+        owners=evidence_owners.get(ident,set())
+        if owners and owners!={fid}:raise ValueError('Stable evidence identity already linked elsewhere')
         previous=finding.get('adapter_observations',{}).get(key)
         if previous is not None:
             if previous!=obs:raise ValueError('Linked evidence changed; use a new report and run')
