@@ -120,11 +120,39 @@ function runtimeFiles() {
   }
   return files.sort();
 }
+// Persist file contents and, on POSIX filesystems that support it, namespace changes.
+// Windows Node does not expose a portable directory flush; do not claim power-loss durability.
+function syncFile(p) {
+  const fd = fs.openSync(p, 'r+');
+  try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+}
+function syncDirectory(p) {
+  if (process.platform === 'win32') return;
+  const fd = fs.openSync(p, 'r');
+  try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+}
+function syncTree(dir) {
+  for (const entry of fs.readdirSync(dir)) {
+    const p = path.join(dir, entry);
+    const st = fs.lstatSync(p);
+    if (st.isSymbolicLink()) fail('Unsafe staged entry: ' + p);
+    if (st.isDirectory()) syncTree(p);
+    else if (st.isFile()) syncFile(p);
+    else fail('Unsafe staged entry: ' + p);
+  }
+  syncDirectory(dir);
+}
+function syncRename(from, to) {
+  fs.renameSync(from, to);
+  syncDirectory(path.dirname(from));
+  if (path.dirname(to) !== path.dirname(from)) syncDirectory(path.dirname(to));
+}
 function mkdirTracked(dir, created) {
   if (safeDirectory(dir)) return;
   mkdirTracked(path.dirname(dir), created);
   fs.mkdirSync(dir, { mode: 0o700 });
   created.push(dir);
+  syncDirectory(path.dirname(dir));
 }
 
 function identity(p) {
@@ -297,7 +325,7 @@ function publishClaim(p, value) {
     fs.writeFileSync(fd, JSON.stringify(value) + '\n');
     fs.fsyncSync(fd);
   } finally { fs.closeSync(fd); }
-  try { fs.linkSync(tmp, p); }
+  try { fs.linkSync(tmp, p); syncDirectory(path.dirname(p)); }
   finally { fs.unlinkSync(tmp); }
 }
 function claimPath(base, root, generation) {
@@ -336,6 +364,7 @@ function recover(options, base) {
   if (!stat(lock) && !prior) return { action: 'NO_RECOVERY_NEEDED', actions: [] };
   const initial = stat(lock) ? recoveryPlan(base, lock) : null;
   if (prior && initial && prior.root.transaction !== initial.transaction) fail('Recovery claim does not match journal.');
+  if (!initial && !prior) return { action: 'NO_RECOVERY_NEEDED', actions: [] };
   if (!initial && !completedClaim(base, prior.root)) fail('Journal missing without verified recovery receipt.');
   const plan = initial || { transaction: prior.root.transaction, actions: [], preservedStages: [] };
   if (options['dry-run']) return { action: 'RECOVERY_PREVIEW', ...plan };
@@ -349,6 +378,13 @@ function recover(options, base) {
   const active = latestClaim(base, guard);
   if (active.root.guardId !== owner.guardId || active.latest.generation !== owner.generation ||
       active.latest.pid !== process.pid) fail('Recovery ownership changed; refusing mutation.');
+  // A fresh claim may have won only after a prior recovery removed both locks.
+  // It has not mutated any installation and must not leave a spurious guard.
+  if (!prior && !stat(lock)) {
+    fs.unlinkSync(guard);
+    syncDirectory(base);
+    return { action: 'NO_RECOVERY_NEEDED', actions: [] };
+  }
   let complete = false;
   try {
     if (stat(lock)) {
@@ -358,12 +394,13 @@ function recover(options, base) {
         if (!checkRecoveryPath(step.from) || !matches(step.from, step.expected) || stat(step.to))
           fail('Recovery state changed; refusing overwrite.');
         checkAncestors(path.dirname(step.to));
-        fs.renameSync(step.from, step.to);
+        syncRename(step.from, step.to);
       }
       const verified = recoveryPlan(base, lock);
       if (verified.transaction !== owner.transaction || verified.actions.length) fail('Recovery verification incomplete.');
       if (!completedClaim(base, owner)) publishClaim(completionPath(base, owner), { ...owner, phase: 'verified' });
       fs.unlinkSync(lock);
+      syncDirectory(base);
     } else if (!completedClaim(base, owner)) fail('Journal disappeared before verification.');
     complete = true;
     return { action: 'RECOVERED', ...plan };
@@ -372,8 +409,10 @@ function recover(options, base) {
     // safely take ownership after this process exits. Never remove an active claim.
     if (complete) {
       fs.unlinkSync(guard);
+      syncDirectory(base);
       for (let n = 1; n <= owner.generation; n++) fs.unlinkSync(claimPath(base, owner, n));
       fs.unlinkSync(completionPath(base, owner));
+      syncDirectory(base);
     }
   }
 }
@@ -408,6 +447,7 @@ function install(options, base, files) {
     if (stat(recoveryLock)) fail('Recovery lock exists; inspect before retrying.');
     checkAncestors(base);
     const targets = plan(options, base);
+    syncDirectory(base);
     record('begin', { pid: process.pid, host: os.hostname(), base, targets: targets.map(x => ({ target: x.target, existing: x.existing, original: x.existing ? identity(x.target) : null })) });
     for (const target of targets) {
       mkdirTracked(target.parent, created);
@@ -423,6 +463,8 @@ function install(options, base, files) {
         fs.copyFileSync(path.join(source, rel), dest, fs.constants.COPYFILE_EXCL);
       }
       skillIdentity(stage);
+      syncTree(stage);
+      syncDirectory(target.parent);
       if (target.existing) {
         mkdirTracked(target.backupDir, created);
         item.backup = path.join(target.backupDir, name + '-' + randomUUID());
@@ -436,11 +478,14 @@ function install(options, base, files) {
         record('backup-intent', { target: item.target, backup: item.backup, stage: item.stage });
         fs.renameSync(item.target, item.backup);
         item.moved = true;
+        syncDirectory(path.dirname(item.target));
+        syncDirectory(path.dirname(item.backup));
         record('backup-moved', { target: item.target, backup: item.backup });
       }
       record('install-intent', { target: item.target, stage: item.stage, backup: item.backup, staged: identity(item.stage) });
       fs.renameSync(item.stage, item.target);
       item.installed = true;
+      syncDirectory(item.parent);
       record('installed', { target: item.target, backup: item.backup });
     }
     record('committed');
@@ -449,9 +494,12 @@ function install(options, base, files) {
     const rollback = [];
     for (const item of work.reverse()) {
       try {
-        if (item.installed) fs.rmSync(item.target, { recursive: true });
-        if (item.moved) fs.renameSync(item.backup, item.target);
-        if (stat(item.stage)) fs.rmSync(item.stage, { recursive: true });
+        if (item.installed) {
+          if (stat(item.stage)) fail('Rollback staging destination already exists.');
+          syncRename(item.target, item.stage);
+        }
+        if (item.moved) syncRename(item.backup, item.target);
+        if (stat(item.stage)) { fs.rmSync(item.stage, { recursive: true }); syncDirectory(item.parent); }
       } catch (e) { rollback.push(item.target + ': ' + e.message); }
     }
     for (const dir of created.reverse()) {
@@ -465,7 +513,7 @@ function install(options, base, files) {
     throw error;
   } finally {
     fs.closeSync(fd);
-    if (!preserveLock) fs.unlinkSync(lock);
+    if (!preserveLock) { fs.unlinkSync(lock); syncDirectory(base); }
   }
 }
 try {

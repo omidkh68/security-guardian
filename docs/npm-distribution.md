@@ -57,3 +57,25 @@ Node 22/24 packaging tests exercise exact runtime assets, install and partial re
 ### Interrupted installation
 
 For schema-2 journals, preview with `security-guardian --recover --project DIR --dry-run`, then explicitly approve with `security-guardian --recover --project DIR --yes` (use `--user` for user scope). Normal installation never triggers recovery automatically. Active or ambiguous owners, another host, malformed or legacy journals, unsafe paths, changed filesystem identity, and an invalid recovery lock fail closed. Recovery restores original backups and moves interrupted new installations back to staging for inspection rather than recursively deleting data. Retrying after a handled error is supported; abrupt termination of recovery itself can be resumed using immutable owner claims published via exclusive hard links, provided the prior owner is demonstrably gone and the journal or verified completion receipt is valid. Legacy guards, ambiguous owners and filesystems without hard-link support require manual inspection. Interrupted final cleanup can leave inert metadata files. This is not a power-loss guarantee or protection against hostile local filesystem actors.
+
+
+### Architecture and durability limits
+
+```mermaid
+flowchart TD
+ A[Exclusive install lock] --> B[Journal begin]
+ B --> C[Stage and flush files]
+ C --> D[Journal backup intent]
+ D --> E[Rename and flush directories]
+ E --> F[Journal install intent]
+ F --> G[Install and flush directories]
+ G --> H[Journal commit]
+ H --> I[Release lock]
+ D -. interrupted .-> R[Explicit recovery]
+ F -. interrupted .-> R
+ R --> V[Validate identities and owner]
+ V --> P[Preserve staged files and restore backup]
+ P --> Q[Verify and release locks]
+```
+
+Staged files and journal records are flushed with fsync; supported POSIX directory entries are flushed before advancing the journal. Flush errors are not reported as success. Node provides no portable Windows directory flush. CI exercises process termination and injected failures, not physical power loss. No guarantee is made for physical power loss, hardware write caches or filesystem corruption.
