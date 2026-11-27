@@ -52,3 +52,8 @@ flowchart LR
 ```
 
 Node 22/24 packaging tests exercise exact runtime assets, install and partial report; registry publication is a separate gate.
+
+
+### Interrupted installation
+
+The `.security-guardian-install.lock` in the selected root retains append-only JSON Lines transaction evidence. Following abrupt termination or incomplete rollback, subsequent installs fail closed. Confirm no installer is active and preserve copies of the lock, installation, staging and backup directories before manual recovery. Journal paths are evidence, not trusted recovery instructions. Automatic recovery is not implemented yet; do not remove the lock or retry before independently reviewing and restoring the affected files. This is not a power-loss durability guarantee.
