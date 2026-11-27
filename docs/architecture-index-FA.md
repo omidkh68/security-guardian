@@ -69,3 +69,6 @@ flowchart LR
 - [multi-agent](multi-agent-FA.md)
 - [npm-distribution](npm-distribution-FA.md)
 
+## پذیرش ساختاری مستندات (#54)
+
+فرمان `python scripts/audit_documentation.py --require-clean` را از ریشه مخزن اجرا کنید. CI اجباری در صورت موجودی خالی، جفت ترجمه مفقود یا بدون مرجع، مقصد محلی نامعتبر شناسایی‌شده و بلوک کد ناقص یا Mermaid خالی ناموفق می‌شود. گزارش در خروجی استاندارد باقی می‌ماند. بررسی نحو و رندر Mermaid، Anchor، لینک خارجی و بازبینی مستقل ترجمه در محدوده این Gate نیست.

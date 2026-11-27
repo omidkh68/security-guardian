@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Read-only inventory and bounded Markdown link/fence audit for human docs."""
+import argparse
 import json
 import posixpath
 import re
@@ -68,14 +69,27 @@ def audit(root,tracked):
             'problems':[{'document':p,**q} for p,x in results.items() for q in x['problems']],
             'limitations':['Simple inline relative link targets only; external URLs, anchors, reference-style links and HTML links not validated.',
                            'Mermaid fence presence and closure only; syntax, rendering and translation fidelity require separate review.',
-                           'Report-only; no automatic edits or release certification.']}
+                           'Optional structural gate only; no automatic edits or release certification.']}
+
+
+def structural_ok(report):
+    """Fail closed on detected structural defects, not unassessed semantics."""
+    return (report['documents'] > 0 and report['pairs'] > 0
+            and not report['missing_persian'] and not report['orphan_persian']
+            and not report['problems'])
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--require-clean', action='store_true',
+                        help='Fail on detected local-target, fence or pair defects')
+    args = parser.parse_args()
     tracked=set(subprocess.check_output(['git','-C',str(ROOT),'ls-files','-z']).decode('utf-8').split('\0'))-{''}
     report=audit(ROOT,tracked)
     report['commit']=subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip()
     print(json.dumps(report,ensure_ascii=False,indent=2,sort_keys=True))
+    if args.require_clean and not structural_ok(report):
+        raise SystemExit(1)
 
 
 if __name__=='__main__':
