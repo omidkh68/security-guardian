@@ -4,6 +4,7 @@ on:
     paths:
       - '.github/workflows/standards-acceptance.yml'
       - 'scripts/standards_inventory.py'
+      - 'scripts/test_standards_reference_inventory.py'
       - 'scripts/test_standards_batch.py'
       - 'scripts/verify_sbom_preview.py'
       - 'scripts/test_sbom_preview.py'
@@ -31,6 +32,7 @@ jobs:
           SG_PUBLISHER_TREE_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          python -m unittest discover -s scripts -p test_standards_reference_inventory.py -v
           python scripts/standards_inventory.py > "$RUNNER_TEMP/standards-inventory.json"
           python - "$RUNNER_TEMP/standards-inventory.json" <<'PY'
           import json,sys

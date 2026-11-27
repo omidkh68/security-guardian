@@ -108,3 +108,7 @@ flowchart LR
 ## MASVS-CODE-1: explicit OS floor configuration check (#151)
 
 Use `python3 <skill-dir>/scripts/security_mobile_policy.py --platform android --metadata /path/to/resolved-AndroidManifest.xml --required-floor 28` or `--platform ios --metadata /path/to/Info.plist --required-floor 16.0`. Values are examples, not recommended minimums. The caller selects the product policy and provides resolved app metadata. The check compares numeric Android API/iOS versions, emits metadata digest and MEETS/BELOW/INCONCLUSIVE configuration status, and fails nonzero on unmet or unresolved policy. It reads only supplied metadata, not target code execution. Device runtime, patch/support lifecycle, policy adequacy and full MASVS-CODE-1 acceptance remain unverified. No new catalog mapping or compliance assertion.
+
+## Publisher inventory reconciliation (#150–154)
+
+Mapped MASVS, MASTG and MASWE references now require exact path and Git blob identity in the pinned publisher inventory. Missing mapped mobile or CWE IDs fail; WSTG checklist omissions and duplicated identities remain explicit review-required cases rather than being silently dropped. The report records matched identities and reconciliation status for each standard. ASVS retains its existing exact leaf/artifact validation. This strengthens identity evidence only, not semantic mapping, project applicability or executed tests. CI must be observed before acceptance.
