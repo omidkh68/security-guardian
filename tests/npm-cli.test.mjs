@@ -264,7 +264,51 @@ test('recovery validates all targets before writes and resumes after a recovery 
   fs.writeFileSync(failHook, "const fs = require('node:fs'); const rename = fs.renameSync; let n = 0; fs.renameSync = function(...args) { if (++n === 2) throw new Error('recovery fault'); return rename.apply(fs, args); };");
   denied(spawn(failHook, recover));
   assert.equal(fs.readFileSync(lock, 'utf8'), raw);
-  assert.ok(!fs.existsSync(path.join(project, '.security-guardian-recovery.lock')));
+  assert.ok(fs.existsSync(path.join(project, '.security-guardian-recovery.lock')));
   assert.equal(JSON.parse(ok(run(...recover))).action, 'RECOVERED');
   for (const target of targets) assert.equal(fs.readFileSync(path.join(target, 'local-note.txt'), 'utf8'), target);
+});
+
+for (const boundary of [1, 2, 3, 4]) {
+  test('recovery resumes after recovery process exits at rename ' + boundary, t => {
+    const { root, project, home, run } = fixture(t);
+    const args = ['--agent', 'all', '--project', project, '--yes'];
+    ok(run(...args));
+    const targets = ['.claude', '.agents'].map(config => path.join(project, config, 'skills', 'security-guardian'));
+    for (const target of targets) fs.writeFileSync(path.join(target, 'local-note.txt'), target);
+    const hook = path.join(root, 'crash.cjs');
+    const crash = (n, args) => {
+      fs.writeFileSync(hook, "const fs = require('node:fs'); const rename = fs.renameSync; let n = 0; fs.renameSync = function(...args) { rename.apply(fs, args); if (++n === " + n + ") process.exit(86); };");
+      return spawnSync(process.execPath, ['--require', hook, cli, ...args], {
+        encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home }, timeout: 15000
+      });
+    };
+    assert.equal(crash(4, [...args, '--upgrade']).status, 86);
+    const recover = ['--recover', '--project', project, '--yes'];
+    assert.equal(crash(boundary, recover).status, 86);
+    assert.ok(fs.existsSync(path.join(project, '.security-guardian-recovery.lock')));
+    assert.equal(JSON.parse(ok(run(...recover))).action, 'RECOVERED');
+    assert.equal(JSON.parse(ok(run(...recover))).action, 'NO_RECOVERY_NEEDED');
+    for (const target of targets) assert.equal(fs.readFileSync(path.join(target, 'local-note.txt'), 'utf8'), target);
+    assert.ok(!fs.readdirSync(project).some(x => x.startsWith('.security-guardian-recovery')));
+  });
+}
+
+test('recovery resumes after journal unlink using verified completion receipt', t => {
+  const { root, project, home, run } = fixture(t);
+  const args = ['--agent', 'claude', '--project', project, '--yes'];
+  const hook = path.join(root, 'crash.cjs');
+  const spawn = args => spawnSync(process.execPath, ['--require', hook, cli, ...args], {
+    encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home }, timeout: 15000
+  });
+  fs.writeFileSync(hook, "const fs = require('node:fs'); const rename = fs.renameSync; fs.renameSync = function(...args) { rename.apply(fs, args); process.exit(86); };");
+  assert.equal(spawn(args).status, 86);
+  fs.writeFileSync(hook, "const fs = require('node:fs'); const unlink = fs.unlinkSync; fs.unlinkSync = function(p) { unlink.call(fs,p); if (String(p).endsWith('.security-guardian-install.lock')) process.exit(86); };");
+  const recover = ['--recover', '--project', project, '--yes'];
+  assert.equal(spawn(recover).status, 86);
+  assert.ok(!fs.existsSync(path.join(project, '.security-guardian-install.lock')));
+  assert.ok(fs.existsSync(path.join(project, '.security-guardian-recovery.lock')));
+  assert.equal(JSON.parse(ok(run(...recover))).action, 'RECOVERED');
+  assert.equal(JSON.parse(ok(run(...recover))).action, 'NO_RECOVERY_NEEDED');
+  ok(run(...args));
 });
