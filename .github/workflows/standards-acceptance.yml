@@ -6,6 +6,7 @@ on:
       - 'scripts/standards_inventory.py'
       - 'scripts/test_standards_batch.py'
       - 'scripts/verify_sbom_preview.py'
+      - 'scripts/test_sbom_preview.py'
       - 'plugins/security-guardian/skills/security-guardian/**'
       - 'package.json'
   workflow_dispatch:
@@ -69,6 +70,7 @@ jobs:
             npm sbom --package-lock-only --sbom-format=spdx > "$dir/spdx-sbom.json"
             npm sbom --package-lock-only --sbom-format=cyclonedx > "$dir/cyclonedx-sbom.json"
           )
+          "$RUNNER_TEMP/sg-standards/bin/python" -m unittest discover -s scripts -p test_sbom_preview.py -v
           "$RUNNER_TEMP/sg-standards/bin/python" scripts/verify_sbom_preview.py "$dir" | tee "$dir/sbom-evidence.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

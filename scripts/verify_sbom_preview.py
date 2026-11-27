@@ -15,14 +15,53 @@ SCHEMAS={
  'jsf-0.82.schema.json':('https://raw.githubusercontent.com/CycloneDX/specification/1.5/schema/jsf-0.82.schema.json','f46bfb1e52731ad1280123ff3e2bd29bd18d4bc2'),
 }
 
+MAX_FILES=4096
+MAX_FILE_BYTES=16_000_000
+MAX_TOTAL_BYTES=128_000_000
+
+def archive_inventory(archive):
+    """Hash shipped regular files without extracting them or inferring licenses."""
+    rows=[]
+    seen=set()
+    total=0
+    manifest=None
+    with tarfile.open(archive,'r:gz') as t:
+        for member in t:
+            name=member.name
+            parts=name.split('/')
+            if (len(parts)<2 or parts[0]!='package' or any(p in ('','.','..') for p in parts)
+                    or '\\' in name or any(ord(c)<32 or ord(c)==127 for c in name)
+                    or name in seen or len(seen)>=MAX_FILES):
+                raise ValueError('Unsafe or duplicate package member')
+            seen.add(name)
+            if not member.isfile() or not 0<=member.size<=MAX_FILE_BYTES:
+                raise ValueError('Unsupported package member')
+            total+=member.size
+            if total>MAX_TOTAL_BYTES:
+                raise ValueError('Package inventory exceeds bound')
+            with t.extractfile(member) as h:
+                raw=h.read(MAX_FILE_BYTES+1)
+            if len(raw)!=member.size:
+                raise ValueError('Package member size mismatch')
+            rel='/'.join(parts[1:])
+            rows.append({'path':rel,'size':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),
+                         'license_concluded':'NOASSERTION'})
+            if rel=='package.json':
+                manifest=json.loads(raw,object_pairs_hook=s.unique_object)
+    if manifest is None or not rows:
+        raise ValueError('Package manifest missing')
+    return manifest,{'files':sorted(rows,key=lambda r:r['path']),
+                     'file_count':len(rows),'uncompressed_file_bytes':total,
+                     'license_review':'NOT_RUN'}
+
+
 def main():
     import jsonschema
     from referencing import Registry, Resource
     from referencing.jsonschema import DRAFT7
     folder=Path(sys.argv[1])
     archive=folder/'preview.tgz'
-    with tarfile.open(archive,'r:gz') as t:
-        manifest=json.load(t.extractfile('package/package.json'))
+    manifest,inventory=archive_inventory(archive)
     if manifest.get('private') is not True or any(manifest.get(k) for k in ('dependencies','optionalDependencies','peerDependencies','bundledDependencies','bundleDependencies')):
         raise ValueError('Expected current private dependency-free preview')
     name,version=manifest['name'],manifest['version']
@@ -57,6 +96,8 @@ def main():
                       'spdx_sha256':hashlib.sha256((folder/'spdx-sbom.json').read_bytes()).hexdigest(),
                       'cyclonedx_sha256':hashlib.sha256((folder/'cyclonedx-sbom.json').read_bytes()).hexdigest(),
                       'schemas':'VALIDATED','dependency_scope':'NPM_PACKAGE_ONLY',
+                      'declared_package_license':manifest.get('license','NOASSERTION'),
+                      'shipped_file_inventory':inventory,
                       'limitations':['Not a final release artifact or Python runtime SBOM.',
                                      'No file-level license adjudication or vulnerability verdict.']},indent=2,sort_keys=True))
 if __name__=='__main__':main()
