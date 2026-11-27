@@ -411,11 +411,27 @@ test('staged file flush failure preserves existing installation', t => {
   const note = path.join(target, 'local-note.txt');
   fs.writeFileSync(note, 'keep original');
   const hook = path.join(root, 'flush-error.cjs');
-  fs.writeFileSync(hook, "const fs = require('node:fs'); const open = fs.openSync; const sync = fs.fsyncSync; const tracked = new Set(); fs.openSync = function(p, flags, ...args) { const fd = open.call(fs,p,flags,...args); if (String(p).includes('.security-guardian-stage-') && flags === 'r+') tracked.add(fd); return fd; }; fs.fsyncSync = function(fd) { if (tracked.has(fd)) throw new Error('simulated staged file flush failure'); return sync.call(fs,fd); };");
+  fs.writeFileSync(hook, "const fs = require('node:fs'); const open = fs.openSync; const sync = fs.fsyncSync; const close = fs.closeSync; const tracked = new Set(); fs.closeSync = function(fd) { tracked.delete(fd); return close.call(fs,fd); }; fs.openSync = function(p, flags, ...args) { const fd = open.call(fs,p,flags,...args); if (String(p).includes('.security-guardian-stage-') && flags === 'r+') tracked.add(fd); return fd; }; fs.fsyncSync = function(fd) { if (tracked.has(fd)) throw new Error('simulated staged file flush failure'); return sync.call(fs,fd); };");
   const failed = spawnSync(process.execPath, ['--require', hook, cli, ...args, '--upgrade'], { encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home }, timeout: 15000 });
   denied(failed);
   assert.match(failed.stderr, /simulated staged file flush failure/);
   assert.equal(fs.readFileSync(note, 'utf8'), 'keep original');
   assert.ok(!fs.existsSync(path.join(project, '.security-guardian-install.lock')));
   ok(run(...args, '--upgrade'));
+});
+
+test('late recovery contender does not leave a guard after another process completes', t => {
+  const { root, project, home, run } = fixture(t);
+  const hook = path.join(root, 'late-recovery.cjs');
+  const env = { ...process.env, HOME: home, USERPROFILE: home };
+  fs.writeFileSync(hook, "const fs = require('node:fs'); const rename = fs.renameSync; fs.renameSync = function(...args) { rename.apply(fs,args); process.exit(86); };");
+  assert.equal(spawnSync(process.execPath, ['--require', hook, cli, '--agent', 'claude', '--project', project, '--yes'], { env, timeout: 15000 }).status, 86);
+  const recover = ['--recover', '--project', project, '--yes'];
+  fs.writeFileSync(hook, "const fs = require('node:fs'); const cp = require('node:child_process'); const link = fs.linkSync; let hit = false; fs.linkSync = function(from,to) { if (!hit && String(to).endsWith('.security-guardian-recovery.lock')) { hit = true; const child = cp.spawnSync(process.execPath, process.argv.slice(1), { encoding: 'utf8', timeout: 15000 }); if (child.status !== 0 || JSON.parse(child.stdout).action !== 'RECOVERED') throw new Error('competing recovery failed: ' + child.stderr); } return link.call(fs,from,to); };");
+  const late = spawnSync(process.execPath, ['--require', hook, cli, ...recover], { env, encoding: 'utf8', timeout: 30000 });
+  assert.equal(JSON.parse(ok(late)).action, 'NO_RECOVERY_NEEDED');
+  assert.ok(!fs.existsSync(path.join(project, '.security-guardian-recovery.lock')));
+  assert.ok(!fs.existsSync(path.join(project, '.security-guardian-install.lock')));
+  assert.equal(JSON.parse(ok(run(...recover))).action, 'NO_RECOVERY_NEEDED');
+  ok(run('--agent', 'claude', '--project', project, '--yes'));
 });
