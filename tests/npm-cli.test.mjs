@@ -402,3 +402,20 @@ for (const phase of ['begin', 'stage-intent', 'stage-created', 'backup-intent', 
     assert.equal(JSON.parse(ok(run(...recover, '--yes'))).action, 'NO_RECOVERY_NEEDED');
   });
 }
+
+test('staged file flush failure preserves existing installation', t => {
+  const { root, project, home, run } = fixture(t);
+  const args = ['--agent', 'claude', '--project', project, '--yes'];
+  ok(run(...args));
+  const target = path.join(project, '.claude', 'skills', 'security-guardian');
+  const note = path.join(target, 'local-note.txt');
+  fs.writeFileSync(note, 'keep original');
+  const hook = path.join(root, 'flush-error.cjs');
+  fs.writeFileSync(hook, "const fs = require('node:fs'); const open = fs.openSync; const sync = fs.fsyncSync; const tracked = new Set(); fs.openSync = function(p, flags, ...args) { const fd = open.call(fs,p,flags,...args); if (String(p).includes('.security-guardian-stage-') && flags === 'r+') tracked.add(fd); return fd; }; fs.fsyncSync = function(fd) { if (tracked.has(fd)) throw new Error('simulated staged file flush failure'); return sync.call(fs,fd); };");
+  const failed = spawnSync(process.execPath, ['--require', hook, cli, ...args, '--upgrade'], { encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home }, timeout: 15000 });
+  denied(failed);
+  assert.match(failed.stderr, /simulated staged file flush failure/);
+  assert.equal(fs.readFileSync(note, 'utf8'), 'keep original');
+  assert.ok(!fs.existsSync(path.join(project, '.security-guardian-install.lock')));
+  ok(run(...args, '--upgrade'));
+});
