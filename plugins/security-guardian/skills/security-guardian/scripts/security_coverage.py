@@ -83,7 +83,7 @@ def framework_row(name):
         ast('js-authz-flow',2,[(authz.RULE,'BIZ-01')],'security_js_authz_flow.py',
             'Explicit routes and bounded Prisma/TypeORM resource selectors; UNVERIFIED evidence')
     if name in SSR_RULES:
-        ast('js-ssr-flow',4,SSR_RULES[name],'security_js_ssr_flow.py',
+        ast('js-ssr-flow',5,SSR_RULES[name],'security_js_ssr_flow.py',
             {'Angular':'CommonEngine document, NodeAppEngine response, credential TransferState',
              'Next.js':'Pages Router props and App Router raw JSX',
              'Nuxt':'Explicit H3 HTML endpoint, not Vue template/hydration',
