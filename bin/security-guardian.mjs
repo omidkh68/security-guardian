@@ -364,6 +364,7 @@ function recover(options, base) {
   if (!stat(lock) && !prior) return { action: 'NO_RECOVERY_NEEDED', actions: [] };
   const initial = stat(lock) ? recoveryPlan(base, lock) : null;
   if (prior && initial && prior.root.transaction !== initial.transaction) fail('Recovery claim does not match journal.');
+  if (!initial && !prior) return { action: 'NO_RECOVERY_NEEDED', actions: [] };
   if (!initial && !completedClaim(base, prior.root)) fail('Journal missing without verified recovery receipt.');
   const plan = initial || { transaction: prior.root.transaction, actions: [], preservedStages: [] };
   if (options['dry-run']) return { action: 'RECOVERY_PREVIEW', ...plan };
@@ -377,6 +378,13 @@ function recover(options, base) {
   const active = latestClaim(base, guard);
   if (active.root.guardId !== owner.guardId || active.latest.generation !== owner.generation ||
       active.latest.pid !== process.pid) fail('Recovery ownership changed; refusing mutation.');
+  // A fresh claim may have won only after a prior recovery removed both locks.
+  // It has not mutated any installation and must not leave a spurious guard.
+  if (!prior && !stat(lock)) {
+    fs.unlinkSync(guard);
+    syncDirectory(base);
+    return { action: 'NO_RECOVERY_NEEDED', actions: [] };
+  }
   let complete = false;
   try {
     if (stat(lock)) {
