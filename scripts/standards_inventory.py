@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Read-only publisher identity inventories; no semantic or runtime verdict."""
 import json
+import os
 import re
 from collections import defaultdict
 from pathlib import Path
@@ -80,6 +81,20 @@ def reconcile(name,rows,data):
             'crosswalk_ids_outside_inventory':missing,
             'rows':sorted(rows,key=lambda r:r['id'])}
 
+def fetch_mobile_tree(name,repo,revision):
+    # Fixed publisher endpoint only; never attach credentials to raw files,
+    # MITRE or caller-provided URLs, and never forward them on redirects.
+    if REPOS.get(name)!=repo or s.REVISIONS.get(name)!=revision:
+        raise ValueError('Unexpected publisher tree identity')
+    url='https://api.github.com/repos/OWASP/'+repo+'/git/trees/'+revision+'?recursive=1'
+    request=Request(url,headers={'User-Agent':'Security-Guardian-Standards-Inventory'})
+    token=os.environ.get('SG_PUBLISHER_TREE_TOKEN')
+    if token:request.add_unredirected_header('Authorization','Bearer '+token)
+    with urlopen(request,timeout=20) as response:
+        raw=response.read(16_000_001)
+    if not raw or len(raw)>16_000_000:raise ValueError('Publisher tree exceeds bound')
+    return raw
+
 def main():
     data=s.load()
     out={}
@@ -89,7 +104,7 @@ def main():
     out['WSTG']['publisher_checklist_entries']=sum(r['publisher_occurrences'] for r in out['WSTG']['rows'])
     for name,repo in REPOS.items():
         rev=s.REVISIONS[name]
-        raw=fetch('https://api.github.com/repos/OWASP/'+repo+'/git/trees/'+rev+'?recursive=1',16_000_000)
+        raw=fetch_mobile_tree(name,repo,rev)
         out[name]=reconcile(name,mobile(name,json.loads(raw,object_pairs_hook=s.unique_object)),data)
     out['MASVS']=masvs.enrich(out['MASVS'],data,masvs.load())
     raw=cwe_xml_from_zip(fetch(CWE_URL,MAX_CWE))
