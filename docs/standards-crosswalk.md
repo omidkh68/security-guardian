@@ -91,3 +91,16 @@ See [release interoperability evidence](standards-acceptance.md) for SARIF, CVSS
 ## Mapping edition v2 — curated expansion (#149–154)
 
 The v1 counts above are historical. V2 retains all previous links and adds 55 individually author-reviewed relationships to exact new publisher IDs, with original rationale and explicit partial boundaries. The schema stays v1; current mapping edition is v2. New totals: 226 reference IDs, 314 relationships; 105 partially mapped handbook controls and 40 unmapped controls, out of 145. ASVS 164, WSTG 14, MASVS 17, MASTG 7, MASWE 8 and CWE 16. The inventory denominators remain distinct; no combined percentage. Previous v1 records remain historical and must not be reinterpreted as v2 evidence. All additions are advisory, not test execution or independent review. Some standards use different edition/lifecycle models; do not derive automatic MASWE relationships from MASTG beta front matter. Unmapped requirements remain genuine gaps requiring review or a justified out-of-scope assessment; do not fabricate mappings to increase counts.
+
+## MASVS unmapped requirement review (#151)
+
+The seven unmapped MASVS 2.1.0 requirements were individually compared with the current handbook and pinned publisher files. The machine-readable `masvs-gap-review.json` records exact publisher blob IDs, original rationales and planned authorized acceptance scenarios. Three require a new control (AUTH-2 local authentication, CODE-1 platform support, CODE-2 enforced updates); four require extensions (PRIVACY-2 unlinkability, PRIVACY-3 transparency, PRIVACY-4 user data control, RESILIENCE-4 runtime resistance). Contextual control IDs are not new mappings. The inventory validates all seven dispositions against the exact publisher tree and mapping edition; stale, missing and falsely approved entries fail. Existing coverage stays 17 partial / 7 unmapped; all planned tests are unexecuted, and independent review remains NOT_RUN. This is a reviewed backlog, not implementation of the missing controls.
+
+```mermaid
+flowchart LR
+ A[Pinned MASVS files] --> B[Unmapped requirements]
+ C[Author reviewed gap plans] --> D[Exact ID and blob checks]
+ B --> D
+ D --> E[New control or extension backlog]
+ E --> F[Authorized tests still NOT_RUN]
+```

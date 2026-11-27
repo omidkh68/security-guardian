@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 import sys
 
 from verify_standards_sources import s, fetch, cwe_xml_from_zip, CWE_URL, MAX_CWE
+import security_masvs as masvs
 
 WSTG_BLOB='cb8b80e6edde0844d8ef3cb1e4a635cc2dd32476'
 REPOS={'MASVS':'masvs','MASTG':'mastg','MASWE':'maswe'}
@@ -105,6 +106,7 @@ def main():
         rev=s.REVISIONS[name]
         raw=fetch_mobile_tree(name,repo,rev)
         out[name]=reconcile(name,mobile(name,json.loads(raw,object_pairs_hook=s.unique_object)),data)
+    out['MASVS']=masvs.enrich(out['MASVS'],data,masvs.load())
     raw=cwe_xml_from_zip(fetch(CWE_URL,MAX_CWE))
     out['CWE']=reconcile('CWE',cwe(raw),data)
     import hashlib
