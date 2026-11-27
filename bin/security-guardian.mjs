@@ -255,29 +255,105 @@ function recoveryPlan(base, lock) {
   }
   return { transaction: journal.transaction, actions, preservedStages: journal.entries.map(x => x.stage).filter(Boolean) };
 }
+// Recovery claims are immutable, published atomically, and never overwritten.
+// The root claim blocks installers; successor claims serialize stale-owner takeover.
+function readClaim(p) {
+  file(p);
+  const st = fs.lstatSync(p);
+  if (st.size < 1 || st.size > 16384) fail('Invalid recovery claim size.');
+  let value;
+  try { value = JSON.parse(fs.readFileSync(p, 'utf8')); }
+  catch { fail('Malformed recovery claim; manual inspection required.'); }
+  if (!value || value.schema !== 1 || !uuid(value.guardId) || !uuid(value.transaction) ||
+      !Number.isSafeInteger(value.generation) || value.generation < 0 || value.generation > 10000 ||
+      typeof value.base !== 'string') fail('Invalid recovery claim.');
+  return value;
+}
+function publishClaim(p, value) {
+  const tmp = p + '.pending-' + randomUUID();
+  const fd = fs.openSync(tmp, 'wx', 0o600);
+  try {
+    fs.writeFileSync(fd, JSON.stringify(value) + '\n');
+    fs.fsyncSync(fd);
+  } finally { fs.closeSync(fd); }
+  try { fs.linkSync(tmp, p); }
+  finally { fs.unlinkSync(tmp); }
+}
+function claimPath(base, root, generation) {
+  return path.join(base, '.security-guardian-recovery-' + root.guardId + '-' + generation);
+}
+function latestClaim(base, guard) {
+  const root = readClaim(guard);
+  if (root.base !== base || root.generation !== 0) fail('Invalid root recovery claim.');
+  let latest = root;
+  for (let n = 1; n <= 10000; n++) {
+    const next = claimPath(base, root, n);
+    if (!stat(next)) break;
+    const value = readClaim(next);
+    if (value.base !== base || value.guardId !== root.guardId || value.transaction !== root.transaction ||
+        value.generation !== n) fail('Invalid successor recovery claim.');
+    latest = value;
+  }
+  return { root, latest };
+}
+function completionPath(base, root) {
+  return path.join(base, '.security-guardian-recovery-' + root.guardId + '-verified');
+}
+function completedClaim(base, root) {
+  const p = completionPath(base, root);
+  if (!stat(p)) return false;
+  const value = readClaim(p);
+  if (value.base !== base || value.guardId !== root.guardId || value.transaction !== root.transaction ||
+      value.phase !== 'verified') fail('Invalid recovery completion receipt.');
+  return true;
+}
 function recover(options, base) {
   const lock = path.join(base, '.security-guardian-install.lock');
   const guard = path.join(base, '.security-guardian-recovery.lock');
-  if (stat(guard)) fail('Recovery lock exists; manual inspection required.');
-  if (!stat(lock)) return { action: 'NO_RECOVERY_NEEDED', actions: [] };
-  if (options['dry-run']) return { action: 'RECOVERY_PREVIEW', ...recoveryPlan(base, lock) };
-  const fd = fs.openSync(guard, 'wx', 0o600);
+  const prior = stat(guard) ? latestClaim(base, guard) : null;
+  if (prior) ownerGone(prior.latest);
+  if (!stat(lock) && !prior) return { action: 'NO_RECOVERY_NEEDED', actions: [] };
+  const initial = stat(lock) ? recoveryPlan(base, lock) : null;
+  if (prior && initial && prior.root.transaction !== initial.transaction) fail('Recovery claim does not match journal.');
+  if (!initial && !completedClaim(base, prior.root)) fail('Journal missing without verified recovery receipt.');
+  const plan = initial || { transaction: prior.root.transaction, actions: [], preservedStages: [] };
+  if (options['dry-run']) return { action: 'RECOVERY_PREVIEW', ...plan };
+  const owner = { schema: 1, guardId: prior ? prior.root.guardId : randomUUID(),
+    transaction: plan.transaction, base, pid: process.pid, host: os.hostname(),
+    generation: prior ? prior.latest.generation + 1 : 0 };
+  if (owner.generation > 10000) fail('Recovery claim limit reached.');
+  const claim = prior ? claimPath(base, prior.root, owner.generation) : guard;
+  publishClaim(claim, owner);
+  // A competing process may have completed cleanup before our claim was published.
+  const active = latestClaim(base, guard);
+  if (active.root.guardId !== owner.guardId || active.latest.generation !== owner.generation ||
+      active.latest.pid !== process.pid) fail('Recovery ownership changed; refusing mutation.');
+  let complete = false;
   try {
-    const plan = recoveryPlan(base, lock);
-    for (const step of plan.actions) {
-      if (!checkRecoveryPath(step.from) || !matches(step.from, step.expected) || stat(step.to))
-        fail('Recovery state changed; refusing overwrite.');
-      checkAncestors(path.dirname(step.to));
-      fs.renameSync(step.from, step.to);
-    }
-    // Keep the journal until every restore is complete and a second plan is empty.
-    const verified = recoveryPlan(base, lock);
-    if (verified.actions.length) fail('Recovery verification incomplete.');
-    fs.unlinkSync(lock);
+    if (stat(lock)) {
+      const current = recoveryPlan(base, lock);
+      if (current.transaction !== owner.transaction) fail('Recovery journal changed.');
+      for (const step of current.actions) {
+        if (!checkRecoveryPath(step.from) || !matches(step.from, step.expected) || stat(step.to))
+          fail('Recovery state changed; refusing overwrite.');
+        checkAncestors(path.dirname(step.to));
+        fs.renameSync(step.from, step.to);
+      }
+      const verified = recoveryPlan(base, lock);
+      if (verified.transaction !== owner.transaction || verified.actions.length) fail('Recovery verification incomplete.');
+      if (!completedClaim(base, owner)) publishClaim(completionPath(base, owner), { ...owner, phase: 'verified' });
+      fs.unlinkSync(lock);
+    } else if (!completedClaim(base, owner)) fail('Journal disappeared before verification.');
+    complete = true;
     return { action: 'RECOVERED', ...plan };
   } finally {
-    fs.closeSync(fd);
-    fs.unlinkSync(guard);
+    // On handled failure, leave the immutable claim chain: the next process can
+    // safely take ownership after this process exits. Never remove an active claim.
+    if (complete) {
+      fs.unlinkSync(guard);
+      for (let n = 1; n <= owner.generation; n++) fs.unlinkSync(claimPath(base, owner, n));
+      fs.unlinkSync(completionPath(base, owner));
+    }
   }
 }
 
