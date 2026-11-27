@@ -38,3 +38,7 @@ flowchart LR
 ```
 
 Fixtures cover parameter binding, reassignment, branches, aliases, context managers and limits; historical measurements and expansions are separate.
+
+## Pack v14 — conditional expressions (#34)
+
+The restricted SQL value model now accepts Python conditional expressions with existing supported predicates. Literal Boolean conditions select one value, other supported predicates conservatively union possible source lines; unknown predicates remain unsupported. This is a may-flow candidate, not feasibility or sanitization proof. Six regression cases; existing external SQL replay labels remain frozen.

@@ -26,7 +26,7 @@ def review(root, profile, components, parser):
         raise ValueError('Scope unresolved; use the standard scope preview')
     roots = {c['root'] for c in scope['selected_components'] if scan._web_core(c)}
     stats = Counter()
-    result = {'schema_version':1, 'contract_version':contract.CONTRACT_VERSION, 'pack_id':'js-dom-flow', 'pack_version':4,
+    result = {'schema_version':1, 'contract_version':contract.CONTRACT_VERSION, 'pack_id':'js-dom-flow', 'pack_version':6,
               'rule_id':RULE, 'legacy_control_id':'ANG-01', 'status':'NOT_AVAILABLE',
               'selected_roots':sorted(roots), 'signals':[],
               'limitations':['Optional syntactic AST flow, not exploit proof or full taint analysis.',
@@ -95,7 +95,7 @@ def review(root, profile, components, parser):
                     stats['omitted_matches'] += 1
                     continue
                 result['signals'].append({'rule_id':RULE,'control_id':'ANG-01',
-                    'signal':'Browser location value reaches DOM HTML assignment',
+                    'signal':'Browser-controlled value reaches DOM HTML assignment',
                     'path':rel,'line':line,'source_lines':source,
                     'source_lines_truncated':hit['source_lines_truncated'] is True,
                     'sanitizer_lines':sanitizer,'sanitizer_lines_truncated':hit['sanitizer_lines_truncated'],

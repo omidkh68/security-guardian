@@ -607,7 +607,7 @@ def preview_framework(root, framework):
 
 PY_SQL_RULE = 'PY.FLASK.SQL.REQUEST_FLOW'
 PY_SQL_PACK = 'python-sql-flow'
-PY_SQL_VERSION = 13
+PY_SQL_VERSION = 14
 PY_SQL_MAX_BYTES = 128_000
 PY_SQL_MAX_NODES = 10_000
 PY_SQL_MAX_PATHS = 64
@@ -745,6 +745,17 @@ def _sql_value(node, values, receivers, request_names, db_names, helpers):
             return _sql_value(node.func.value,values,receivers,request_names,db_names,helpers)
     if isinstance(node, ast.Call) and _sql_receiver(node, receivers, db_names, helpers):
         return True, empty
+    if isinstance(node, ast.IfExp):
+        # The condition is not evaluated; only the existing restricted
+        # condition syntax is modeled. Literal booleans prune dead values.
+        if not _sql_condition(node.test, request_names):
+            return False, empty
+        if isinstance(node.test, ast.Constant) and type(node.test.value) is bool:
+            return _sql_value(node.body if node.test.value else node.orelse,
+                              values, receivers, request_names, db_names, helpers)
+        a = _sql_value(node.body, values, receivers, request_names, db_names, helpers)
+        b = _sql_value(node.orelse, values, receivers, request_names, db_names, helpers)
+        return a[0] and b[0], a[1] | b[1]
     if isinstance(node, ast.JoinedStr):
         children = node.values
     elif isinstance(node, ast.FormattedValue) and node.format_spec is None:

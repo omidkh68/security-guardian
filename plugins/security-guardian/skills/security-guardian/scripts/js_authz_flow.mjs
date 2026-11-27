@@ -139,7 +139,7 @@ function analyze(ts,file){
   }
   if(!routes.length)return fail();
   for(const {fn,framework,method,route,evidence,injectedRepos=new Set()} of routes){
-    const locals=new Set(),env=new Map(),objects=new Set(),requests=new Set();
+    const locals=new Set(),objects=new Set(),requests=new Set(); let env=new Map(),mutable=new Set();
     let valid=fn.parameters.length>=1&&fn.parameters.length<=(framework==='NestJS'?16:3);
     for(let i=0;i<fn.parameters.length;i++){
       const p=fn.parameters[i],n=id(p.name);
@@ -225,24 +225,83 @@ function analyze(ts,file){
       r.hits.push({line:line(n),source_lines:[...new Set(user.flatMap(x=>x.lines))].sort((a,b)=>a-b).slice(0,16),framework,method,route_line:route,operation:op,adapter:prisma?'PRISMA':'TYPEORM',scope_status:status,object_request:obj,tenant_context:tenant,owner_context:owner,caller_scope:callerScope,selectors,evidence});
       return true;
     }
-    for(const s of fn.body.statements){
-      if(ts.isEmptyStatement(s))continue;
-      if(ts.isVariableStatement(s)&&(s.declarationList.flags&ts.NodeFlags.Const)){
-        let ok=true;
-        for(const d of s.declarationList.declarations){
-          const n=id(d.name),a=value(d.initializer);
-          if(a){env.set(n,a);continue;}
-          if(operation(d.initializer))continue;
-          ok=false;break;
-        }
-        if(ok)continue;
+    // Conditions select possible paths but NEVER prove a guard or authorization.
+    // Keep selector provenance separate even when paths meet at the same sink.
+    const snapshot=()=>({env:new Map(env),mutable:new Set(mutable)});
+    let paths=1,steps=0,limited=false;
+    const limit=()=>{limited=true;r.partial=true;r.reason='path_limit';return [];};
+    function condition(n,depth=0){
+      if(!n||depth>16)return null;
+      if(ts.isParenthesizedExpression(n))return condition(n.expression,depth+1);
+      if(n.kind===ts.SyntaxKind.TrueKeyword)return {truth:true};
+      if(n.kind===ts.SyntaxKind.FalseKeyword)return {truth:false};
+      if(ts.isPrefixUnaryExpression(n)&&n.operator===ts.SyntaxKind.ExclamationToken){
+        const inner=condition(n.operand,depth+1);
+        return inner?{truth:inner.truth===null?null:!inner.truth}:null;
       }
-      if(ts.isExpressionStatement(s)&&operation(s.expression))continue;
-      if(ts.isReturnStatement(s)){
-        if(!s.expression||operation(s.expression)||value(s.expression))break;
-      }
-      r.partial=true;break;
+      if(ts.isBinaryExpression(n)&&[ts.SyntaxKind.EqualsEqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(n.operatorToken.kind)
+        &&value(n.left)&&value(n.right))return {truth:null};
+      return value(n)?{truth:null}:null;
     }
+    function scoped(statement,state,depth){
+      const before=new Set(state.env.keys());
+      const out=walk(ts.isBlock(statement)?statement.statements:[statement],[state],depth);
+      for(const next of out)for(const key of next.env.keys())if(!before.has(key)){
+        next.env.delete(key);next.mutable.delete(key);
+      }
+      return out;
+    }
+    function walk(statements,states,depth=0){
+      if(depth>32)return limit();
+      for(const s of statements){
+        const next=[];
+        for(const state of states){
+          if(limited||++steps>4096)return limit();
+          env=state.env;mutable=state.mutable;
+          if(ts.isEmptyStatement(s)){next.push(state);continue;}
+          if(ts.isIfStatement(s)){
+            const test=condition(s.expression);
+            if(!test){r.partial=true;continue;}
+            if(test.truth===null&&++paths>64)return limit();
+            const yes=snapshot(),no=snapshot();
+            if(test.truth!==false)next.push(...scoped(s.thenStatement,yes,depth+1));
+            if(test.truth!==true)next.push(...(s.elseStatement?scoped(s.elseStatement,no,depth+1):[no]));
+            continue;
+          }
+          if(ts.isBlock(s)){next.push(...scoped(s,snapshot(),depth+1));continue;}
+          if(ts.isVariableStatement(s)&&(s.declarationList.flags&(ts.NodeFlags.Const|ts.NodeFlags.Let))){
+            let ok=true;
+            for(const d of s.declarationList.declarations){
+              const n=id(d.name),a=value(d.initializer);
+              if(a){
+                env.set(n,a);
+                if(s.declarationList.flags&ts.NodeFlags.Let)mutable.add(n);
+                continue;
+              }
+              if((s.declarationList.flags&ts.NodeFlags.Const)&&operation(d.initializer))continue;
+              ok=false;break;
+            }
+            if(ok){next.push(state);continue;}
+          }
+          if(ts.isExpressionStatement(s)){
+            if(operation(s.expression)){next.push(state);continue;}
+            const e=s.expression;
+            if(ts.isBinaryExpression(e)&&e.operatorToken.kind===ts.SyntaxKind.EqualsToken&&mutable.has(id(e.left))){
+              const a=value(e.right);if(a){env.set(id(e.left),a);next.push(state);continue;}
+            }
+          }
+          if(ts.isReturnStatement(s)){
+            if(s.expression&&!operation(s.expression)&&!value(s.expression))r.partial=true;
+            continue;
+          }
+          r.partial=true;
+        }
+        states=next;
+        if(limited||!states.length)break;
+      }
+      return states;
+    }
+    walk(fn.body.statements,[snapshot()]);
   }
   return r;
 }

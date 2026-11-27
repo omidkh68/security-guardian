@@ -93,3 +93,30 @@ test('local SQL helpers preserve exact parameter dependencies and reject dynamic
   ];
   for(const [code,count] of cases){const r=run(fixture(t,code,code.includes("'fastify'")?'fastify':'express'));assert.equal(r.signals.length,count,code);}
 });
+
+test('Node SQL v3 path-local branches, early exits and bounds',{skip:!parser},t=>{
+  const cases=[
+    ['branch positive','let q="fixed"; if(input.query.flag){q=input.query.name;} db.query(q);',1,'HEURISTIC_REVIEW_ONLY'],
+    ['both branches safe','let q=input.query.name; if(input.query.flag){q="a";}else{q="b";} db.query(q);',0,'HEURISTIC_REVIEW_ONLY'],
+    ['early return','let q=input.query.name; if(input.query.flag){return;}else{q="fixed";} db.query(q);',0,'HEURISTIC_REVIEW_ONLY'],
+    ['literal dead branch','if(false){db.query(input.query.name);} if(true){db.query("fixed");}',0,'HEURISTIC_REVIEW_ONLY'],
+    ['nested branches','if(input.query.flag){if(input.query.name==="x"){db.query(input.query.name);}}',1,'HEURISTIC_REVIEW_ONLY'],
+    ['bound parameters','if(input.query.flag){db.query("SELECT $1",[input.query.name]);}',0,'HEURISTIC_REVIEW_ONLY'],
+    ['unknown call condition','if(mutate()){db.query(input.query.name);}',0,'PARTIAL'],
+    ['independent unsupported branch','if(input.query.flag){mutate();}else{db.query(input.query.name);}',1,'PARTIAL'],
+    ['block local not exported','if(input.query.flag){const q=input.query.name;} db.query(q);',0,'PARTIAL'],
+    ['dedup','const q=input.query.name; if(input.query.flag){}else{} db.query(q);',1,'HEURISTIC_REVIEW_ONLY'],
+    ['negated literal','if(!true){db.query(input.query.name);}else{db.query("fixed");}',0,'HEURISTIC_REVIEW_ONLY'],
+    ['budget',Array.from({length:8},()=> 'if(input.query.flag){}').join(' ')+' db.query(input.query.name);',0,'PARTIAL']
+  ];
+  for(const [label,body,count,status] of cases){
+    const r=run(fixture(t,route('express',body),'express'));
+    assert.equal(r.pack_version,3,label);
+    assert.equal(r.signals.length,count,label);
+    assert.equal(r.status,status,label);
+    if(label==='budget')assert.equal(r.coverage.path_limited_files,1);
+  }
+  const r=run(fixture(t,nest('if(name){return db.query(name);} return db.query("fixed");'),'@nestjs/core'));
+  assert.equal(r.signals.length,1);
+  console.log('NODE_SQL_CONTROL_FLOW_CASES=13');
+});

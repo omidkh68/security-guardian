@@ -155,11 +155,14 @@ jobs:
           python scripts/benchmark_scanner.py > "$REPORTS/indicator.json"
           python scripts/benchmark_holdout.py --synthetic all --require-synthetic-regression --typescript-module "$PARSER" > "$REPORTS/semantic.json"
           python scripts/benchmark_release_evidence.py --reports "$REPORTS" --typescript-module "$PARSER" | tee "$RUNNER_TEMP/benchmark-evidence.json"
+          python scripts/benchmark_external_dom.py --typescript-module "$PARSER" | tee "$RUNNER_TEMP/external-dom-probe.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: matrix.python-version == '3.12'
         with:
           name: benchmark-evidence
-          path: ${{ runner.temp }}/benchmark-evidence.json
+          path: |
+            ${{ runner.temp }}/benchmark-evidence.json
+            ${{ runner.temp }}/external-dom-probe.json
           if-no-files-found: error
           retention-days: 7
       - name: Verify no tracked secret-like files or generated reports
@@ -212,4 +215,48 @@ jobs:
       - name: Enforce exposed JS semantic regression labels (not independent accuracy)
         run: python scripts/benchmark_holdout.py --synthetic js --require-synthetic-regression --typescript-module "$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js"
       - name: Verify exact tarball manifest and offline npx install-to-report
+        run: node scripts/verify-npm-package.mjs
+
+  npm-macos-smoke:
+    name: npm macOS smoke (Node ${{ matrix.node-version }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22', '24']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Test installer safety and release manifest
+        run: node --test tests/npm-cli.test.mjs tests/npm-release.test.mjs
+      - name: Verify exact tarball and isolated offline install-to-report
+        run: node scripts/verify-npm-package.mjs
+
+  npm-windows-smoke:
+    name: npm Windows smoke (Node ${{ matrix.node-version }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22', '24']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Test installer safety and release manifest
+        run: node --test tests/npm-cli.test.mjs tests/npm-release.test.mjs
+      - name: Verify exact tarball and isolated offline install-to-report
         run: node scripts/verify-npm-package.mjs
