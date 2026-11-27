@@ -49,6 +49,22 @@ class SemanticFlowTests(unittest.TestCase):
         self.assertNotIn('SELECT name',json.dumps(r))
         self.assertEqual(r['summary']['python_sql_flow']['matches'],1)
 
+    def test_conditional_expression_provenance(self):
+        cases = [
+            ('request.args["q"] if flag else "fixed"', 1, False),
+            ('"fixed" if flag else request.args["q"]', 1, False),
+            ('"fixed" if True else request.args["q"]', 0, False),
+            ('request.args["q"] if False else "fixed"', 0, False),
+            ('"a" if flag else "b"', 0, False),
+            ('request.args["q"] if mutate() else "fixed"', 0, True),
+        ]
+        for expr, count, partial in cases:
+            with self.subTest(expr=expr):
+                r = self.run_scan('    query = '+expr+'\n    cur.execute(query)\n')
+                self.assertEqual(len(self.hits(r)),count)
+                self.assertEqual(r['summary']['python_sql_flow']['status']=='PARTIAL',partial)
+                self.assertTrue(all(x['pack_version']==14 for x in self.hits(r)))
+
     def test_parameterized_and_reassigned(self):
         for body in (
             '    term = request.args["q"]\n    cur.execute("SELECT * FROM items WHERE name = ?", (term,))\n',
