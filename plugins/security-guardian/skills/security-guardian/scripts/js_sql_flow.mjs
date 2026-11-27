@@ -107,7 +107,7 @@ function analyze(ts,file){
   // Direct framework registration establishes the first parameter as request.
   // Do not infer provenance from parameter names or a type annotation alone.
   for(const {fn,kind} of routes){
-    const locals=new Set(),env=new Map(),constants=new Set();
+    const locals=new Set(); let env=new Map(),constants=new Set();
     const nestObjects=new Set(),nestScalars=new Map();
     let valid=fn.parameters.length>=1&&fn.parameters.length<=(kind==='nest'?16:3);
     for(const p of fn.parameters){
@@ -167,28 +167,78 @@ function analyze(ts,file){
       if(v.length)r.hits.push({line:line(n),source_lines:v.slice(0,16),source_lines_truncated:v.length>16});
       return true;
     }
-    for(const s of fn.body.statements){
-      if(ts.isEmptyStatement(s))continue;
-      if(ts.isVariableStatement(s)&&(s.declarationList.flags&(ts.NodeFlags.Let|ts.NodeFlags.Const))){
-        let ok=true;
-        for(const d of s.declarationList.declarations){
-          const n=id(d.name),v=value(d.initializer);
-          if(v===null){ok=false;break;}
-          env.set(n,v);if(s.declarationList.flags&ts.NodeFlags.Const)constants.add(n);
-        }
-        if(ok)continue;
-      }else if(ts.isExpressionStatement(s)){
-        const e=s.expression;
-        if(sink(e))continue;
-        if(ts.isBinaryExpression(e)&&e.operatorToken.kind===ts.SyntaxKind.EqualsToken&&env.has(id(e.left))&&!constants.has(id(e.left))){
-          const v=value(e.right);if(v!==null){env.set(id(e.left),v);continue;}
-        }
-      }else if(ts.isReturnStatement(s)){
-        if(s.expression&&!sink(s.expression)&&value(s.expression)===null)partial();
-        break;
+    // Path-local state. Never execute a condition, and do not merge mutually
+    // exclusive bindings. Unsupported effects terminate only the affected path.
+    const snapshot=()=>({env:new Map(env),constants:new Set(constants)});
+    let paths=1,steps=0,limited=false;
+    const limit=()=>{limited=true;partial();r.reason='path_limit';return [];};
+    function condition(n,depth=0){
+      if(!n||depth>16)return null;
+      if(ts.isParenthesizedExpression(n))return condition(n.expression,depth+1);
+      if(n.kind===ts.SyntaxKind.TrueKeyword)return {truth:true};
+      if(n.kind===ts.SyntaxKind.FalseKeyword)return {truth:false};
+      if(ts.isPrefixUnaryExpression(n)&&n.operator===ts.SyntaxKind.ExclamationToken){
+        const inner=condition(n.operand,depth+1);
+        return inner?{truth:inner.truth===null?null:!inner.truth}:null;
       }
-      partial();break;
+      if(ts.isBinaryExpression(n)&&[ts.SyntaxKind.EqualsEqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsEqualsToken,
+        ts.SyntaxKind.LessThanToken,ts.SyntaxKind.LessThanEqualsToken,ts.SyntaxKind.GreaterThanToken,ts.SyntaxKind.GreaterThanEqualsToken].includes(n.operatorToken.kind)
+        &&value(n.left)!==null&&value(n.right)!==null)return {truth:null};
+      return value(n)!==null?{truth:null}:null;
     }
+    function scoped(statement,state,depth){
+      const before=new Set(state.env.keys());
+      const out=walk(ts.isBlock(statement)?statement.statements:[statement],[state],depth);
+      // Block-local declarations must not escape the block.
+      for(const next of out)for(const key of next.env.keys())if(!before.has(key)){
+        next.env.delete(key);next.constants.delete(key);
+      }
+      return out;
+    }
+    function walk(statements,states,depth=0){
+      if(depth>32)return limit();
+      for(const s of statements){
+        const next=[];
+        for(const state of states){
+          if(limited||++steps>4096)return limit();
+          env=state.env;constants=state.constants;
+          if(ts.isEmptyStatement(s)){next.push(state);continue;}
+          if(ts.isIfStatement(s)){
+            const test=condition(s.expression);
+            if(!test){partial();continue;}
+            if(test.truth===null&&++paths>64)return limit();
+            const yes=snapshot(),no=snapshot();
+            if(test.truth!==false)next.push(...scoped(s.thenStatement,yes,depth+1));
+            if(test.truth!==true)next.push(...(s.elseStatement?scoped(s.elseStatement,no,depth+1):[no]));
+            continue;
+          }
+          if(ts.isBlock(s)){next.push(...scoped(s,snapshot(),depth+1));continue;}
+          if(ts.isVariableStatement(s)&&(s.declarationList.flags&(ts.NodeFlags.Let|ts.NodeFlags.Const))){
+            let ok=true;
+            for(const d of s.declarationList.declarations){
+              const n=id(d.name),v=value(d.initializer);
+              if(v===null){ok=false;break;}
+              env.set(n,v);if(s.declarationList.flags&ts.NodeFlags.Const)constants.add(n);
+            }
+            if(ok){next.push(state);continue;}
+          }else if(ts.isExpressionStatement(s)){
+            const e=s.expression;
+            if(sink(e)){next.push(state);continue;}
+            if(ts.isBinaryExpression(e)&&e.operatorToken.kind===ts.SyntaxKind.EqualsToken&&env.has(id(e.left))&&!constants.has(id(e.left))){
+              const v=value(e.right);if(v!==null){env.set(id(e.left),v);next.push(state);continue;}
+            }
+          }else if(ts.isReturnStatement(s)){
+            if(s.expression&&!sink(s.expression)&&value(s.expression)===null)partial();
+            continue;
+          }
+          partial();
+        }
+        states=next;
+        if(limited||!states.length)break;
+      }
+      return states;
+    }
+    walk(fn.body.statements,[snapshot()]);
   }
   if(!routes.length)partial();
   return r;
