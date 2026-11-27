@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const cli = fileURLToPath(new URL('../bin/security-guardian.mjs', import.meta.url));
@@ -311,4 +311,64 @@ test('recovery resumes after journal unlink using verified completion receipt', 
   assert.equal(JSON.parse(ok(run(...recover))).action, 'RECOVERED');
   assert.equal(JSON.parse(ok(run(...recover))).action, 'NO_RECOVERY_NEEDED');
   ok(run(...args));
+});
+
+test('strict journal rejects extra fields, partial records, legacy schema and reordered targets', t => {
+  const { root, project, home, run } = fixture(t);
+  const args = ['--agent', 'all', '--project', project, '--yes'];
+  const hook = path.join(root, 'crash.cjs');
+  fs.writeFileSync(hook, "const fs = require('node:fs'); const rename = fs.renameSync; fs.renameSync = function(...args) { rename.apply(fs,args); process.exit(86); };");
+  assert.equal(spawnSync(process.execPath, ['--require', hook, cli, ...args], {
+    encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home }, timeout: 15000
+  }).status, 86);
+  const lock = path.join(project, '.security-guardian-install.lock');
+  const raw = fs.readFileSync(lock, 'utf8');
+  const records = raw.trimEnd().split('\n').map(JSON.parse);
+  const encode = xs => xs.map(x => JSON.stringify(x)).join('\n') + '\n';
+  const variants = [
+    raw.slice(0, -1),
+    encode(records.map(x => ({ ...x, schema: 1 }))),
+    encode(records.map((x, i) => i === 0 ? { ...x, unexpected: true } : x)),
+    encode(records.map((x, i) => i === 1 ? { ...x, unexpected: true } : x)),
+    encode([records[0], records[3], records[4], records[1], records[2], ...records.slice(5)]),
+    encode([...records, records[1]])
+  ];
+  const target = path.join(project, '.claude', 'skills', 'security-guardian');
+  for (const invalid of variants) {
+    fs.writeFileSync(lock, invalid);
+    denied(run('--recover', '--project', project, '--yes'));
+    assert.equal(fs.readFileSync(lock, 'utf8'), invalid);
+    assert.ok(fs.existsSync(path.join(target, 'SKILL.md')));
+    assert.ok(!fs.existsSync(path.join(project, '.security-guardian-recovery.lock')));
+  }
+  fs.writeFileSync(lock, raw);
+  ok(run('--recover', '--project', project, '--yes'));
+  assert.ok(!fs.existsSync(target));
+});
+
+test('simultaneous recovery contenders cannot both mutate the same transaction', async t => {
+  const { root, project, home, run } = fixture(t);
+  const args = ['--agent', 'all', '--project', project, '--yes'];
+  ok(run(...args));
+  const targets = ['.claude', '.agents'].map(config => path.join(project, config, 'skills', 'security-guardian'));
+  for (const target of targets) fs.writeFileSync(path.join(target, 'local-note.txt'), target);
+  const hook = path.join(root, 'crash.cjs');
+  fs.writeFileSync(hook, "const fs = require('node:fs'); const rename = fs.renameSync; let n = 0; fs.renameSync = function(...args) { rename.apply(fs,args); if (++n === 4) process.exit(86); };");
+  const env = { ...process.env, HOME: home, USERPROFILE: home };
+  assert.equal(spawnSync(process.execPath, ['--require', hook, cli, ...args, '--upgrade'], { env, timeout: 15000 }).status, 86);
+  const recover = ['--recover', '--project', project, '--yes'];
+  const contender = () => new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [cli, ...recover], { env });
+    let out = '', err = '';
+    child.stdout.on('data', x => out += x);
+    child.stderr.on('data', x => err += x);
+    const timer = setTimeout(() => { child.kill(); reject(new Error('recovery timed out')); }, 15000);
+    child.on('error', e => { clearTimeout(timer); reject(e); });
+    child.on('close', code => { clearTimeout(timer); resolve({ code, out, err }); });
+  });
+  const results = await Promise.all(Array.from({ length: 8 }, contender));
+  assert.ok(results.every(x => [0, 2].includes(x.code)), JSON.stringify(results));
+  assert.equal(results.filter(x => x.code === 0 && JSON.parse(x.out).action === 'RECOVERED').length, 1, JSON.stringify(results));
+  for (const target of targets) assert.equal(fs.readFileSync(path.join(target, 'local-note.txt'), 'utf8'), target);
+  assert.equal(JSON.parse(ok(run(...recover))).action, 'NO_RECOVERY_NEEDED');
 });
