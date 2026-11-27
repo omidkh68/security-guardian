@@ -133,7 +133,7 @@ function identity(p) {
   return { dev: String(st.dev), ino: String(st.ino) };
 }
 function validIdentity(value) {
-  return value && typeof value.dev === 'string' && /^\d+$/.test(value.dev) &&
+  return exactFields(value, ['dev', 'ino']) && typeof value.dev === 'string' && /^\d+$/.test(value.dev) &&
     typeof value.ino === 'string' && /^[1-9]\d*$/.test(value.ino);
 }
 function matches(p, expected) {
@@ -157,6 +157,14 @@ function ownerGone(begin) {
   }
   fail('Installer owner may still be active; recovery refused.');
 }
+function exactFields(value, fields) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) &&
+    Object.keys(value).length === fields.length && fields.every(key => Object.hasOwn(value, key));
+}
+function validOwner(value) {
+  return typeof value.host === 'string' && value.host.length > 0 &&
+    Number.isSafeInteger(value.pid) && value.pid > 0 && value.pid <= 2147483647;
+}
 function readJournal(base, lock) {
   file(lock);
   const st = fs.lstatSync(lock);
@@ -167,27 +175,40 @@ function readJournal(base, lock) {
   try { records = raw.trimEnd().split('\n').map(JSON.parse); }
   catch { fail('Malformed journal; manual recovery required.'); }
   const begin = records[0];
-  if (!begin || begin.schema !== 2 || begin.phase !== 'begin' || !uuid(begin.transaction) || begin.base !== base ||
+  if (!exactFields(begin, ['schema', 'transaction', 'phase', 'pid', 'host', 'base', 'targets']) || !validOwner(begin) || begin.schema !== 2 || begin.phase !== 'begin' || !uuid(begin.transaction) || begin.base !== base ||
       !Array.isArray(begin.targets) || begin.targets.length < 1 || begin.targets.length > 2)
     fail('Unsupported or invalid journal; manual recovery required.');
   ownerGone(begin);
   const entries = new Map();
   for (const item of begin.targets) {
-    if (!item || typeof item.existing !== 'boolean' || (item.existing ? !validIdentity(item.original) : item.original !== null))
+    if (!exactFields(item, ['target', 'existing', 'original']) || typeof item.existing !== 'boolean' || (item.existing ? !validIdentity(item.original) : item.original !== null))
       fail('Invalid original target identity.');
     const config = ['.claude', '.agents'].find(x => item.target === path.join(base, x, 'skills', name));
     if (!config || entries.has(item.target)) fail('Invalid or duplicate journal target.');
     entries.set(item.target, { ...item, parent: path.join(base, config, 'skills'), backupDir: path.join(base, config, 'skill-backups'), stage: null, backup: null, staged: null, phase: 'begin' });
   }
   let terminal = null;
+  const fields = new Map([
+    ['stage-intent', ['target', 'stage']], ['stage-created', ['target', 'stage']],
+    ['backup-intent', ['target', 'stage', 'backup']], ['backup-moved', ['target', 'backup']],
+    ['install-intent', ['target', 'stage', 'backup', 'staged']], ['installed', ['target', 'backup']],
+    ['committed', []], ['rollback-incomplete', ['errors']]
+  ]);
   for (const r of records.slice(1)) {
-    if (!r || r.schema !== 2 || r.transaction !== begin.transaction || terminal) fail('Invalid journal sequence.');
+    if (!r || !fields.has(r.phase) || !exactFields(r, ['schema', 'transaction', 'phase', ...fields.get(r.phase)]) || r.schema !== 2 || r.transaction !== begin.transaction || terminal) fail('Invalid journal sequence.');
     if (r.phase === 'committed' || r.phase === 'rollback-incomplete') {
       if (r.phase === 'committed' && [...entries.values()].some(x => x.phase !== 'installed')) fail('Incomplete committed journal.');
+      if (r.phase === 'rollback-incomplete' && (!Array.isArray(r.errors) || !r.errors.length || !r.errors.every(x => typeof x === 'string'))) fail('Invalid rollback evidence.');
       terminal = r.phase; continue;
     }
     const x = entries.get(r.target);
     if (!x) fail('Unexpected journal target.');
+    const all = [...entries.values()];
+    const staging = ['stage-intent', 'stage-created'].includes(r.phase);
+    if (staging && all.some(y => !['begin', 'stage-intent', 'stage-created'].includes(y.phase))) fail('Staging after mutation intent.');
+    if (!staging && all.some(y => ['begin', 'stage-intent'].includes(y.phase))) fail('Mutation before staging complete.');
+    const expected = staging ? all.find(y => y.phase !== 'stage-created') : all.find(y => y.phase !== 'installed');
+    if (expected !== x) fail('Out-of-order journal target.');
     switch (r.phase) {
       case 'stage-intent':
         if (x.phase !== 'begin' || !directChild(r.stage, x.parent, '.security-guardian-stage-')) fail('Invalid stage intent.');
@@ -264,7 +285,7 @@ function readClaim(p) {
   let value;
   try { value = JSON.parse(fs.readFileSync(p, 'utf8')); }
   catch { fail('Malformed recovery claim; manual inspection required.'); }
-  if (!value || value.schema !== 1 || !uuid(value.guardId) || !uuid(value.transaction) ||
+  if (!value || !validOwner(value) || !exactFields(value, ['schema', 'guardId', 'transaction', 'base', 'pid', 'host', 'generation', ...(value.phase === 'verified' ? ['phase'] : [])]) || value.schema !== 1 || !uuid(value.guardId) || !uuid(value.transaction) ||
       !Number.isSafeInteger(value.generation) || value.generation < 0 || value.generation > 10000 ||
       typeof value.base !== 'string') fail('Invalid recovery claim.');
   return value;
@@ -284,14 +305,14 @@ function claimPath(base, root, generation) {
 }
 function latestClaim(base, guard) {
   const root = readClaim(guard);
-  if (root.base !== base || root.generation !== 0) fail('Invalid root recovery claim.');
+  if (root.base !== base || root.generation !== 0 || root.phase !== undefined) fail('Invalid root recovery claim.');
   let latest = root;
   for (let n = 1; n <= 10000; n++) {
     const next = claimPath(base, root, n);
     if (!stat(next)) break;
     const value = readClaim(next);
     if (value.base !== base || value.guardId !== root.guardId || value.transaction !== root.transaction ||
-        value.generation !== n) fail('Invalid successor recovery claim.');
+        value.generation !== n || value.phase !== undefined) fail('Invalid successor recovery claim.');
     latest = value;
   }
   return { root, latest };
