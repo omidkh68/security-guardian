@@ -112,3 +112,7 @@ Use `python3 <skill-dir>/scripts/security_mobile_policy.py --platform android --
 ## Publisher inventory reconciliation (#150–154)
 
 Mapped MASVS, MASTG and MASWE references now require exact path and Git blob identity in the pinned publisher inventory. Missing mapped mobile or CWE IDs fail; WSTG checklist omissions and duplicated identities remain explicit review-required cases rather than being silently dropped. The report records matched identities and reconciliation status for each standard. ASVS retains its existing exact leaf/artifact validation. This strengthens identity evidence only, not semantic mapping, project applicability or executed tests. CI must be observed before acceptance.
+
+## Cumulative ASVS review plan (#149)
+
+Use `python3 <skill-dir>/scripts/security_asvs.py --source /path/to/pinned-asvs.json --review-level 2` to produce a cumulative Level 1+2 review worklist, including every unmapped selected requirement. Levels 1, 2 and 3 are explicit review selections; higher-level IDs remain listed separately. Each selected requirement identifies the next mapping/applicability review action and retains NOT_ASSESSED/NOT_VERIFIED. No inferred assurance level, assessment or compliance. Default full inventory is unchanged. Offline regression tests cover selection and unknown states; CI pending.
