@@ -6,8 +6,9 @@ Security Guardian itself reviews security-sensitive projects. **Do not disclose 
 
 | Version | Status |
 |---|---|
-| 1.1.x | Active maintenance |
-| 1.0.x | Superseded; please upgrade |
+| 1.2.1 | Current documented release baseline |
+| 1.3.0 development | Unreleased; not a production release |
+| 1.1.x and older | Earlier versions; review upgrade availability |
 
 ## Report a vulnerability privately
 
@@ -24,3 +25,7 @@ Include affected version, minimal offline reproduction, impact, and suggested re
 - Keep `.security-guardian/` reports private: file paths, security findings and architecture metadata can be sensitive.
 
 See [the threat and trust model](docs/security-model.md).
+
+## Report handling and coordinated disclosure
+
+If private vulnerability reporting is enabled, use [the private advisory form](https://github.com/omidkh68/security-guardian/security/advisories/new). Otherwise use an established private maintainer channel; do not include sensitive details in a public request. Triage should confirm scope, affected versions and reproducibility, preserve private evidence, and coordinate disclosure after remediation and validation. No guaranteed response deadline, support lifetime or bounty is implied. The current public release baseline and development status are distinguished in the [README](README.md).

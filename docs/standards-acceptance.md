@@ -68,3 +68,7 @@ The private preview workflow now separates build, signing and verification into 
 ## Shipped file inventory (#157–158)
 
 Preview evidence now enumerates and hashes every regular file in the exact npm tarball, including shipped Python, JavaScript and reference assets. Unsafe paths, duplicate members, links and oversized archives fail before inventory acceptance. The declared package license is separate from file-level NOASSERTION. This is a companion inventory, not a modification of the npm-generated SPDX or CycloneDX SBOM or a full Python dependency/license adjudication. Final published artifact validation remains pending.
+
+## Portable SARIF paths and explicit CVSS output checks (#155–156)
+
+The opt-in location sidecar rejects Windows reserved device names in every path segment. Fingerprint identity remains stable when the ledger status or severity changes. CVSS output is checked for finite one-decimal scores within 0–10 and matching qualitative severity. Environmental metric membership is explicit; supplemental metrics and explicit Not Defined values do not change the B/BT/BE/BTE nomenclature. New regression tests exercise these boundaries and malformed calculator output. This is not exhaustive scoring validation or GitHub code scanning import evidence.

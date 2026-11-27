@@ -81,6 +81,39 @@ def reconcile(name,rows,data):
             'crosswalk_ids_outside_inventory':missing,
             'rows':sorted(rows,key=lambda r:r['id'])}
 
+def validate_reference_inventory(name, inventory, crosswalk):
+    """Reconcile exact mapped publisher identities, without creating new mappings."""
+    rows=inventory['rows']
+    by_id={r['id']:r for r in rows}
+    if len(rows)!=len(by_id):
+        raise ValueError('Duplicate publisher ID')
+    refs=[r for r in crosswalk['references'].values() if r['standard']==name]
+    outside=[]
+    checked=0
+    conflicts=[]
+    for ref in refs:
+        ident=ref['id']
+        row=by_id.get(ident)
+        if row is None:
+            outside.append(ident)
+            continue
+        if name in REPOS:
+            if row['path']!=ref['source_path'] or row['blob_sha']!=ref['source_blob_sha']:
+                raise ValueError('Mapped publisher file identity mismatch: '+ident)
+        if name=='WSTG' and row['publisher_identity_conflict']:
+            conflicts.append(ident)
+        checked+=1
+    if name!='WSTG' and outside:
+        raise ValueError('Mapped ID outside publisher inventory: '+name)
+    if sorted(outside)!=inventory['crosswalk_ids_outside_inventory']:
+        raise ValueError('Crosswalk reference and relationship inventory disagreement')
+    return {'mapped_references':len(refs),'matched_identities':checked,
+            'outside_inventory':sorted(outside),'publisher_identity_conflicts':sorted(conflicts),
+            'validation_kind':'EXACT_FILE_IDENTITY' if name in REPOS else 'IDENTIFIER_ONLY',
+            'status':'REVIEW_REQUIRED' if outside or conflicts else 'IDENTITIES_MATCHED',
+            'semantic_review':'NOT_RUN'}
+
+
 def fetch_mobile_tree(name,repo,revision):
     # Fixed publisher endpoint only; never attach credentials to raw files,
     # MITRE or caller-provided URLs, and never forward them on redirects.
@@ -109,6 +142,8 @@ def main():
     out['MASVS']=masvs.enrich(out['MASVS'],data,masvs.load())
     raw=cwe_xml_from_zip(fetch(CWE_URL,MAX_CWE))
     out['CWE']=reconcile('CWE',cwe(raw),data)
+    for name,inventory in out.items():
+        inventory['reference_identity_review']=validate_reference_inventory(name,inventory,data)
     import hashlib
     out['CWE']['source_xml_sha256']=hashlib.sha256(raw).hexdigest()
     print(json.dumps({'schema_version':1,'kind':'STANDARD_IDENTITY_INVENTORIES','standards':out,

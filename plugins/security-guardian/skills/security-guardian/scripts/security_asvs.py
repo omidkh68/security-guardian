@@ -102,14 +102,47 @@ def inventory(data,raw):
                            'No project access, tests, certification or compliance percentage.']}
 
 
+def review_plan(report, target_level):
+    """Cumulative review worklist, never a project assurance-level verdict."""
+    if type(target_level) is not int or target_level not in (1,2,3):
+        raise ValueError('Invalid target review level')
+    rows=report['requirements']
+    selected=[r for r in rows if r['level']<=target_level]
+    excluded=[r['requirement_id'] for r in rows if r['level']>target_level]
+    if len(selected)+len(excluded)!=len(rows):
+        raise ValueError('Incomplete review worklist')
+    return {'schema_version':1,'kind':'ASVS_LEVEL_REVIEW_PLAN',
+            'edition':report['edition'],'source_revision':report['source_revision'],
+            'source_blob_sha':report['source_blob_sha'],'crosswalk_version':report['crosswalk_version'],
+            'target_review_level':target_level,'selected_requirements':len(selected),
+            'partial':sum(r['mapping_status']=='PARTIAL' for r in selected),
+            'unmapped':sum(r['mapping_status']=='UNMAPPED' for r in selected),
+            'higher_level_not_selected':excluded,
+            'requirements':[{'requirement_id':r['requirement_id'],'level':r['level'],
+                             'chapter':r['chapter'],'mapping_status':r['mapping_status'],
+                             'controls':r['controls'],
+                             'next_action':'REVIEW_MAPPING_AND_APPLICABILITY' if r['controls'] else 'REVIEW_CATALOG_GAP_AND_APPLICABILITY',
+                             'applicability':'NOT_ASSESSED','verification':'NOT_VERIFIED'}
+                            for r in selected],
+            'assurance_level':'NOT_ASSESSED','independent_review':'NOT_RUN',
+            'limitations':['Cumulative publisher level labels for review planning only.',
+                           'Unmapped rows remain in the selected worklist.',
+                           'Higher-level exclusion is a review selection, not an applicability decision.',
+                           'No project test, certification or compliance claim.']}
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source',type=Path,required=True,help='Exact pinned publisher JSON, obtained separately')
+    parser.add_argument('--review-level',type=int,choices=(1,2,3),help='Emit cumulative review worklist; does not assess assurance')
     args=parser.parse_args()
     try:
         with args.source.open('rb') as h:
             raw=h.read(MAX_BYTES+1)
-        print(json.dumps(inventory(standards.load(),raw),indent=2,sort_keys=True))
+        report=inventory(standards.load(),raw)
+        if args.review_level is not None:
+            report=review_plan(report,args.review_level)
+        print(json.dumps(report,indent=2,sort_keys=True))
     except (OSError,ValueError,TypeError,KeyError,AttributeError):
         parser.error('Invalid official ASVS source or crosswalk')
 
