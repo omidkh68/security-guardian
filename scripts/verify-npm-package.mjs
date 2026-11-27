@@ -76,6 +76,31 @@ try {
       assert.ok(!fs.existsSync(path.join(target, 'local-note.txt')));
       for (const p of runtime) assert.deepEqual(fs.readFileSync(path.join(target, p.slice(prefix.length))), fs.readFileSync(path.join(root, p)));
     }
+    // Inject a process exit in the actual installed tarball executable only.
+    const recoveryRoot = path.join(tmp, 'recovery-project');
+    fs.mkdirSync(recoveryRoot);
+    const recoveryInstall = [...args, '--agent', 'all', '--project', recoveryRoot, '--yes'];
+    run('npx', recoveryInstall, recoveryRoot);
+    const recoveryTargets = ['.claude', '.agents'].map(config => path.join(recoveryRoot, config, 'skills/security-guardian'));
+    for (const target of recoveryTargets) fs.writeFileSync(path.join(target, 'local-note.txt'), target);
+    const hook = path.join(tmp, 'packed-crash.cjs');
+    fs.writeFileSync(hook, "const fs = require('node:fs'); const path = require('node:path'); if (['security-guardian.mjs', 'security-guardian'].includes(path.basename(process.argv[1] || '')) && path.basename(fs.realpathSync(process.argv[1])) === 'security-guardian.mjs') { const rename = fs.renameSync; let n = 0; fs.renameSync = function(...args) { rename.apply(fs,args); if (++n === 2) process.exit(86); }; }");
+    const crash = invoke('npx', [...recoveryInstall, '--upgrade'], recoveryRoot, { NODE_OPTIONS: '--require ' + JSON.stringify(hook) });
+    assert.equal(crash.status, 86, crash.stderr || crash.stdout);
+    const journal = path.join(recoveryRoot, '.security-guardian-install.lock');
+    const evidence = fs.readFileSync(journal, 'utf8');
+    const recoverArgs = [...args, '--recover', '--project', recoveryRoot];
+    assert.equal(JSON.parse(run('npx', [...recoverArgs, '--dry-run'], recoveryRoot)).action, 'RECOVERY_PREVIEW');
+    assert.equal(fs.readFileSync(journal, 'utf8'), evidence);
+    assert.equal(JSON.parse(run('npx', [...recoverArgs, '--yes'], recoveryRoot)).action, 'RECOVERED');
+    for (const target of recoveryTargets) {
+      assert.equal(fs.readFileSync(path.join(target, 'local-note.txt'), 'utf8'), target);
+      for (const p of runtime) assert.deepEqual(fs.readFileSync(path.join(target, p.slice(prefix.length))), fs.readFileSync(path.join(root, p)));
+    }
+    assert.equal(JSON.parse(run('npx', [...recoverArgs, '--yes'], recoveryRoot)).action, 'NO_RECOVERY_NEEDED');
+    assert.ok(!fs.existsSync(journal));
+    assert.ok(!fs.existsSync(path.join(recoveryRoot, '.security-guardian-recovery.lock')));
+    run('npx', [...recoveryInstall, '--upgrade'], recoveryRoot);
     const home = path.join(tmp, 'isolated-home');
     fs.mkdirSync(home);
     const userEnv = { HOME: home, USERPROFILE: home };

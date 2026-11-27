@@ -372,3 +372,33 @@ test('simultaneous recovery contenders cannot both mutate the same transaction',
   for (const target of targets) assert.equal(fs.readFileSync(path.join(target, 'local-note.txt'), 'utf8'), target);
   assert.equal(JSON.parse(ok(run(...recover))).action, 'NO_RECOVERY_NEEDED');
 });
+
+for (const phase of ['begin', 'stage-intent', 'stage-created', 'backup-intent', 'backup-moved', 'install-intent', 'installed', 'committed']) {
+  test('recover after durable journal phase ' + phase, t => {
+    const { root, project, home, run } = fixture(t);
+    const args = ['--agent', 'all', '--project', project, '--yes'];
+    ok(run(...args));
+    const targets = ['.claude', '.agents'].map(config => path.join(project, config, 'skills/security-guardian'));
+    for (const target of targets) fs.writeFileSync(path.join(target, 'local-note.txt'), target);
+    const hook = path.join(root, 'journal-crash.cjs');
+    fs.writeFileSync(hook, "const fs = require('node:fs'); const write = fs.writeSync; const sync = fs.fsyncSync; let hit = false; fs.writeSync = function(fd, data, ...args) { const result = write.call(fs,fd,data,...args); try { if (JSON.parse(String(data)).phase === " + JSON.stringify(phase) + ") hit = true; } catch {} return result; }; fs.fsyncSync = function(fd) { sync.call(fs,fd); if (hit) process.exit(86); };");
+    const crashed = spawnSync(process.execPath, ['--require', hook, cli, ...args, '--upgrade'], {
+      encoding: 'utf8', env: { ...process.env, HOME: home, USERPROFILE: home }, timeout: 15000
+    });
+    assert.equal(crashed.status, 86, crashed.stderr);
+    const recover = ['--recover', '--project', project];
+    assert.equal(JSON.parse(ok(run(...recover, '--dry-run'))).action, 'RECOVERY_PREVIEW');
+    assert.equal(JSON.parse(ok(run(...recover, '--yes'))).action, 'RECOVERED');
+    for (const target of targets) {
+      if (phase === 'committed') assert.ok(!fs.existsSync(path.join(target, 'local-note.txt')));
+      else assert.equal(fs.readFileSync(path.join(target, 'local-note.txt'), 'utf8'), target);
+    }
+    if (phase === 'committed') {
+      for (const config of ['.claude', '.agents']) {
+        const backupDir = path.join(project, config, 'skill-backups');
+        assert.ok(fs.readdirSync(backupDir).some(x => fs.existsSync(path.join(backupDir, x, 'local-note.txt'))));
+      }
+    }
+    assert.equal(JSON.parse(ok(run(...recover, '--yes'))).action, 'NO_RECOVERY_NEEDED');
+  });
+}
