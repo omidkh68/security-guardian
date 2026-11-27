@@ -29,11 +29,11 @@ def review(root, profile, components, parser):
                 and set(c['frameworks']) & {'Express','Fastify','NestJS'}}
     roots = set(selected)
     stats = Counter()
-    result = {'schema_version':1, 'contract_version':contract.CONTRACT_VERSION, 'pack_id':'js-authz-flow', 'pack_version':1,
+    result = {'schema_version':1, 'contract_version':contract.CONTRACT_VERSION, 'pack_id':'js-authz-flow', 'pack_version':2,
               'rule_id':RULE, 'legacy_control_id':'BIZ-01', 'status':'NOT_AVAILABLE',
               'selected_roots':sorted(roots), 'signals':[], 'authorization_matrix':[],
               'limitations':['Syntactic evidence only; no route is certified authorized or unauthorized.',
-                             'Explicit Express/Fastify and NestJS routes with local PrismaClient and TypeORM repository selectors, including direct Nest repository injection. Middleware, guards, principal provenance, database policy, branches and cross-module calls require manual evidence.',
+                             'Explicit Express/Fastify and NestJS routes with local PrismaClient and TypeORM repository selectors, including direct Nest repository injection. Bounded path-local if/else and early return preserve selector provenance; middleware, guards, principal provenance, database policy, unsupported conditions and cross-module calls require manual evidence.',
                              'Trusted parser execution is not an OS sandbox; no project code or config loaded.',
                              'No ledger update; review and record candidates manually.']}
     def finish(status):

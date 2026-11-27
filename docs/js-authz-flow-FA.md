@@ -76,3 +76,7 @@ flowchart TD
 ```
 
 ساخت مستقیم DataSource با تنظیم واردشده یا ساده و getRepository از Entity واردشده، و تزریق پارامتر-ویژگی Constructor در Nest با InjectRepository(Entity) صریح و نوع منطبق Repository<Entity> شواهد نحوی گیرنده را برقرار می‌کنند. گزینه‌های find/findOne/count/exists، شرط‌های findBy/findOneBy/countBy/existsBy و update/delete/softDelete/restore بررسی می‌شوند. نبود فیلتر در عملیات مجموعه مدل‌شده UNKNOWN_RESOURCE_SCOPE است، نه نتیجه سالم. اتصال، مقداردهی Repository، ثبت Provider، سیاست و SQL واقعی تأیید نشده‌اند. شرط تودرتو/OR و گیرنده یا نوع ناشناخته PARTIAL هستند. هشت Fixture طبقه‌بندی‌شده و چهار Fixture ناقص شامل Tenant، مالک، ورودی کاربر، Repository تزریقی و لیست بدون فیلتر اضافه شده‌اند؛ تمام ردیف‌ها UNVERIFIED می‌مانند.
+
+## بسته Authorization نسخه ۲ — منشأ مستقل مسیر (#34)
+
+مدل منشأ Selector را در `if`/`else` محدود، بلوک تو در تو، بازگشت زودهنگام و انتساب مجدد `let` محلی مستقل نگه می‌دارد. شرط حتی در مقایسه فیلد Caller و Principal مجوز مؤثر را ثابت نمی‌کند. در Sink مشترک شواهد مسیرهای متفاوت حفظ و موارد دقیقاً تکراری حذف می‌شوند. سقف ۶۴ مسیر، ۴۰۹۶ گام و عمق ۳۲ است. شرط ناشناخته و اثر پشتیبانی‌نشده مسیر مربوط را با PARTIAL متوقف می‌کند. اثبات سیاست کل برنامه، Middleware دلخواه، فیلتر تو در تو ORM یا مجوز زمان اجرا وجود ندارد. ده سناریوی مصنوعی Predicate متفاوت Caller/Principal، خروج زودهنگام، حذف مسیر ثابت، مسیر نامدل‌شده، محدوده واژگانی، سقف‌ها و Nest TypeORM را می‌سنجند. همه ردیف‌های ماتریس UNVERIFIED باقی می‌مانند.

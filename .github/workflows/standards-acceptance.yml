@@ -26,6 +26,8 @@ jobs:
         with:
           node-version: '24'
       - name: Inventory pinned publisher sources
+        env:
+          SG_PUBLISHER_TREE_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           python scripts/standards_inventory.py > "$RUNNER_TEMP/standards-inventory.json"

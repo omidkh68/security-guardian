@@ -80,7 +80,7 @@ def framework_row(name):
     if name in NODE_AST:
         ast('js-sql-flow',3,[(sql.RULE,'API-07')],'security_js_sql_flow.py',
             'Explicit routes, module-local pg query text and bounded pure helpers')
-        ast('js-authz-flow',1,[(authz.RULE,'BIZ-01')],'security_js_authz_flow.py',
+        ast('js-authz-flow',2,[(authz.RULE,'BIZ-01')],'security_js_authz_flow.py',
             'Explicit routes and bounded Prisma/TypeORM resource selectors; UNVERIFIED evidence')
     if name in SSR_RULES:
         ast('js-ssr-flow',4,SSR_RULES[name],'security_js_ssr_flow.py',
