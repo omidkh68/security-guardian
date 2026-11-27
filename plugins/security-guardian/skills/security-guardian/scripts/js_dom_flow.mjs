@@ -271,6 +271,8 @@ function analyze(ts, file) {
           }
         }
       }
+      // Do not restart beyond a control transfer or unsupported control structure.
+      if(!ts.isVariableStatement(stmt)&&!ts.isExpressionStatement(stmt))break;
       env=new Map();gap=true;
     }
   }
