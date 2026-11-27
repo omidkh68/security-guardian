@@ -68,3 +68,24 @@ Workflow اختصاصی CI نسخه 1.140.0 ابزار Semgrep را در محی�
 ## نقطه بررسی منابع Adapter و بنچمارک (#34)
 
 Semgrep اکنون stdout/stderr را با سقف زنده بایت (۱۶ و ۱ مگابایت)، مهلت و قطع گروه فرایند در POSIX دریافت می‌کند؛ دریافت ناموفق یا بزرگ نتیجه پاک نمی‌دهد. تکرار دقیق Rule/مسیر/خط/شدت با شمارنده رخداد و Fingerprint ثابت SHA-256 حفظ می‌شود؛ شواهد متفاوت جدا هستند. Metadata به Digest فایل Rule متصل است و نسخه گزارش‌شده JSON را نشان می‌دهد. Fingerprint شناسه Ledger نیست و اتصال خودکار NOT_LINKED است. این Sandbox حافظه/CPU، محصورسازی همه فرزندان Windows، جلوگیری از نوشتن یا منع شبکه در همه میزبان‌ها نیست. Fixture آفلاین Runner فقط شواهد محدود می‌دهد. Probe جدید DOM با برچسب نویسنده خارجی، سورس ثابت GitHub CodeQL را بدون اجرا می‌خواند؛ هر چهار انتساب innerHTML دارای برچسب صریح در دو فایل منتخب را مقایسه و Miss و PARTIAL را گزارش می‌کند؛ برچسب منفی، Precision یا F1 ندارد. Holdout کور مستقل یا مقایسه اجرای CodeQL نیست. #34 پیش از پذیرش بازبینی‌شده شکاف‌ها بسته نمی‌شود.
+
+## شواهد یکپارچه Adapter و اتصال صریح به Ledger (#34)
+
+ابزار بدون وابستگی `security_evidence.py` گزارش نسخه‌دار چهار بسته AST جاوااسکریپت/تایپ‌اسکریپت و Ruleهای داخلی Semgrep را نرمال می‌کند. Rule و فیلدهای ساختاریافته مجازند، Fingerprint ابزار دوباره محاسبه می‌شود، شواهد متفاوت خط منبع/Sanitizer/Scope و تعداد رخداد تکراری حفظ و توضیح دلخواه و قطعه کد حذف می‌شوند. هویت Observation شامل Adapter، Rule، Location و شواهد ساختاریافته است؛ ویرایش یا جابه‌جایی خط می‌تواند هویت جدید ایجاد کند. ارتباط کنترل Semgrep سرنخ بازبینی است، نه هم‌ارزی معنایی. نسخه دیگر، تنظیم سفارشی Semgrep و خروجی خام Scanner در این محدوده پشتیبانی نمی‌شوند.
+
+```bash
+python3 plugins/security-guardian/skills/security-guardian/scripts/security_evidence.py --report /path/to/adapter.json
+python3 plugins/security-guardian/skills/security-guardian/scripts/security_tracker.py link-evidence --root /path/to/project --run RUN_ID --report /path/to/adapter.json --plan /path/to/links.json
+```
+
+برنامه اتصال JSON صریح با `schema_version: 1`، `run_id`، `report_sha256` (بایت دقیق گزارش) و `links` (آرایه اشیای دارای فقط `evidence_id` و `finding_id`) است. قبل از اتصال شناسه‌ها را بازبینی کنید. Run فعال باید Scope حل‌شده داشته باشد؛ Scope و موجودی Component جاری باید مطابق باشند و یافته موجود با کنترل پیشنهادی و مسیر نسبی دقیق یکسان باشد. مسیر خارج Scope، خصوصی و Symlink رد می‌شود. Fingerprint محلی هویت فایل جاری است، **نه** اثبات اسکن آن. یافته جدید، تأیید، بستن، انتساب مجدد خودکار یا Verification انجام نمی‌شود. تکرار یکسان همان Run بی‌اثر و اتصال متعارض رد می‌شود. Observationها در `adapter_observations` یافته موجود همراه Run و Digest گزارش و شمارنده در RUN.md ثبت می‌شوند. Ledger خصوصی Attestation یا خروجی عمومی نیست. ماتریس Authorization و Signalهای Python داخلی در این محدوده اول Import نمی‌شوند؛ در گزارش اصلی باقی می‌مانند. ذخیره چندفایلی Tracker پایگاه داده تراکنشی نیست.
+
+```mermaid
+flowchart LR
+ A[JSON ابزار پشتیبانی شده] --> B[نرمال سازی شواهد مجاز]
+ B --> C[برنامه اتصال صریح با Digest]
+ D[Scope و یافته موجود] --> E[اعتبارسنجی اتصال و هویت فایل]
+ C --> E
+ E --> F[فقط Observation خصوصی Ledger]
+ F --> G[وضعیت یافته ثابت]
+```
