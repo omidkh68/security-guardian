@@ -123,7 +123,23 @@ function analyze(ts, file) {
     const v=value(ret.expression,params);
     if(v&&!v.element) helpers.set(fn.name.text,{arity:params.size,used:v.lines});
   }
-  const condition=n=>ts.isIdentifier(n)||n.kind===ts.SyntaxKind.TrueKeyword||n.kind===ts.SyntaxKind.FalseKeyword;
+  function condition(n,env,localHelpers,depth=0){
+    if(!n||depth>16)return null;
+    if(ts.isParenthesizedExpression(n))return condition(n.expression,env,localHelpers,depth+1);
+    if(n.kind===ts.SyntaxKind.TrueKeyword)return {truth:true};
+    if(n.kind===ts.SyntaxKind.FalseKeyword)return {truth:false};
+    if(ts.isPrefixUnaryExpression(n)&&n.operator===ts.SyntaxKind.ExclamationToken){
+      const inner=condition(n.operand,env,localHelpers,depth+1);
+      return inner?{truth:inner.truth===null?null:!inner.truth}:null;
+    }
+    if(ts.isBinaryExpression(n)&&[ts.SyntaxKind.EqualsEqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(n.operatorToken.kind)){
+      const a=value(n.left,env,0,localHelpers),b=value(n.right,env,0,localHelpers);
+      return a&&!a.element&&b&&!b.element?{truth:null}:null;
+    }
+    if(ts.isIdentifier(n))return {truth:null};
+    const a=value(n,env,0,localHelpers);
+    return a&&!a.element?{truth:null}:null;
+  }
   function body(fn){
     const localHelpers=new Map(helpers);
     // Remove summaries for any potentially shadowing binding in this function.
@@ -152,9 +168,10 @@ function analyze(ts, file) {
           todo.splice(i,1,...stmt.statements,{leaveBlock:true});i--;continue;
         }
         if(ts.isIfStatement(stmt)){
-          if(!condition(stmt.expression)){result.partial=true;break;}
-          const branches=stmt.expression.kind===ts.SyntaxKind.TrueKeyword?[stmt.thenStatement]:
-            stmt.expression.kind===ts.SyntaxKind.FalseKeyword?[stmt.elseStatement]:[stmt.thenStatement,stmt.elseStatement];
+          const test=condition(stmt.expression,env,localHelpers);
+          if(!test){result.partial=true;break;}
+          const branches=test.truth===true?[stmt.thenStatement]:
+            test.truth===false?[stmt.elseStatement]:[stmt.thenStatement,stmt.elseStatement];
           if(paths+branches.length-1>64){result.partial=true;result.reason='path_limit';pending.length=0;break;}
           paths+=branches.length-1;
           for(const branch of branches.reverse()) pending.push({todo:[...(branch?[branch]:[]),...todo.slice(i+1)],
