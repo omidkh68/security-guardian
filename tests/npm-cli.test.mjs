@@ -82,3 +82,40 @@ test('refuse foreign skill and concurrent installer lock', t => {
   assert.equal(fs.readFileSync(lock, 'utf8'), 'existing lock');
   assert.ok(!fs.existsSync(path.join(project, '.agents')));
 });
+
+test('upgrade preflight rejects nested symlinks without changing either agent', t => {
+  const { project, root, run } = fixture(t);
+  const args = ['--agent', 'all', '--project', project, '--yes'];
+  ok(run(...args));
+  const claude = path.join(project, '.claude/skills/security-guardian');
+  const agents = path.join(project, '.agents/skills/security-guardian');
+  const outside = path.join(root, 'sentinel.txt');
+  fs.writeFileSync(outside, 'untouched');
+  fs.writeFileSync(path.join(claude, 'local-note.txt'), 'keep');
+  fs.symlinkSync(outside, path.join(agents, 'unsafe-link'));
+  denied(run(...args, '--upgrade'));
+  assert.equal(fs.readFileSync(outside, 'utf8'), 'untouched');
+  assert.equal(fs.readFileSync(path.join(claude, 'local-note.txt'), 'utf8'), 'keep');
+  assert.ok(fs.lstatSync(path.join(agents, 'unsafe-link')).isSymbolicLink());
+  for (const config of ['.claude', '.agents']) {
+    assert.ok(!fs.existsSync(path.join(project, config, 'skill-backups')));
+  }
+  assert.ok(!fs.existsSync(path.join(project, '.security-guardian-install.lock')));
+});
+test('mixed missing upgrade and symlink lock fail without side effects', t => {
+  const { project, root, run } = fixture(t);
+  ok(run('--agent', 'claude', '--project', project, '--yes'));
+  const target = path.join(project, '.claude/skills/security-guardian');
+  fs.writeFileSync(path.join(target, 'local-note.txt'), 'keep');
+  denied(run('--agent', 'all', '--project', project, '--yes', '--upgrade'));
+  assert.equal(fs.readFileSync(path.join(target, 'local-note.txt'), 'utf8'), 'keep');
+  assert.ok(!fs.existsSync(path.join(project, '.agents')));
+  const sentinel = path.join(root, 'sentinel.txt');
+  fs.writeFileSync(sentinel, 'untouched');
+  const lock = path.join(project, '.security-guardian-install.lock');
+  fs.symlinkSync(sentinel, lock);
+  denied(run('--agent', 'codex', '--project', project, '--yes'));
+  assert.equal(fs.readFileSync(sentinel, 'utf8'), 'untouched');
+  assert.ok(fs.lstatSync(lock).isSymbolicLink());
+  assert.ok(!fs.existsSync(path.join(project, '.agents')));
+});
