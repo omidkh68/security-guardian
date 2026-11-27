@@ -143,6 +143,19 @@ class StandardsBatchTests(unittest.TestCase):
         with self.assertRaises(ValueError):inv.reconcile('MASVS',rows+rows,data)
         with self.assertRaises(ValueError):inv.mobile('MASVS',{**tree,'truncated':True})
 
+    def test_publisher_tree_token_only_on_exact_unredirected_endpoint(self):
+        rev=inv.s.REVISIONS['MASVS']
+        with patch.dict(os.environ,{'SG_PUBLISHER_TREE_TOKEN':'SYNTHETIC_TOKEN'}):
+            with patch.object(inv,'urlopen') as call:
+                call.return_value.__enter__.return_value.read.return_value=b'{}'
+                self.assertEqual(inv.fetch_mobile_tree('MASVS','masvs',rev),b'{}')
+                request=call.call_args.args[0]
+                self.assertEqual(request.full_url,'https://api.github.com/repos/OWASP/masvs/git/trees/'+rev+'?recursive=1')
+                self.assertEqual(request.unredirected_hdrs['Authorization'],'Bearer SYNTHETIC_TOKEN')
+                self.assertNotIn('Authorization',request.headers)
+                with self.assertRaises(ValueError):inv.fetch_mobile_tree('MASVS','other',rev)
+                self.assertEqual(call.call_count,1)
+
     def test_cwe_catalog_weakness_only(self):
         raw=b'<Weakness_Catalog Version="5.0"><Weakness ID="89" Abstraction="Base" Status="Stable"/><Category ID="1"/></Weakness_Catalog>'
         self.assertEqual([r['id'] for r in inv.cwe(raw)],['CWE-89'])
