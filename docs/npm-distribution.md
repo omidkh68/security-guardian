@@ -82,3 +82,7 @@ Staged files and journal records are flushed with fsync; supported POSIX directo
 ## Exact tested artifact handoff (#64)
 
 The verifier can export the very tarball used for the offline smoke test to a fresh absolute directory; it does not repack after testing. It records SHA-256, source commit, package identity, runtime versions and the limited smoke scope in a receipt. Linux Node 22 and 24 CI retain their separate tested artifacts. The tagged release workflow uses the same verifier export and checks the digest and receipt before publishing. Private previews stay private; a receipt is CI evidence, not an independent signature or successful registry publication. For an approved first publication use the tested tarball from the approved revision, not a newly packed checkout. Review the digest and retain the receipt. No tag or publication is authorized by this change.
+
+## Machine-enforced Release Gate (#105)
+
+Before packaging, the publish workflow reads the exact GitHub issue #105 using read-only Issues permission. It must be closed as completed with at least 18 checked acceptance rows, including each of standards #149–160 exactly once. API failure, an open or not-planned issue, unchecked rows or duplicate/missing standard IDs block publication. This is a checklist metadata gate only, not independent validation of the underlying evidence, maintainer approval, environment protections or compliance. Future releases require their own review. This change does not close an issue or create a tag.
