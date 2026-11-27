@@ -441,6 +441,7 @@ function install(options, base, files) {
     fs.fsyncSync(fd);
   };
   let preserveLock = false;
+  let committing = false;
   const created = [];
   const work = [];
   try {
@@ -488,9 +489,14 @@ function install(options, base, files) {
       syncDirectory(item.parent);
       record('installed', { target: item.target, backup: item.backup });
     }
+    committing = true;
     record('committed');
     return work.map(x => ({ target: x.target, backup: x.backup }));
   } catch (error) {
+    if (committing) {
+      preserveLock = true;
+      fail('Commit durability uncertain; installation journal retained for recovery: ' + error.message);
+    }
     const rollback = [];
     for (const item of work.reverse()) {
       try {
@@ -498,7 +504,10 @@ function install(options, base, files) {
           if (stat(item.stage)) fail('Rollback staging destination already exists.');
           syncRename(item.target, item.stage);
         }
-        if (item.moved) syncRename(item.backup, item.target);
+        if (item.moved) {
+          if (stat(item.target)) fail('Rollback target already exists.');
+          syncRename(item.backup, item.target);
+        }
         if (stat(item.stage)) { fs.rmSync(item.stage, { recursive: true }); syncDirectory(item.parent); }
       } catch (e) { rollback.push(item.target + ': ' + e.message); }
     }
