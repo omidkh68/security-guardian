@@ -3,12 +3,13 @@
 import argparse
 from importlib.metadata import version, PackageNotFoundError
 import json
-import re
+import math
 
 BASE={'AV':'NALP','AC':'LH','AT':'NP','PR':'NLH','UI':'NPA','VC':'HLN','VI':'HLN','VA':'HLN','SC':'HLN','SI':'HLN','SA':'HLN'}
 OPTIONAL={'E':'XAPU','CR':'XHML','IR':'XHML','AR':'XHML','MAV':'XNALP','MAC':'XLH','MAT':'XNP','MPR':'XNLH','MUI':'XNPA','MVC':'XHLN','MVI':'XHLN','MVA':'XHLN','MSC':'XHLN','MSI':'XHLNS','MSA':'XHLNS','S':'XNP','AU':'XNY','R':'XAUI','V':'XDC','RE':'XLMH','U':('X','Clear','Green','Amber','Red')}
 METRICS={**BASE,**OPTIONAL}
 PIN='3.6'
+ENVIRONMENTAL=frozenset(('CR','IR','AR','MAV','MAC','MAT','MPR','MUI','MVC','MVI','MVA','MSC','MSI','MSA'))
 
 def validate(vector):
     if not isinstance(vector,str) or len(vector)>512 or not vector.startswith('CVSS:4.0/'):
@@ -29,8 +30,15 @@ def score(vector):
     from cvss import CVSS4
     c=CVSS4(vector)
     value=c.scores()[0]
-    nomenclature='CVSS-B'+('T' if fields.get('E','X')!='X' else '')+('E' if any(fields.get(k,'X')!='X' for k in list(OPTIONAL)[1:15]) else '')
-    return {'standard':'CVSS:4.0','vector':vector,'score':value,'severity':c.severities()[0],
+    severity=c.severities()[0]
+    if type(value) not in (int,float) or not math.isfinite(value) or not 0<=value<=10 or round(value,1)!=value:
+        raise ValueError('Invalid calculator score')
+    expected_severity=('None' if value==0 else 'Low' if value<4 else 'Medium' if value<7
+                       else 'High' if value<9 else 'Critical')
+    if severity!=expected_severity:
+        raise ValueError('Calculator severity mismatch')
+    nomenclature='CVSS-B'+('T' if fields.get('E','X')!='X' else '')+('E' if any(fields.get(k,'X')!='X' for k in ENVIRONMENTAL) else '')
+    return {'standard':'CVSS:4.0','vector':vector,'score':value,'severity':severity,
             'nomenclature':nomenclature,'engine':'cvss=='+PIN,'metric_evidence':'USER_SUPPLIED_NOT_VERIFIED'}
 
 def main():

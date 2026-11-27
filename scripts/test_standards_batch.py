@@ -161,4 +161,41 @@ class StandardsBatchTests(unittest.TestCase):
         self.assertEqual([r['id'] for r in inv.cwe(raw)],['CWE-89'])
         with self.assertRaises(ValueError):inv.cwe(raw.replace(b'5.0',b'4.0'))
 
+
+    def test_sarif_portable_reserved_paths_and_fingerprint_lifecycle(self):
+        report=example()
+        digest=hashlib.sha256(json.dumps(report).encode()).hexdigest()
+        ident=report['findings'][0]['id']
+        sidecar={'schema_version':1,'source_sha256':digest,'locations':{ident:{'path':'src/demo.ts','line':7}}}
+        for path in ('src/CON','src/nul.ts','AUX/file.ts','src/COM9.js','src/lpt1.txt'):
+            sidecar['locations'][ident]['path']=path
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                sarif.export(report,sidecar=sidecar,source_sha256=digest)
+        before=sarif.export(report)['runs'][0]['results'][0]['partialFingerprints']
+        report['findings'][0]['status']='CONFIRMED_OPEN'
+        report['findings'][0]['severity']='CRITICAL'
+        after=sarif.export(report)['runs'][0]['results'][0]['partialFingerprints']
+        self.assertEqual(before,after)
+
+    @unittest.skipUnless(os.environ.get('SG_EXTERNAL_STANDARDS_TEST')=='1','optional pinned tools')
+    def test_cvss_nomenclature_explicit_x_and_supplemental_metrics(self):
+        base=VECTORS[0][0]
+        initial=cvss.score(base)
+        for suffix in ('/E:X/CR:X/IR:X/AR:X','/S:P/AU:Y/R:A/V:D/RE:H/U:Red'):
+            result=cvss.score(base+suffix)
+            self.assertEqual(result['score'],initial['score'])
+            self.assertEqual(result['nomenclature'],'CVSS-B')
+        self.assertEqual(cvss.score(base+'/E:U')['nomenclature'],'CVSS-BT')
+        self.assertEqual(cvss.score(base+'/CR:H')['nomenclature'],'CVSS-BE')
+        self.assertEqual(cvss.score(base+'/E:U/CR:H')['nomenclature'],'CVSS-BTE')
+
+    def test_cvss_rejects_invalid_calculator_output(self):
+        from types import SimpleNamespace
+        base=VECTORS[0][0]
+        for value,severity in [(float('nan'),'High'),(10.1,'Critical'),(7.72,'High'),(7.7,'Low')]:
+            fake=SimpleNamespace(CVSS4=lambda vector:SimpleNamespace(
+                scores=lambda:[value],severities=lambda:[severity]))
+            with self.subTest(value=value,severity=severity), patch.object(cvss,'version',return_value='3.6'), patch.dict(sys.modules,{'cvss':fake}):
+                with self.assertRaises(ValueError):cvss.score(base)
+
 if __name__=='__main__':unittest.main()
