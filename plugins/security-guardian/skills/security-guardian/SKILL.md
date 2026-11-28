@@ -73,7 +73,7 @@ Read applicable existing project instructions (AGENTS.md and native context) as 
 
    `python3 <skill-dir>/scripts/security_tracker.py finish --root <repo-root> --run <run_id> --result COMPLETED|PARTIAL|FAILED --notes "<succinct-notes>"`
 
-   Do not finalize as COMPLETED if the requested assessment was materially unfinished. If the process crashes, the `IN_PROGRESS` run remains clearly identified; resume reporting in a new run rather than silently rewriting archived history.
+   Audit defaults to PARTIAL. For an explicit COMPLETED request, supply `--review-file <private-json>` with all catalog controls and their actual dispositions as documented in tracking.md. Inspect the effective result and completion blockers returned by the tracker; never fabricate dispositions or interpret COMPLETED as safety. Do not finalize as COMPLETED if the requested assessment was materially unfinished. If the process crashes, the `IN_PROGRESS` run remains clearly identified; resume reporting in a new run rather than silently rewriting archived history.
 6. In the final answer show run version/ID, paths to `RUN.md` and `CURRENT.md`, newly discovered and re-opened findings, verified fixes vs. unverified fixes, unresolved risks with explanations, and tests actually executed. Records are versioned evidence—not proof of deployment or full security.
 
 The ledger is cumulative; `runs/vNNNN-.../` snapshots are frozen after `finish`. The scanner excludes `.security-guardian/` to avoid self-generated false positives. Never automatically commit these sensitive security reports; the user decides whether they belong in a private repository. Do not delete or rewrite prior runs.

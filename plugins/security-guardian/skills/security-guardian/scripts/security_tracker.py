@@ -321,6 +321,13 @@ def make_run_report(run, ledger, scan):
             f'- Explicit evidence links in this run: {linked}',
             '- Imported adapter observations are unverified; no automatic finding transition or execution attestation.',
             '- Full structured observations: findings.json (private audit history).',''])
+    if run.get('audit_completion'):
+        gate = run['audit_completion']
+        coverage_lines.extend(['## Audit completion accounting','',
+            f"- Requested: {gate['requested_result']}; effective: {gate['effective_result']}",
+            f"- Control dispositions recorded: {gate['reviewed_controls']}/{scan['summary']['catalog_controls']}",
+            '- Blockers: ' + (', '.join(gate['blockers']) or 'None recorded'),
+            '- Agent-reported evidence references; not independently verified or a security pass.',''])
     marker=lines.index('## Status snapshot (entire project, not just this run)')
     lines[marker:marker]=coverage_lines
     if run.get('scope_resolution'):
@@ -826,11 +833,92 @@ def run_test(args):
                 'evidence_quality': 'LOCAL_EXECUTION', 'independently_verified_fix': False}).strip())
 
 
+def audit_completion(run, scan, ledger, requested, review):
+    """Validate review accounting, never attest to the truth of agent assertions."""
+    blockers = []
+    rows = []
+    if review is not None:
+        if not isinstance(review, dict) or set(review) != {'schema_version', 'run_id', 'controls'} or type(review['schema_version']) is not int or review['schema_version'] != 1 or review['run_id'] != run['id']:
+            raise ValueError('Invalid audit review identity')
+        raw = review['controls']
+        if not isinstance(raw, list) or len(raw) > len(CONTROL_IDS):
+            raise ValueError('Invalid audit review inventory')
+        seen = set()
+        for row in raw:
+            if not isinstance(row, dict) or set(row) != {'control_id', 'disposition', 'reason', 'evidence'}:
+                raise ValueError('Invalid audit review row')
+            cid, disposition, reason, evidence = (row[x] for x in ('control_id','disposition','reason','evidence'))
+            if not isinstance(cid, str) or cid not in CONTROL_IDS or cid in seen:
+                raise ValueError('Unknown or duplicate audit control')
+            if disposition not in ('REVIEWED', 'NOT_APPLICABLE', 'NOT_RUN'):
+                raise ValueError('Invalid audit review disposition')
+            if not isinstance(reason, str) or not 10 <= len(reason.strip()) <= 1000:
+                raise ValueError('Audit control requires specific bounded rationale')
+            if not isinstance(evidence, list) or len(evidence) > 12 or any(not isinstance(x, str) or not 1 <= len(x.strip()) <= 300 or '\n' in x or '\r' in x for x in evidence):
+                raise ValueError('Invalid audit evidence references')
+            if disposition == 'REVIEWED' and not evidence:
+                raise ValueError('Reviewed control requires evidence references')
+            seen.add(cid)
+            rows.append(row)
+    if len(rows) != len(CONTROL_IDS):
+        blockers.append('CONTROL_REVIEW_INCOMPLETE')
+    if any(x['disposition'] == 'NOT_RUN' for x in rows):
+        blockers.append('CONTROLS_NOT_RUN')
+    if any(x.get('result') in ('NOT_RUN','BLOCKED') for x in run['tests']):
+        blockers.append('TEST_EVIDENCE_INCOMPLETE')
+    summary = scan['summary']
+    if (summary.get('scope_resolution') or {}).get('status') != 'RESOLVED':
+        blockers.append('EXPLICIT_SCOPE_REQUIRED')
+    if any(summary.get(key, {}).get('truncated') is not False for key in ('scan_coverage','signal_coverage')):
+        blockers.append('SCANNER_COVERAGE_INCOMPLETE')
+    for signal in scan.get('signals', []):
+        cid, path, label = (signal[x] for x in ('control_id','path','signal'))
+        finding = ledger['findings'].get(fingerprint(cid, f'scanner:{cid}:{path}:{label}'), {})
+        if finding.get('last_reviewed_run') != run['id'] or finding.get('status') in (None,'CANDIDATE','NEEDS_REVIEW','SUPERSEDED'):
+            blockers.append('SCANNER_CANDIDATE_UNREVIEWED')
+            break
+    if requested == 'COMPLETED' and blockers:
+        effective = 'PARTIAL'
+    else:
+        effective = requested
+    return {'schema_version': 1, 'requested_result': requested, 'effective_result': effective,
+            'blockers': blockers, 'reviewed_controls': len(rows),
+            'dispositions': dict(Counter(x['disposition'] for x in rows)),
+            'controls': rows, 'evidence_quality': 'AGENT_REPORTED_NOT_INDEPENDENTLY_VERIFIED'}
+
+
 def finish(args):
     root, store = root_and_store(args.root)
     with locked(store):
         index, ledger = load_state(store)
         rdir, run = ensure_run(store, index, args.run)
+        scan = read_json(rdir / 'scanner.json')
+        requested = args.result or ('PARTIAL' if run['mode'] == 'audit' else 'COMPLETED')
+        effective = requested
+        if args.review_file and run['mode'] != 'audit':
+            raise ValueError('Audit control review applies only to audit mode')
+        if run['mode'] == 'audit':
+            review = None
+            if args.review_file:
+                with Path(args.review_file).open('rb') as stream:
+                    raw = stream.read(1_000_001)
+                if len(raw) > 1_000_000:
+                    raise ValueError('Audit review exceeds input budget')
+                def unique(pairs):
+                    result = {}
+                    for key, value in pairs:
+                        if key in result:
+                            raise ValueError('Duplicate audit review JSON key')
+                        result[key] = value
+                    return result
+                try:
+                    review = json.loads(raw.decode('utf-8'), object_pairs_hook=unique)
+                except (UnicodeError, RecursionError) as exc:
+                    raise ValueError('Invalid audit review JSON') from exc
+                if review is None:
+                    raise ValueError('Audit review must be an object')
+            run['audit_completion'] = audit_completion(run, scan, ledger, requested, review)
+            effective = run['audit_completion']['effective_result']
         prev_path = store / 'runs' / run['previous_run_id'] / 'findings.json' if run.get('previous_run_id') else None
         previous = read_json(prev_path, {'findings': {}}) if prev_path else {'findings': {}}
         old_findings = previous['findings']
@@ -850,11 +938,11 @@ def finish(args):
                         'tests_passed': sum(t['result'] == 'PASS' for t in run['tests']),
                         'tests_failed': sum(t['result'] == 'FAIL' for t in run['tests']),
                         'total_unresolved_or_unverified': sum(f['status'] not in CLOSED for f in new_findings.values())}
-        run['status'] = args.result
+        run['status'] = effective
         run['finished_at'] = now()
         run['notes'] = args.notes or ''
         run['git_after'] = git_meta(root)
-        append_event(rdir / 'events.jsonl', {'at': now(), 'type': 'FINISH', 'result': args.result,
+        append_event(rdir / 'events.jsonl', {'at': now(), 'type': 'FINISH', 'result': effective, 'requested_result': requested,
                                               'delta': run['delta']})
         save_state(store, index, ledger)
         snapshot(store, rdir, run, ledger, read_json(rdir / 'scanner.json'))
@@ -874,7 +962,8 @@ def finish(args):
                 pdf[key] = json.loads(proc.stdout)['pdf']
         except (OSError, ValueError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
             errors[key] = str(exc)[:350]
-    print(dump({'run_id': args.run, 'result': args.result, 'delta': run['delta'],
+    print(dump({'run_id': args.run, 'result': effective, 'requested_result': requested,
+                'audit_completion': {k:v for k,v in run.get('audit_completion', {}).items() if k != 'controls'}, 'delta': run['delta'],
                 'run_report': str(rdir / 'RUN.md'), 'latest_ledger': str(store / 'CURRENT.md'),
                 'pdf_reports': pdf, 'pdf_warnings': errors}).strip())
 
@@ -1019,7 +1108,8 @@ def main():
     p = subs.add_parser('finish', help='Finalize one run and freeze the run archive')
     p.add_argument('--root', default='.')
     p.add_argument('--run', required=True)
-    p.add_argument('--result', choices=['COMPLETED', 'PARTIAL', 'FAILED'], default='COMPLETED')
+    p.add_argument('--result', choices=['COMPLETED', 'PARTIAL', 'FAILED'], help='Audit defaults to PARTIAL; other modes retain COMPLETED default')
+    p.add_argument('--review-file', help='Bounded run-specific audit control disposition JSON')
     p.add_argument('--notes', default='')
     p.set_defaults(fn=finish)
     p = subs.add_parser('mapping-audit', help='Review existing control classifications without writes')

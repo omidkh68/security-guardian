@@ -146,5 +146,48 @@ class TrackingTests(unittest.TestCase):
         scan = json.loads((store/'runs'/second/'scanner.json').read_text())
         self.assertNotIn('ANG-01',{x['control_id'] for x in scan['signals']})
 
+    def test_empty_agent_completion_downgraded_and_archive_preserved(self):
+        (self.root/'app.ts').write_text('const harmless = 1;')
+        run = self.call('begin','--mode','audit','--profile','backend')['run_id']
+        done = self.call('finish','--run',run,'--result','COMPLETED')
+        self.assertEqual(done['result'],'PARTIAL')
+        self.assertEqual(done['requested_result'],'COMPLETED')
+        self.assertIn('CONTROL_REVIEW_INCOMPLETE',done['audit_completion']['blockers'])
+        archive = self.root/'.security-guardian'/'runs'/run/'manifest.json'
+        original = archive.read_bytes()
+        self.call('finish','--run',run,expected=2)
+        self.assertEqual(archive.read_bytes(),original)
+        self.assertEqual(json.loads(original)['status'],'PARTIAL')
+
+    def test_review_inventory_validation_and_explicit_completion(self):
+        (self.root/'app.ts').write_text('const harmless = 1;')
+        run = self.call('begin','--mode','audit','--profile','backend')['run_id']
+        catalog=json.loads((SCRIPT.parent.parent/'references'/'controls.json').read_text())['controls']
+        rows=[{'control_id':x['id'],'disposition':'REVIEWED','reason':'Synthetic accounting fixture only','evidence':['app.ts:1']} for x in catalog]
+        review={'schema_version':1,'run_id':run,'controls':rows}
+        file=Path(self.tmp.name)/'review.json'
+        for bad in ({**review,'run_id':'other'}, {**review,'controls':rows[:-1]+[rows[0]]},
+                    {**review,'controls':[dict(rows[0],evidence=[])]}):
+            file.write_text(json.dumps(bad))
+            self.call('finish','--run',run,'--result','COMPLETED','--review-file',str(file),expected=2)
+        file.write_text(json.dumps(review))
+        done=self.call('finish','--run',run,'--result','COMPLETED','--review-file',str(file))
+        self.assertEqual(done['result'],'COMPLETED')
+        self.assertEqual(done['audit_completion']['evidence_quality'],'AGENT_REPORTED_NOT_INDEPENDENTLY_VERIFIED')
+        self.assertEqual(done['audit_completion']['reviewed_controls'],len(rows))
+
+    def test_not_run_blocks_even_full_review_inventory(self):
+        (self.root/'app.ts').write_text('const harmless = 1;')
+        run=self.call('begin','--mode','audit','--profile','backend')['run_id']
+        catalog=json.loads((SCRIPT.parent.parent/'references'/'controls.json').read_text())['controls']
+        rows=[{'control_id':x['id'],'disposition':'NOT_RUN','reason':'No authorized runtime evidence','evidence':[]} for x in catalog]
+        file=self.root/'review.json'
+        file.write_text(json.dumps({'schema_version':1,'run_id':run,'controls':rows}))
+        self.call('test','--run',run,payload={'name':'runtime','result':'NOT_RUN','reason':'Not authorized'})
+        done=self.call('finish','--run',run,'--result','COMPLETED','--review-file',str(file))
+        self.assertEqual(done['result'],'PARTIAL')
+        self.assertIn('CONTROLS_NOT_RUN',done['audit_completion']['blockers'])
+        self.assertIn('TEST_EVIDENCE_INCOMPLETE',done['audit_completion']['blockers'])
+
 if __name__=='__main__':
     unittest.main()
