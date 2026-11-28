@@ -65,6 +65,16 @@ jobs:
           npm pack --ignore-scripts --pack-destination "$dir" --json > "$dir/pack.json"
           file="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))[0]["filename"])' "$dir/pack.json")"
           mv "$dir/$file" "$dir/preview.tgz"
+          # Validate every member and private manifest before extraction.
+          python - "$dir/preview.tgz" <<'PY'
+          import sys
+          sys.path.insert(0,'scripts')
+          from verify_sbom_preview import archive_inventory
+          manifest, inventory=archive_inventory(sys.argv[1])
+          if manifest.get('name')!='@omidkh68/security-guardian' or manifest.get('private') is not True:
+              raise ValueError('Expected canonical private preview')
+          print('Validated archive members before extraction:',inventory['file_count'])
+          PY
           tar -xzf "$dir/preview.tgz" -C "$dir"
           (
             cd "$dir/package"

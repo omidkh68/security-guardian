@@ -86,3 +86,7 @@ The verifier can export the very tarball used for the offline smoke test to a fr
 ## Machine-enforced Release Gate (#105)
 
 Before packaging, the publish workflow reads the exact GitHub issue #105 using read-only Issues permission. It must be closed as completed with at least 18 checked acceptance rows, including each of standards #149–160 exactly once. API failure, an open or not-planned issue, unchecked rows or duplicate/missing standard IDs block publication. This is a checklist metadata gate only, not independent validation of the underlying evidence, maintainer approval, environment protections or compliance. Future releases require their own review. This change does not close an issue or create a tag.
+
+## Registry artifact integrity (#64)
+
+After authorized publication, the read-only registry smoke job computes SHA-256 and SHA-512 from the exact tested tarball and compares the latter to exact-version registry `dist.integrity`. Receipt package, version, source commit and public state must match. Exact-version CLI installation remains required. This checks registry-advertised integrity, not independent provenance verification. No publication or tag is performed by this change.

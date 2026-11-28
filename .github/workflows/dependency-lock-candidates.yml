@@ -1,0 +1,43 @@
+name: Dependency lock candidate evidence
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/dependency-lock-candidates.yml'
+      - 'scripts/dependency_lock_candidate.py'
+      - 'scripts/test_dependency_lock_candidate.py'
+      - 'scripts/requirements-framework-fixture.txt'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  python-fixture-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Generate review-only wheel hash candidate
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s scripts -p test_dependency_lock_candidate.py -v
+          mkdir "$RUNNER_TEMP/sg-wheels"
+          python -m pip --isolated download --index-url https://pypi.org/simple --only-binary=:all: --no-deps --dest "$RUNNER_TEMP/sg-wheels" -r scripts/requirements-framework-fixture.txt
+          python scripts/dependency_lock_candidate.py scripts/requirements-framework-fixture.txt "$RUNNER_TEMP/sg-wheels" "$RUNNER_TEMP/sg-lock-candidate"
+      - name: Exercise candidate offline and preserve existing runtime checks
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/sg-lock-venv"
+          PY="$RUNNER_TEMP/sg-lock-venv/bin/python"
+          "$PY" -m pip --isolated install --no-index --find-links "$RUNNER_TEMP/sg-wheels" --only-binary=:all: --no-deps --require-hashes -r "$RUNNER_TEMP/sg-lock-candidate/requirements-candidate.txt"
+          "$PY" -m pip check
+          "$PY" scripts/test_framework_verification.py -v
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: python-fixture-lock-candidate
+          path: ${{ runner.temp }}/sg-lock-candidate/
+          if-no-files-found: error
+          retention-days: 7

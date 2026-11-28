@@ -19,16 +19,20 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
-      - name: Build preview without publishing
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Build and smoke-test exact preview without publishing
         run: |
           set -euo pipefail
           node -e 'if(require("./package.json").private!==true)process.exit(1)'
           dir="$RUNNER_TEMP/sg-provenance"
-          mkdir -p "$dir"
-          npm pack --ignore-scripts --pack-destination "$dir" --json > "$dir/pack.json"
-          file="$(node -p 'require(process.argv[1])[0].filename' "$dir/pack.json")"
-          mv "$dir/$file" "$dir/preview.tgz"
+          node --test tests/npm-artifact-evidence.test.mjs
+          node scripts/verify-npm-package.mjs --artifact-dir "$dir"
           cd "$dir"
+          sha256sum --check SHA256SUMS
+          file="$(node -p 'require("./tested-artifact.json").tarball')"
+          mv -- "$file" preview.tgz
           sha256sum preview.tgz > SHA256SUMS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -36,6 +40,7 @@ jobs:
           path: |
             ${{ runner.temp }}/sg-provenance/preview.tgz
             ${{ runner.temp }}/sg-provenance/SHA256SUMS
+            ${{ runner.temp }}/sg-provenance/tested-artifact.json
           if-no-files-found: error
           retention-days: 7
   attest:
@@ -87,11 +92,19 @@ jobs:
               raise ValueError('Missing successful verification result')
           artifact=Path('preview/preview.tgz')
           digest=hashlib.sha256(artifact.read_bytes()).hexdigest()
+          receipt_raw=Path('preview/tested-artifact.json').read_bytes()
+          receipt=json.loads(receipt_raw)
+          if (receipt.get('kind')!='TESTED_NPM_ARTIFACT' or receipt.get('private') is not True
+              or receipt.get('package')!='@omidkh68/security-guardian'
+              or receipt.get('source_commit')!=os.environ['SHA']
+              or receipt.get('sha256')!=digest or receipt.get('bytes')!=artifact.stat().st_size):
+              raise ValueError('Tested artifact receipt does not bind verified preview')
           evidence={'schema_version':1,'kind':'PRIVATE_PREVIEW_PROVENANCE_VERIFICATION',
                     'repository':os.environ['REPO'],'source_commit':os.environ['SHA'],
                     'source_ref':'refs/heads/main','workflow_run_id':os.environ['GITHUB_RUN_ID'],
                     'artifact_sha256':digest,
                     'verification_sha256':hashlib.sha256(raw).hexdigest(),
+                    'tested_artifact_receipt_sha256':hashlib.sha256(receipt_raw).hexdigest(),
                     'verification':'GH_ATTESTATION_VERIFY_SUCCEEDED',
                     'slsa_level':'NOT_ASSESSED','publication':'NOT_PERFORMED'}
           Path('verification-evidence.json').write_text(json.dumps(evidence,indent=2,sort_keys=True))
@@ -103,5 +116,6 @@ jobs:
           path: |
             verification.json
             verification-evidence.json
+            preview/tested-artifact.json
           if-no-files-found: error
           retention-days: 7
