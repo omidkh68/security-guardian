@@ -11,6 +11,10 @@ Specialist security review playbook. Mapped controls: BIZ-01, DATA-02, TEST-01.
 5. Execute edits only when the user explicitly requested remediation. Obtain specific approval for high-risk changes; never run destructive infrastructure operations.
 6. Verify with tests/builds where allowed; present residual risk, tests not run and rollback details.
 
+## Mandatory object ownership review
+
+Separate trusted tenant membership, resource ownership, and explicit role/delegation policy. Compare actual predicates with existing tests and approved requirements: owner allowed, same-tenant nonowner denied unless explicitly permitted, cross-tenant denied, missing identity denied where required. Tenant equality alone does not prove authorization; a preceding guard or tenant-wide role may make it legitimate. Unknown policy means NEEDS_REVIEW, not an invented owner-only requirement. Source contradiction may support CONFIRMED_OPEN; never claim HTTP exploitability or executed tests without evidence. Never execute tests without approval. Use explicit finding_category object_level_authorization for reviewed BIZ-01, retain finding ID, and do not substitute zero scanner signals for manual review.
+
 ## Controls and exact gates
 
 ### BIZ-01 - Object-level authorization (BOLA/IDOR)

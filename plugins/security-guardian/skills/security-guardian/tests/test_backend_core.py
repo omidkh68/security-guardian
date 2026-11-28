@@ -48,7 +48,7 @@ class BackendCoreTests(unittest.TestCase):
                 p = r['summary']['backend_core']
                 self.assertEqual(p['selected_roots'], ['.'])
                 self.assertEqual(p['inspected_eligible_files'], 2)
-                self.assertEqual([x['matches'] for x in p['rules']], [1]*4)
+                self.assertEqual([x['matches'] for x in p['rules']], [1,1,1,1,0])
                 self.assertIn('Backend core v1', scan.markdown(r))
                 if dep != '@nestjs/core':
                     self.assertEqual(next(c for c in r['controls'] if c['id']=='API-02')['applicability'], 'NEEDS_DISCOVERY')
@@ -96,6 +96,24 @@ class BackendCoreTests(unittest.TestCase):
         self.assertEqual(r['summary']['backend_core']['status'],'NOT_SELECTED')
         self.assertEqual(r['summary']['backend_core']['inspected_eligible_files'],0)
         self.assertFalse(r['signals'])
+
+
+    def test_tenant_only_return_requires_ownership_review(self):
+        self.package('api','express')
+        self.package('web','react')
+        vulnerable='export function canRead(user, record) {\n  return user.tenantId === record.tenantId;\n}\n'
+        self.write('api/src/access.mjs',vulnerable)
+        self.write('api/src/owner.mjs','export function canRead(user, record) {\n  return user.tenantId === record.tenantId && user.id === record.ownerId;\n}\n')
+        self.write('api/tests/access.test.mjs',vulnerable)
+        self.write('web/src/access.mjs',vulnerable)
+        hits=[x for x in scan.process(self.root,'backend')['signals'] if x['control_id']=='BIZ-01']
+        self.assertEqual([(x['path'],x['line'],x['rule_id'],x['status']) for x in hits],
+            [('api/src/access.mjs',2,'BACKEND.AUTHZ.TENANT_ONLY_RETURN','HEURISTIC_REVIEW_ONLY')])
+        self.assertFalse(any(x['control_id']=='BIZ-01' for x in scan.process(self.root,'frontend')['signals']))
+        self.assertFalse(any(x['control_id']=='BIZ-01' for x in scan.process(self.root)['signals']))
+        self.assertNotIn('return user.tenantId',json.dumps(hits))
+        self.write('api/src/access.mjs','function guard(user, record) {\n  if (user.id !== record.ownerId) return false;\n  return user.tenantId === record.tenantId;\n}')
+        self.assertEqual([x['status'] for x in scan.process(self.root,'backend')['signals'] if x['control_id']=='BIZ-01'],['HEURISTIC_REVIEW_ONLY'])
 
 
 if __name__ == '__main__':

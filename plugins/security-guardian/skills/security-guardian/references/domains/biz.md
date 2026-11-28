@@ -20,6 +20,7 @@ Priority: **P0** | Implementation difficulty: **60%** | Ease: **40%** | PDF p. 1
 - **Audit implementation:** Query by both resource ID and authorized tenant/user; UUIDs are not an authorization mechanism.
 - **Acceptance test / evidence:** Two-user/two-tenant negative tests cover GET/PUT/PATCH/DELETE.
 - **Suggested tool:** Repository scopes, API tests
+- **Required distinction:** Compare owner/nonowner within one tenant separately from cross-tenant isolation, using existing negative tests and approved role policy. Tenant-only equality is a review signal, not proof.
 - **Specialist playbook:** `references/playbooks/multi-tenant-isolation-audit.md`
 - **Remediate when applicable:** Trace the actual code/config and failure mechanism, implement the smallest compatible change meeting the acceptance criterion, add a negative test where feasible; request approval for sensitive behavior, network, secrets, payments and PKI.
 - **Result:** VERIFIED_PASS only with executed/evidenced checks; FINDING only with supporting evidence; otherwise NEEDS_REVIEW, OUT_OF_SCOPE or NOT_APPLICABLE with rationale.

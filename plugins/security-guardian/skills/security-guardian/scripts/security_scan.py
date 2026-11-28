@@ -53,6 +53,8 @@ PATTERNS = [
  ('API-10','Development stack traces returned to clients',r'(?:response|res)\.(?:send|json)\s*\(\s*(?:err|error)\.(?:stack|message)',{'.ts','.js'},'medium','medium'),
  ('API-15','Untrusted forwarding header read',r'(?:headers\[[\'\"]x-forwarded-for|headers\.\s*xForwardedFor)',{'.ts','.js'},'low','high'),
  ('BIZ-02','Client-supplied privileged entity field',r'\b(?:body|dto|request\.body)\.(?:isAdmin|isPaid|tenantId|role|certificateStatus|paid)\b',{'.ts','.js'},'low','high'),
+ # Scoped Node backend only (empty legacy extensions).
+ ('BIZ-01','Tenant equality alone requires object ownership policy review',r'^\s*return\s+[A-Za-z_$][\w$]*\.tenantId\s*===\s*[A-Za-z_$][\w$]*\.tenantId\s*;?\s*$',set(),'low','high'),
  ('MOB-01','Mobile plaintext preferences for secret-like field',r'(?:(?:setString|getString)\(\s*[\'\"](?:token|password|refreshToken|privateKey))',{'.dart'},'medium','high'),
  ('MOB-02','TLS certificate acceptance override',r'badCertificateCallback\s*=|onBadCertificate\s*=|HttpOverrides\.global',{'.dart'},'medium','high'),
  ('MOB-02','Disabled TLS certificate verification',r'(?:rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED\s*=\s*0)',{'.ts','.js','.sh','.yaml','.yml'},'high','critical'),
@@ -116,6 +118,7 @@ BACKEND_CORE_RULES = {
     ('API-10', 'Development stack traces returned to clients'): 'BACKEND.HTTP.ERROR_DISCLOSURE',
     ('API-15', 'Untrusted forwarding header read'): 'BACKEND.HTTP.FORWARDED_HEADER',
     ('BIZ-02', 'Client-supplied privileged entity field'): 'BACKEND.API.PRIVILEGED_FIELD',
+    ('BIZ-01', 'Tenant equality alone requires object ownership policy review'): 'BACKEND.AUTHZ.TENANT_ONLY_RETURN',
 }
 CORS_WILDCARD = re.compile(r'origin\s*:\s*[\'"]\*[\'"]', re.I)
 NEST_ONLY_LABELS = {'Potentially loose ValidationPipe whitelist',

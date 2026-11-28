@@ -42,3 +42,7 @@ python scripts/benchmark_semantic_context.py --fresh-flask
 ## بازبینی پذیرش #107
 
 CI #235 نتایج SQL با Context و گیت Runtime را حفظ کرد. برچسب‌های مصنوعی قبلاً مشاهده‌شده اکنون رگرسیون اجباری شامل py-loop، dom-transform و sql-helper هستند؛ معنای اسکنر و برچسب تاریخی تغییر ندارد. Holdout مستقل تازه و ریسک Context ناقص در #37/#105 باقی است. CI این تغییر در انتظار است.
+
+### بازبینی بازگشت برابری Tenant
+
+در آزمایش نگه‌دارنده، Gemini ضعف مالکیت در همان Tenant را ندید. قانون BACKEND.AUTHZ.TENANT_ONLY_RETURN در Pack محدود Node Backend برای بازگشت تک‌خطی برابری سخت tenantId فقط Candidate با اطمینان پایین تولید می‌کند. Legacy، مؤلفه خارج محدوده و Fixture تست بدون تغییر می‌مانند. Guard قبلی یا سیاست دسترسی در کل Tenant می‌تواند سیگنال را بی‌خطر کند. موارد چندخطی، Alias و Dynamic خارج محدوده‌اند. قرارداد واقعی تست بررسی شود؛ دسته صریح object_level_authorization به BIZ-01 نگاشت می‌شود نه تأیید خودکار. شناسه تاریخی مهاجرت نمی‌کند. CI و تست مجدد باقی است.
