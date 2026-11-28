@@ -59,7 +59,7 @@ jobs:
           python -m unittest discover -s scripts -p test_dependency_lock_candidate.py -v
           mkdir "$RUNNER_TEMP/sg-standards-wheels"
           python -m pip --isolated download --index-url https://pypi.org/simple --only-binary=:all: --no-deps --dest "$RUNNER_TEMP/sg-standards-wheels" -r scripts/requirements-standards-candidate.txt
-          python scripts/dependency_lock_candidate.py scripts/requirements-standards-candidate.txt "$RUNNER_TEMP/sg-standards-wheels" "$RUNNER_TEMP/sg-standards-lock-candidate" --scope standards
+          python scripts/dependency_lock_candidate.py scripts/requirements-standards-candidate.txt "$RUNNER_TEMP/sg-standards-wheels" "$RUNNER_TEMP/sg-standards-lock-candidate" --scope standards --verify-registry --expected-lock-sha256 b519758f80ff327b116a2deb19e77b8d33f64fce9f94bc1cc96a90ded87609cb
       - name: Exercise standards candidate offline
         run: |
           set -euo pipefail
