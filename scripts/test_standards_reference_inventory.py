@@ -39,3 +39,33 @@ class ReferenceInventoryTests(unittest.TestCase):
         for rows in ([],[row,row]):
             with self.assertRaises(ValueError):
                 inv.validate_reference_inventory('CWE',{**good,'rows':rows},data)
+
+    def test_mastg_pinned_method_metadata(self):
+        raw=b'---\nid: MASTG-TEST-0251\nplatform: android\ntype: [dynamic, hooks, manual]\n---\nProcedure\n'
+        ref={'id':'MASTG-TEST-0251','source_blob_sha':inv.s.git_blob(raw)}
+        meta=inv.mastg_metadata(ref,raw)
+        self.assertEqual(meta['publisher_type_tags'],['dynamic','hooks','manual'])
+        self.assertEqual(meta['publisher_status'],'NOT_DECLARED')
+        self.assertEqual(meta['execution_status'],'NOT_RUN')
+        self.assertEqual(meta['automation_status'],'NOT_ASSESSED')
+        self.assertTrue(meta['procedure_body_present'])
+        for bad in (raw.replace(b'android',b'ios'),raw.replace(b'dynamic',b'static, dynamic'),
+                    raw.replace(b'hooks, manual',b'hooks, hooks'),raw.replace(b'type:',b'id: other\ntype:')):
+            with self.subTest(raw=bad),self.assertRaises(ValueError):
+                inv.mastg_metadata({**ref,'source_blob_sha':inv.s.git_blob(bad)},bad)
+        with self.assertRaises(ValueError):inv.mastg_metadata(ref,raw+b'changed')
+
+    def test_mastg_mapped_metadata_does_not_imply_unmapped_review(self):
+        raw=b'---\nid: MASTG-TEST-0251\nplatform: android\ntype: [dynamic, hooks, manual]\nstatus: placeholder\n---\n'
+        ref={'standard':'MASTG','id':'MASTG-TEST-0251','source_path':'tests-beta/android/MASVS-PLATFORM/MASTG-TEST-0251.md','source_blob_sha':inv.s.git_blob(raw)}
+        row={'id':ref['id'],'path':ref['source_path'],'blob_sha':ref['source_blob_sha'],'lifecycle':'NOT_INSPECTED'}
+        other={'id':'MASTG-TEST-9999','lifecycle':'NOT_INSPECTED'}
+        inventory={'rows':[row,other]}
+        data={'references':{'MASTG:'+ref['id']:ref}}
+        inv.annotate_mapped_mastg(inventory,data,lambda _:raw)
+        self.assertEqual(row['publisher_metadata']['publisher_status'],'placeholder')
+        self.assertFalse(row['publisher_metadata']['procedure_body_present'])
+        self.assertEqual(other['lifecycle'],'NOT_INSPECTED')
+        self.assertEqual(inventory['mapped_metadata_review']['inspected'],1)
+        self.assertEqual(inventory['mapped_metadata_review']['not_inspected'],1)
+        with self.assertRaises(ValueError):inv.annotate_mapped_mastg({'rows':[other]},data,lambda _:raw)

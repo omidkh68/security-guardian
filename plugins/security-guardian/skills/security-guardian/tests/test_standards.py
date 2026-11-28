@@ -16,15 +16,15 @@ class StandardsTests(unittest.TestCase):
     def test_catalog_complete(self):
         r=s.report(self.data)
         self.assertEqual(r['mapping_counts'],{'partial':105,'unmapped':40,'selected_controls':145})
-        self.assertEqual(len(r['references']),243)
+        self.assertEqual(len(r['references']),263)
         self.assertEqual(r['verification_status'],'NOT_VERIFIED')
         self.assertTrue(all(x['applicability_status']=='NOT_ASSESSED' and x['verification_status']=='NOT_VERIFIED' for x in r['controls']))
     def test_expanded_reference_edition(self):
         from collections import Counter
-        self.assertEqual(self.data['crosswalk_version'],3)
+        self.assertEqual(self.data['crosswalk_version'],4)
         self.assertEqual(Counter(r['standard'] for r in self.data['references'].values()),
-                         {'ASVS':172,'WSTG':23,'MASVS':17,'MASTG':7,'MASWE':8,'CWE':16})
-        self.assertEqual(sum(len(r['mappings']) for r in self.data['controls']),331)
+                         {'ASVS':172,'WSTG':23,'MASVS':17,'MASTG':15,'MASWE':15,'CWE':21})
+        self.assertEqual(sum(len(r['mappings']) for r in self.data['controls']),351)
         for cid,key in [('IAM-07','ASVS:6.5.1'),('IAM-04','WSTG:WSTG-v42-SESS-02'),
                         ('MOB-11','MASVS:MASVS-PLATFORM-3'),('MOB-10','MASTG:MASTG-TEST-0203'),
                         ('MOB-01','MASWE:MASWE-0001'),('OPS-01','CWE:CWE-532')]:
@@ -46,8 +46,18 @@ class StandardsTests(unittest.TestCase):
                 self.assertEqual(result['assessment_status'],'NOT_ASSESSED')
                 self.assertEqual(result['review_status'],'AUTHOR_REVIEWED_NOT_INDEPENDENTLY_APPROVED')
         previous=copy.deepcopy(self.data)
-        previous['crosswalk_version']=2
+        previous['crosswalk_version']=3
         with self.assertRaises(ValueError):s.validate(previous,self.ids,self.blob)
+
+    def test_mobile_and_cwe_acceptance_batch(self):
+        for cid,key in [["MOB-02","MASTG:MASTG-TEST-0218"],["MOB-02","MASTG:MASTG-TEST-0233"],["MOB-02","MASTG:MASTG-TEST-0234"],["MOB-02","MASTG:MASTG-TEST-0235"],["MOB-05","MASTG:MASTG-TEST-0250"],["MOB-05","MASTG:MASTG-TEST-0251"],["MOB-05","MASTG:MASTG-TEST-0252"],["MOB-05","MASTG:MASTG-TEST-0253"],["MOB-02","MASWE:MASWE-0027"],["MOB-04","MASWE:MASWE-0029"],["MOB-11","MASWE:MASWE-0030"],["MOB-04","MASWE:MASWE-0032"],["MOB-05","MASWE:MASWE-0033"],["MOB-05","MASWE:MASWE-0034"],["MOB-05","MASWE:MASWE-0035"],["MOB-02","CWE:CWE-295"],["MOB-02","CWE:CWE-297"],["ANG-11","CWE:CWE-601"],["API-10","CWE:CWE-209"],["API-09","CWE:CWE-22"]]:
+            with self.subTest(control=cid,reference=key):
+                result=s.report(self.data,[cid])
+                self.assertIn(key,result['references'])
+                self.assertEqual(result['verification_status'],'NOT_VERIFIED')
+                self.assertEqual(result['assessment_status'],'NOT_ASSESSED')
+        for ident in ('0237','0238','0239'):
+            self.assertNotIn('MASTG:MASTG-TEST-'+ident,self.data['references'])
 
     def test_selection(self):
         r=s.report(self.data,['API-07'])

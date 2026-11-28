@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "crosswalk_version": 3,
+  "crosswalk_version": 4,
   "catalog_blob_sha": "7d939ce0b3d83250b6eb47adf172e16a98f5f1f2",
   "review_status": "AUTHOR_REVIEWED_NOT_INDEPENDENTLY_APPROVED",
   "sources": {
@@ -1591,6 +1591,42 @@
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 9.2.3"
     },
+    "CWE:CWE-209": {
+      "standard": "CWE",
+      "id": "CWE-209",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/209.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Sensitive error output"
+    },
+    "CWE:CWE-22": {
+      "standard": "CWE",
+      "id": "CWE-22",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/22.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Path confinement"
+    },
+    "CWE:CWE-295": {
+      "standard": "CWE",
+      "id": "CWE-295",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/295.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Certificate validation"
+    },
+    "CWE:CWE-297": {
+      "standard": "CWE",
+      "id": "CWE-297",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/297.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Certificate hostname identity"
+    },
     "CWE:CWE-307": {
       "standard": "CWE",
       "id": "CWE-307",
@@ -1662,6 +1698,15 @@
       "source_path": null,
       "source_blob_sha": null,
       "topic": "Weakness 532"
+    },
+    "CWE:CWE-601": {
+      "standard": "CWE",
+      "id": "CWE-601",
+      "version": "5.0",
+      "source_url": "https://cwe.mitre.org/data/definitions/601.html",
+      "source_path": null,
+      "source_blob_sha": null,
+      "topic": "Untrusted redirection"
     },
     "CWE:CWE-613": {
       "standard": "CWE",
@@ -1762,6 +1807,15 @@
       "source_blob_sha": "bb10d7894272236c7093b1f90bb61d20f9000772",
       "topic": "Insecure TLS protocols"
     },
+    "MASTG:MASTG-TEST-0218": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0218",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-NETWORK/MASTG-TEST-0218.md",
+      "source_path": "tests-beta/android/MASVS-NETWORK/MASTG-TEST-0218.md",
+      "source_blob_sha": "aafa8f6cc1152717333fd74272af5566a0e1e851",
+      "topic": "Negotiated TLS"
+    },
     "MASTG:MASTG-TEST-0231": {
       "standard": "MASTG",
       "id": "MASTG-TEST-0231",
@@ -1771,6 +1825,33 @@
       "source_blob_sha": "eb469c93c0a61cc03133e26accfe42c22710fef9",
       "topic": "Android beta test 0231"
     },
+    "MASTG:MASTG-TEST-0233": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0233",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-NETWORK/MASTG-TEST-0233.md",
+      "source_path": "tests-beta/android/MASVS-NETWORK/MASTG-TEST-0233.md",
+      "source_blob_sha": "dfa2aa94f5d3cbe292242545c4f7ee5b6162a58a",
+      "topic": "HTTP URL references"
+    },
+    "MASTG:MASTG-TEST-0234": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0234",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-NETWORK/MASTG-TEST-0234.md",
+      "source_path": "tests-beta/android/MASVS-NETWORK/MASTG-TEST-0234.md",
+      "source_blob_sha": "f95a73d6de8a52a73e109ede5f7b83a6296f6398",
+      "topic": "Hostname verification"
+    },
+    "MASTG:MASTG-TEST-0235": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0235",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-NETWORK/MASTG-TEST-0235.md",
+      "source_path": "tests-beta/android/MASVS-NETWORK/MASTG-TEST-0235.md",
+      "source_blob_sha": "0fe10dfacacb23eed94f5d2019a1e2fb7bc7d97c",
+      "topic": "Cleartext configuration"
+    },
     "MASTG:MASTG-TEST-0242": {
       "standard": "MASTG",
       "id": "MASTG-TEST-0242",
@@ -1779,6 +1860,42 @@
       "source_path": "tests-beta/android/MASVS-NETWORK/MASTG-TEST-0242.md",
       "source_blob_sha": "50950c6a4caa8000e73d8b6715dfb4bbfb5f0231",
       "topic": "Android network configuration pinning"
+    },
+    "MASTG:MASTG-TEST-0250": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0250",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-PLATFORM/MASTG-TEST-0250.md",
+      "source_path": "tests-beta/android/MASVS-PLATFORM/MASTG-TEST-0250.md",
+      "source_blob_sha": "c8cde57a228d62a924b66489aaf7497f34a1ffe0",
+      "topic": "WebView content access"
+    },
+    "MASTG:MASTG-TEST-0251": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0251",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-PLATFORM/MASTG-TEST-0251.md",
+      "source_path": "tests-beta/android/MASVS-PLATFORM/MASTG-TEST-0251.md",
+      "source_blob_sha": "5343a070cb87e8336a5bbbfa5d05d7e66d3f1076",
+      "topic": "Runtime WebView content access"
+    },
+    "MASTG:MASTG-TEST-0252": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0252",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-PLATFORM/MASTG-TEST-0252.md",
+      "source_path": "tests-beta/android/MASVS-PLATFORM/MASTG-TEST-0252.md",
+      "source_blob_sha": "d00abd024784e61136af1bc46741544a0c7b2cb9",
+      "topic": "WebView file access"
+    },
+    "MASTG:MASTG-TEST-0253": {
+      "standard": "MASTG",
+      "id": "MASTG-TEST-0253",
+      "version": "2.0.0",
+      "source_url": "https://github.com/OWASP/mastg/blob/990472dbcffe126f5556045d60270c4ffdfdde72/tests-beta/android/MASVS-PLATFORM/MASTG-TEST-0253.md",
+      "source_path": "tests-beta/android/MASVS-PLATFORM/MASTG-TEST-0253.md",
+      "source_blob_sha": "511026dd1dfc18a3d681f1551aeefc82f5fd98cb",
+      "topic": "Runtime WebView file access"
     },
     "MASTG:MASTG-TEST-0315": {
       "standard": "MASTG",
@@ -2014,6 +2131,15 @@
       "source_blob_sha": "2310ed512fbef71f1e9ac117cbfa9616b5d3a409",
       "topic": "Unencrypted traffic"
     },
+    "MASWE:MASWE-0027": {
+      "standard": "MASWE",
+      "id": "MASWE-0027",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-NETWORK/MASWE-0027.md",
+      "source_path": "weaknesses/MASVS-NETWORK/MASWE-0027.md",
+      "source_blob_sha": "2465f647ac4d7b4fb351299e9ab764749759f051",
+      "topic": "Certificate trust"
+    },
     "MASWE:MASWE-0028": {
       "standard": "MASWE",
       "id": "MASWE-0028",
@@ -2022,6 +2148,60 @@
       "source_path": "weaknesses/MASVS-NETWORK/MASWE-0028.md",
       "source_blob_sha": "426ca4d8fd02a8759455a5005b279a353fb55a72",
       "topic": "Pinning weakness"
+    },
+    "MASWE:MASWE-0029": {
+      "standard": "MASWE",
+      "id": "MASWE-0029",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-PLATFORM/MASWE-0029.md",
+      "source_path": "weaknesses/MASVS-PLATFORM/MASWE-0029.md",
+      "source_blob_sha": "9138947c7b239ba3cffc6c578a270fe195b9da9f",
+      "topic": "Deep link trust"
+    },
+    "MASWE:MASWE-0030": {
+      "standard": "MASWE",
+      "id": "MASWE-0030",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-PLATFORM/MASWE-0030.md",
+      "source_path": "weaknesses/MASVS-PLATFORM/MASWE-0030.md",
+      "source_blob_sha": "caf77f8977cff01ed1dea7604ce38e41252d89a1",
+      "topic": "Clipboard privacy"
+    },
+    "MASWE:MASWE-0032": {
+      "standard": "MASWE",
+      "id": "MASWE-0032",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-PLATFORM/MASWE-0032.md",
+      "source_path": "weaknesses/MASVS-PLATFORM/MASWE-0032.md",
+      "source_blob_sha": "9120ed8e7083453d16a93a7b726fdc86aa3d2185",
+      "topic": "Intent trust"
+    },
+    "MASWE:MASWE-0033": {
+      "standard": "MASWE",
+      "id": "MASWE-0033",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-PLATFORM/MASWE-0033.md",
+      "source_path": "weaknesses/MASVS-PLATFORM/MASWE-0033.md",
+      "source_blob_sha": "20effdf5afcb7553f71d8bb3c2f2ebcecefc4df7",
+      "topic": "Native bridge exposure"
+    },
+    "MASWE:MASWE-0034": {
+      "standard": "MASWE",
+      "id": "MASWE-0034",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-PLATFORM/MASWE-0034.md",
+      "source_path": "weaknesses/MASVS-PLATFORM/MASWE-0034.md",
+      "source_blob_sha": "ef741d41d4e3b62e7591b8ae3f425f90ab7732dc",
+      "topic": "Local WebView resources"
+    },
+    "MASWE:MASWE-0035": {
+      "standard": "MASWE",
+      "id": "MASWE-0035",
+      "version": "1.0.0",
+      "source_url": "https://github.com/OWASP/maswe/blob/308b82b4bbe29166934fb5a621b40471cfea61db/weaknesses/MASVS-PLATFORM/MASWE-0035.md",
+      "source_path": "weaknesses/MASVS-PLATFORM/MASWE-0035.md",
+      "source_blob_sha": "0472677076a57fba36c3b010261c99ac8e65814c",
+      "topic": "WebView content trust"
     },
     "WSTG:WSTG-v42-APIT-01": {
       "standard": "WSTG",
@@ -3075,6 +3255,12 @@
           "relationship": "RELATED_TEST",
           "rationale": "Review user-controlled redirect targets against the approved destination policy.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-601",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Relate approved destination allowlists to untrusted redirects.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
         }
       ],
       "unmapped_reason": null,
@@ -3470,6 +3656,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "File count and size limits address storage abuse; per-user aggregate quota still needs explicit review.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-22",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Relate safe upload filenames and isolated storage to path traversal; other file paths need review.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
         }
       ],
       "unmapped_reason": null,
@@ -3501,6 +3693,12 @@
           "relationship": "RELATED_TEST",
           "rationale": "Review error output for internal details; the fail-closed control also requires separate authorization evidence.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-209",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Relate sanitized error responses to disclosure through error messages.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
         }
       ],
       "unmapped_reason": null,
@@ -4000,6 +4198,48 @@
           "relationship": "RELATED_WEAKNESS",
           "rationale": "Cleartext network transmission overlaps production transport restrictions.",
           "applicability": "WHERE_WEAKNESS_APPLIES"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0218",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review observed TLS negotiation in an authorized device test; static settings do not establish runtime protocol.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0233",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review HTTP URL references for actual use; their presence alone is not a finding.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0234",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review low-level socket hostname checks as one part of certificate validation.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0235",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review resolved manifest and network policy; actual traffic is a separate test.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0027",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Relate certificate and hostname validation policy to the weakness; no automatic finding.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "CWE:CWE-295",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Reject untrusted certificates; transport policy alone is not proof.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
+        },
+        {
+          "reference": "CWE:CWE-297",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Review verification of endpoint identity separately from chain validation.",
+          "applicability": "WHERE_WEAKNESS_APPLIES"
         }
       ],
       "unmapped_reason": null,
@@ -4038,6 +4278,18 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "IPC safety; related aspect only",
           "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0029",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Relate destination validation and authorization to deep-link risk.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0032",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Relate exported-component authorization and validated intent data to this weakness.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -4050,6 +4302,48 @@
           "reference": "MASVS:MASVS-PLATFORM-2",
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "WebView safety; related aspect only",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0250",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review whether untrusted navigation can reach content-provider resources.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0251",
+          "relationship": "RELATED_TEST",
+          "rationale": "Observe actual content-access settings on authorized device; no runtime verdict inferred.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0252",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review local file access together with origin and navigation trust.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASTG:MASTG-TEST-0253",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review actual WebView file-access state in an authorized device session.",
+          "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0033",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Relate native bridge privilege restriction to untrusted content.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0034",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Relate content trust and navigation restrictions to local-resource access; file settings need review.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0035",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Relate origin and navigation allowlists to untrusted content risk.",
           "applicability": "MOBILE_WHERE_RELEVANT"
         }
       ],
@@ -4213,6 +4507,12 @@
           "relationship": "RELATED_TEST",
           "rationale": "Review notification contents for confidential UI data; platform behavior requires manual evidence.",
           "applicability": "ANDROID_WHERE_RELEVANT"
+        },
+        {
+          "reference": "MASWE:MASWE-0030",
+          "relationship": "RELATED_WEAKNESS",
+          "rationale": "Relate confidential UI and clipboard data exposure; consent needs separate review.",
+          "applicability": "MOBILE_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
