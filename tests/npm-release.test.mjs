@@ -69,3 +69,14 @@ test('prepare is default; OIDC is stage-only and registry verification is separa
   assert.match(registry,/npm pack "\$package"/);
   assert.match(registry,/^\s+cmp /m);
 });
+
+test('release SBOM validation precedes artifact upload and signing', () => {
+  const workflow=normalizeWorkflow(readFileSync(new URL('../.github/workflows/npm-publish.yml',import.meta.url),'utf8'));
+  const verify=workflow.split('  verify:\n')[1].split('  attest-release:\n')[0];
+  const step=verify.indexOf('Generate and validate SBOMs of exact tested release artifact');
+  assert.ok(step>verify.indexOf('Check exact tested release artifact'));
+  assert.ok(verify.indexOf('name: npm-release-sbom')>step);
+  assert.ok(verify.indexOf('name: npm-release\n')>step);
+  for(const fragment of ['validate_release_receipt','--sbom-format=spdx','--sbom-format=cyclonedx','--release-version "$version" --source-commit "$GITHUB_SHA"','cmp ']) assert.ok(verify.includes(fragment),fragment);
+  assert.match(workflow,/^  attest-release:\n    needs: verify$/m);
+});

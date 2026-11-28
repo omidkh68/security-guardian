@@ -47,3 +47,11 @@ Do not treat an open parent RFC or missing evidence as PASS. Recheck final candi
 ## 2026-11-28 checkpoint
 
 The table above is historical. #206 merged as `8045c1e54a3d53bb44683388d4fa4f854b9d2185`; exact-commit [main CI](https://github.com/omidkh68/security-guardian/actions/runs/46118458477) and [private preview provenance workflow](https://github.com/omidkh68/security-guardian/actions/runs/46118458474) succeeded. See [standards evidence](standards-acceptance.md) for newer SARIF, CVSS, SBOM and Scorecard evidence. Actual artifact evidence and independent acceptance of #149–160 and #105 still require review; publication remains blocked.
+
+## Release artifact evidence sequence — 2026-11-28
+
+PRs #208–212 are merged. [CI #398](https://github.com/omidkh68/security-guardian/actions/runs/46128201878) passed all ten jobs. [Private preview provenance](https://github.com/omidkh68/security-guardian/actions/runs/46127735027) passed positive verification and both negative controls. [Standards #51](https://github.com/omidkh68/security-guardian/actions/runs/46127759522) passed; the preview inventory has 172 regular files. These are preview observations, not final release acceptance. See #157–160 for detailed evidence and limitations.
+
+The proposed final SBOM gate uses the exact tested tarball and validates its canonical manifest, stable version, explicit public state, dual-use declaration, disclosure, receipt digest, size and source commit before extraction. SPDX 2.3 and CycloneDX 1.5 are generated offline from the extracted package lock and checked against the existing pinned schemas; the companion evidence hashes every shipped regular file and both SBOMs. SBOM validation and upload must pass before the release artifact is signed and staged. File-level license review, Python dependencies and independent human review remain separate; do not call this full supply-chain compliance.
+
+The pre-tag gate reviews bounded preview evidence and the planned enforceable final checks. The final tagged prepare/stage run must produce and validate the exact final SBOM and signed provenance before any authorized registry mutation. Registry comparison follows owner 2FA promotion. Final checks cannot be described as completed before they run. No checklist item is removed, and #105 remains blocked pending its actual acceptance review.
