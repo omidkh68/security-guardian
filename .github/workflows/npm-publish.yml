@@ -1,6 +1,17 @@
 name: npm trusted publish
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Prepare exact artifact, stage using existing npm trust, or verify after owner promotion
+        type: choice
+        options: [prepare, stage, registry]
+        default: prepare
+        required: true
+      source_run_id:
+        description: Successful prepare/stage run ID (registry mode only)
+        type: string
+        required: false
 permissions:
   contents: read
 concurrency:
@@ -8,6 +19,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   verify:
+    if: inputs.mode == 'prepare' || inputs.mode == 'stage'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -113,6 +125,8 @@ jobs:
           if-no-files-found: error
   publish:
     needs: verify-release-provenance
+    if: inputs.mode == 'stage'
+    name: Stage verified tarball (owner promotion required)
     runs-on: ubuntu-latest
     environment: npm-release
     permissions:
@@ -128,7 +142,7 @@ jobs:
         with:
           name: npm-release
           path: release-artifact
-      - name: Publish verified tarball using OIDC
+      - name: Stage verified tarball using OIDC
         shell: bash
         run: |
           set -euo pipefail
@@ -152,22 +166,57 @@ jobs:
             assert.equal(r.bytes,bytes.length);
             assert.equal(r.sha256,createHash("sha256").update(bytes).digest("hex"));
           ' "${packages[0]}"
-          npm publish "./${packages[0]}" --access public --tag latest --ignore-scripts
+          node -e 'const [major,minor]=process.argv[1].split(".").map(Number); if (!(major>11 || (major===11 && minor>=15))) throw Error("npm >=11.15.0 required")' "$(npm --version)"
+          npm stage publish "./${packages[0]}" --access public --tag latest --ignore-scripts --provenance
+          echo "Staging only. Owner must verify staged bytes and approve with 2FA."
   registry-smoke:
-    needs: publish
+    if: inputs.mode == 'registry'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: npm-release
-          path: release-artifact
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
           package-manager-cache: false
+      - name: Require exact release tag and successful source workflow run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          set -euo pipefail
+          node scripts/check-npm-release.mjs
+          [[ "$SOURCE_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID" > "$RUNNER_TEMP/source-run.json"
+          jq -e --arg sha "$GITHUB_SHA" --arg repo "$GITHUB_REPOSITORY" '
+            .head_sha == $sha and .head_repository.full_name == $repo and
+            .event == "workflow_dispatch" and .status == "completed" and
+            .conclusion == "success" and (.path | split("@")[0]) == ".github/workflows/npm-publish.yml"
+          ' "$RUNNER_TEMP/source-run.json"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: npm-release
+          path: release-artifact
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify original signed tarball before registry comparison
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd release-artifact
+          sha256sum --check SHA256SUMS
+          shopt -s nullglob
+          packages=(*.tgz)
+          test "${#packages[@]}" -eq 1
+          gh attestation verify "${packages[0]}" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/npm-publish.yml" --source-digest "$GITHUB_SHA" --source-ref "$GITHUB_REF" --predicate-type https://slsa.dev/provenance/v1 --deny-self-hosted-runners
       - name: Check exact registry version and CLI
         shell: bash
         run: |
@@ -186,6 +235,11 @@ jobs:
           packages=(release-artifact/*.tgz)
           test "${#packages[@]}" -eq 1
           node scripts/verify-registry-artifact.mjs release-artifact/tested-artifact.json "${packages[0]}" "$RUNNER_TEMP/registry-metadata.json" "$version" "$GITHUB_SHA" | tee "$RUNNER_TEMP/registry-integrity.json"
+          mkdir "$RUNNER_TEMP/registry-download"
+          npm pack "$package" --ignore-scripts --registry https://registry.npmjs.org/ --pack-destination "$RUNNER_TEMP/registry-download"
+          downloaded=("$RUNNER_TEMP"/registry-download/*.tgz)
+          test "${#downloaded[@]}" -eq 1
+          cmp "${packages[0]}" "${downloaded[0]}"
           test "$(npx --yes --ignore-scripts --registry https://registry.npmjs.org/ --package "$package" -- security-guardian --version)" = "$version"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

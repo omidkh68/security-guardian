@@ -49,3 +49,23 @@ test('release provenance cannot be skipped by the publish job', () => {
   assert.match(preview,/ERROR: altered artifact accepted/);
   assert.match(preview,/ERROR: incorrect source ref accepted/);
 });
+
+// The release workflow never promotes an npm dual-use package automatically.
+test('prepare is default; OIDC is stage-only and registry verification is separately dispatched', () => {
+  const workflow=normalizeWorkflow(readFileSync(new URL('../.github/workflows/npm-publish.yml',import.meta.url),'utf8'));
+  assert.match(workflow,/options: \[prepare, stage, registry\]\n\s+default: prepare/);
+  assert.match(workflow,/^  verify:\n    if: inputs.mode == 'prepare' \|\| inputs.mode == 'stage'$/m);
+  const stage=workflow.split('  publish:\n')[1].split('  registry-smoke:\n')[0];
+  assert.match(stage,/needs: verify-release-provenance/);
+  assert.match(stage,/if: inputs.mode == 'stage'/);
+  assert.match(stage,/environment: npm-release/);
+  assert.match(stage,/npm stage publish /);
+  assert.doesNotMatch(workflow,/^\s*npm (publish|stage approve)\b/m);
+  const registry=workflow.split('  registry-smoke:\n')[1];
+  assert.match(registry,/if: inputs.mode == 'registry'/);
+  assert.doesNotMatch(registry,/id-token: write|npm stage publish/);
+  assert.ok(registry.includes('.head_sha == $sha') && registry.includes('.conclusion == "success"'));
+  assert.ok(registry.includes('run-id: ${{ inputs.source_run_id }}') && registry.includes('gh attestation verify'));
+  assert.match(registry,/npm pack "\$package"/);
+  assert.match(registry,/^\s+cmp /m);
+});
