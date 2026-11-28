@@ -48,7 +48,12 @@ jobs:
             ${{ runner.temp }}/sg-provenance/preview.tgz
             ${{ runner.temp }}/sg-provenance/SHA256SUMS
             ${{ runner.temp }}/sg-provenance/tested-artifact.json
-            ${{ runner.temp }}/slsa-source-evidence.json
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: slsa-normative-source-evidence
+          path: ${{ runner.temp }}/slsa-source-evidence.json
           if-no-files-found: error
           retention-days: 7
   attest:
