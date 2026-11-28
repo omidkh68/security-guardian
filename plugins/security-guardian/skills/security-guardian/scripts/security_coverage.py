@@ -16,7 +16,7 @@ MATRIX_VERSION = 2
 REFERENCE_FIXTURES = {
     'Angular': ('20.3.34', 'scripts/fixtures/angular-ssr/package.json', 'scripts/test_angular_ssr_verification.py', 'Angular SSR'),
     'NestJS': ('11.1.6', 'scripts/fixtures/nest-http/package.json', 'scripts/test_nest_http_verification.py', 'NestJS HTTP'),
-    'Flask': ('3.1.2', 'scripts/requirements-framework-fixture.txt', 'scripts/test_framework_verification.py', 'Flask SQLite HTTP'),
+    'Flask': ('3.1.3', 'scripts/requirements-framework-fixture.txt', 'scripts/test_framework_verification.py', 'Flask SQLite HTTP'),
 }
 
 
