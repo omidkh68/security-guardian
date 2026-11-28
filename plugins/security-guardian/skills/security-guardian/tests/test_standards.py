@@ -16,15 +16,15 @@ class StandardsTests(unittest.TestCase):
     def test_catalog_complete(self):
         r=s.report(self.data)
         self.assertEqual(r['mapping_counts'],{'partial':105,'unmapped':40,'selected_controls':145})
-        self.assertEqual(len(r['references']),226)
+        self.assertEqual(len(r['references']),243)
         self.assertEqual(r['verification_status'],'NOT_VERIFIED')
         self.assertTrue(all(x['applicability_status']=='NOT_ASSESSED' and x['verification_status']=='NOT_VERIFIED' for x in r['controls']))
     def test_expanded_reference_edition(self):
         from collections import Counter
-        self.assertEqual(self.data['crosswalk_version'],2)
+        self.assertEqual(self.data['crosswalk_version'],3)
         self.assertEqual(Counter(r['standard'] for r in self.data['references'].values()),
-                         {'ASVS':164,'WSTG':14,'MASVS':17,'MASTG':7,'MASWE':8,'CWE':16})
-        self.assertEqual(sum(len(r['mappings']) for r in self.data['controls']),314)
+                         {'ASVS':172,'WSTG':23,'MASVS':17,'MASTG':7,'MASWE':8,'CWE':16})
+        self.assertEqual(sum(len(r['mappings']) for r in self.data['controls']),331)
         for cid,key in [('IAM-07','ASVS:6.5.1'),('IAM-04','WSTG:WSTG-v42-SESS-02'),
                         ('MOB-11','MASVS:MASVS-PLATFORM-3'),('MOB-10','MASTG:MASTG-TEST-0203'),
                         ('MOB-01','MASWE:MASWE-0001'),('OPS-01','CWE:CWE-532')]:
@@ -34,6 +34,20 @@ class StandardsTests(unittest.TestCase):
         bad=copy.deepcopy(self.data)
         bad['crosswalk_version']=1
         with self.assertRaises(ValueError):s.validate(bad,self.ids,self.blob)
+
+    def test_web_acceptance_batch_relationships(self):
+        pairs=[["API-08","WSTG:WSTG-v42-INPV-19"],["ANG-06","WSTG:WSTG-v42-INPV-17"],["ANG-11","WSTG:WSTG-v42-CLNT-04"],["API-11","WSTG:WSTG-v42-CLNT-10"],["API-10","WSTG:WSTG-v42-ERRH-01"],["DATA-06","WSTG:WSTG-v42-CONF-11"],["BIZ-04","WSTG:WSTG-v42-BUSL-06"],["IAM-09","WSTG:WSTG-v42-SESS-07"],["HOST-04","WSTG:WSTG-v42-CRYP-01"],["API-03","ASVS:3.2.1"],["API-12","ASVS:4.3.2"],["API-09","ASVS:5.2.4"],["DATA-06","ASVS:5.4.1"],["IAM-09","ASVS:7.1.1"],["HOST-04","ASVS:12.2.2"],["DATA-03","ASVS:12.3.3"],["GOV-05","ASVS:14.1.2"]]
+        for cid,key in pairs:
+            with self.subTest(control=cid,reference=key):
+                result=s.report(self.data,[cid])
+                self.assertIn(key,result['references'])
+                self.assertEqual(result['controls'][0]['status'],'PARTIAL')
+                self.assertEqual(result['controls'][0]['verification_status'],'NOT_VERIFIED')
+                self.assertEqual(result['assessment_status'],'NOT_ASSESSED')
+                self.assertEqual(result['review_status'],'AUTHOR_REVIEWED_NOT_INDEPENDENTLY_APPROVED')
+        previous=copy.deepcopy(self.data)
+        previous['crosswalk_version']=2
+        with self.assertRaises(ValueError):s.validate(previous,self.ids,self.blob)
 
     def test_selection(self):
         r=s.report(self.data,['API-07'])

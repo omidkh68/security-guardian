@@ -124,3 +124,29 @@ Use `python3 <skill-dir>/scripts/security_asvs.py --source /path/to/pinned-asvs.
 ## MASVS synthetic authentication and privacy observation review (#151)
 
 `python3 <skill-dir>/scripts/security_mobile_observations.py --reference MASVS-AUTH-2 --observations synthetic.json` (also accepts `MASVS-PRIVACY-2` and `MASVS-PRIVACY-3`). All inputs require `schema_version: 1` and `synthetic_only: true`; never supply real identifiers. AUTH-2 requires distinct evidence digests and decisions for valid bound challenge, cancellation, failed authentication, replayed and mismatched challenges, and enrollment-change reauthentication. PRIVACY-2 checks shared synthetic identifier SHA-256 values across supplied purposes; PRIVACY-3 compares declared and observed category/purpose/recipient tuples and retention days. Missing or contradictory observations return nonzero. Inputs are caller assertions; no source evidence, key binding, device runtime, linkability, actual notices or retention is independently verified. No compliance claim or new crosswalk mapping. CI pending.
+
+## Mapping edition v3 — web acceptance batch (#149–150)
+
+This increment preserves every v2 relationship and adds 8 ASVS and 9 WSTG references (17 new advisory relationships). Current totals: 243 selected IDs, 331 relationships, 105 partially mapped and 40 unmapped handbook controls. ASVS 172/345, WSTG 23/97 unique checklist identities. Other standard counts unchanged. Source scope: exact pinned ASVS JSON and WSTG 4.2 pages, with source blob checks in CI. WSTG publisher license: [CC BY-SA 4.0](https://owasp.org/projects/web-security-testing-guide?tab=main); publisher revision and checklist digest remain pinned. WSTG-ERRH-02 is a merged page, not added as a separate active procedure. The duplicate INPV-13 remains unresolved. Mapping is advisory, not an implemented scanner or execution result. The following table identifies each new relationship and its bounded review purpose.
+
+| Reference | Control | Review purpose |
+|---|---|---|
+| WSTG-v42-INPV-19 | API-08 | SSRF |
+| WSTG-v42-INPV-17 | ANG-06 | Host header trust |
+| WSTG-v42-CLNT-04 | ANG-11 | Client redirect validation |
+| WSTG-v42-CLNT-10 | API-11 | WebSocket security |
+| WSTG-v42-ERRH-01 | API-10 | Error disclosure |
+| WSTG-v42-CONF-11 | DATA-06 | Cloud storage authorization |
+| WSTG-v42-BUSL-06 | BIZ-04 | Workflow state integrity |
+| WSTG-v42-SESS-07 | IAM-09 | Session expiry |
+| WSTG-v42-CRYP-01 | HOST-04 | Transport security |
+| ASVS 3.2.1 | API-03 | Response rendering context |
+| ASVS 4.3.2 | API-12 | GraphQL introspection |
+| ASVS 5.2.4 | API-09 | Upload resource quotas |
+| ASVS 5.4.1 | DATA-06 | Download filename handling |
+| ASVS 7.1.1 | IAM-09 | Session lifetime policy |
+| ASVS 12.2.2 | HOST-04 | Public TLS certificate trust |
+| ASVS 12.3.3 | DATA-03 | Internal transport confidentiality |
+| ASVS 14.1.2 | GOV-05 | Sensitive data protection policy |
+
+The new regression test checks every added relationship, unknown verification and assessment states, and rejects a stale mapping edition. MASVS gap-review edition binding is refreshed without changing its seven reviewed gaps. No independent human review, target execution, automatic WSTG procedure or compliance claim. All remaining unmapped requirements need review; CI results are pending.
