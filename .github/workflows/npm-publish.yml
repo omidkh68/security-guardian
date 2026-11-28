@@ -53,8 +53,66 @@ jobs:
           name: npm-release
           path: ${{ runner.temp }}/npm-release/
           if-no-files-found: error
-  publish:
+  attest-release:
     needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: npm-release
+          path: release-artifact
+      - name: Select exact tested artifact
+        id: artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release-artifact
+          sha256sum --check SHA256SUMS
+          shopt -s nullglob
+          packages=(*.tgz)
+          test "${#packages[@]}" -eq 1
+          printf 'path=release-artifact/%s\n' "${packages[0]}" >> "$GITHUB_OUTPUT"
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: ${{ steps.artifact.outputs.path }}
+  verify-release-provenance:
+    needs: attest-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      attestations: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: npm-release
+          path: release-artifact
+      - name: Verify signed provenance before publication
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          cd release-artifact
+          sha256sum --check SHA256SUMS
+          shopt -s nullglob
+          packages=(*.tgz)
+          test "${#packages[@]}" -eq 1
+          gh attestation verify "${packages[0]}" --repo "$REPO" --signer-workflow "$REPO/.github/workflows/npm-publish.yml" --source-digest "$GITHUB_SHA" --source-ref "$GITHUB_REF" --predicate-type https://slsa.dev/provenance/v1 --deny-self-hosted-runners --format json > "$RUNNER_TEMP/release-provenance.json"
+          test -s "$RUNNER_TEMP/release-provenance.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-provenance-verification
+          path: ${{ runner.temp }}/release-provenance.json
+          if-no-files-found: error
+  publish:
+    needs: verify-release-provenance
     runs-on: ubuntu-latest
     environment: npm-release
     permissions:
