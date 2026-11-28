@@ -76,7 +76,8 @@ jobs:
           set -euo pipefail
           python -m venv "$RUNNER_TEMP/sg-framework-fixture"
           PY="$RUNNER_TEMP/sg-framework-fixture/bin/python"
-          "$PY" -m pip install --only-binary=:all: --no-deps -r scripts/requirements-framework-fixture.txt
+          python -m unittest discover -s scripts -p test_fixture_hash_lock.py -v
+          "$PY" -m pip --isolated install --index-url https://pypi.org/simple --only-binary=:all: --no-deps --require-hashes -r scripts/requirements-framework-fixture-linux-py312.lock
           "$PY" -m pip check
           "$PY" scripts/test_framework_verification.py -v
       - name: Verify real Angular SSR runtime receipts in isolated fixture environment
@@ -233,7 +234,7 @@ jobs:
       - name: Enforce exposed JS semantic regression labels (not independent accuracy)
         run: python scripts/benchmark_holdout.py --synthetic js --require-synthetic-regression --typescript-module "$RUNNER_TEMP/sg-typescript/node_modules/typescript/lib/typescript.js"
       - name: Test artifact receipt export and release checklist gate
-        run: node --test tests/npm-artifact-evidence.test.mjs tests/release-gate.test.mjs
+        run: node --test tests/npm-artifact-evidence.test.mjs tests/release-gate.test.mjs tests/registry-artifact.test.mjs
       - name: Verify exact tarball manifest and offline npx install-to-report
         run: node scripts/verify-npm-package.mjs --artifact-dir "$RUNNER_TEMP/sg-tested-npm"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
