@@ -92,3 +92,15 @@ class ReferenceInventoryTests(unittest.TestCase):
         self.assertEqual(other['lifecycle'],'NOT_INSPECTED')
         self.assertNotIn('publisher_metadata',other)
         with self.assertRaises(ValueError):inv.annotate_mapped_maswe({'rows':[other]},data,lambda _:raw)
+
+    def test_cwe_source_digest_pin_rejects_drift(self):
+        import hashlib
+        from unittest.mock import patch
+        import verify_standards_sources as sources
+        raw=b'<Weakness_Catalog Version="5.0"/>'
+        self.assertEqual(sources.CWE_XML_SHA256,'47165a9593def89c69b9ef50c34d99ac68db55df8373613e85e9cc9ceecefb1d')
+        with patch.object(sources,'CWE_XML_SHA256',hashlib.sha256(raw).hexdigest()):
+            self.assertEqual(sources.require_cwe_xml_pin(raw),raw)
+            for bad in (raw+b' ',b'',None):
+                with self.subTest(raw=bad),self.assertRaises(ValueError):
+                    sources.require_cwe_xml_pin(bad)
