@@ -91,6 +91,13 @@ class MappingTests(unittest.TestCase):
         self.assertEqual(mapping.audit_legacy(records)[0]["status"], "MATCHED")
         self.assertEqual(records["example"]["status"], "FIXED_UNVERIFIED")
 
+    def test_explicit_object_authorization_category(self):
+        title='Same-tenant nonowner can read a protected record'
+        self.assertEqual(mapping.classify('BIZ-01',title,'Owner-only requirement documented',category='object_level_authorization')['status'],'MATCHED')
+        self.assertEqual(mapping.classify('BIZ-01','Tenant comparison','Policy unknown')['status'],'NEEDS_REVIEW')
+        with self.assertRaisesRegex(ValueError,'maps to BIZ-01'):
+            mapping.classify('BIZ-03',title,'Owner-only requirement documented',category='object_level_authorization')
+
     def test_mismatch_override_and_ambiguity(self):
         with self.assertRaisesRegex(ValueError,'maps to API-03'):
             mapping.classify('ANG-12','Missing security headers','')

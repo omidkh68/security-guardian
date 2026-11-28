@@ -42,3 +42,7 @@ The second command fetches only pinned public source artifacts and validates Git
 ## Current acceptance review (#107)
 
 CI #235 preserved SQL contextual metrics and runtime gates. The original exposed synthetic labels are now required regressions, including py-loop, dom-transform and sql-helper; no changes to scanner semantics or historical labels. New independent holdout work and missing-context residual risk remain #37/#105. CI for this increment pending.
+
+### Tenant-only return review
+
+Maintainer-reported Gemini missed a same-tenant ownership flaw. The scoped Node backend pack adds BACKEND.AUTHZ.TENANT_ONLY_RETURN for an exact single-line return of tenantId strict equality. Low-confidence candidate only; legacy scans, excluded components and test fixtures remain unchanged. A preceding owner guard or legitimate tenant-wide policy can make the signal benign. Multiline/aliased/dynamic cases remain outside this detector. Review the actual test contract; explicit object_level_authorization maps to BIZ-01, not an automatic finding. No historical ID migration. CI and native retest pending.

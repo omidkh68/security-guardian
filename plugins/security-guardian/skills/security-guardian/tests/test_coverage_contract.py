@@ -44,7 +44,8 @@ class CoverageContractTests(unittest.TestCase):
                     key=rule['rule_id']
                     val=(pack['pack_id'],rule['control_id'])
                     self.assertEqual(mapping.setdefault(key,val),val)
-        self.assertEqual(len(mapping),28)
+        self.assertEqual(len(mapping),29)
+        self.assertEqual(mapping['BACKEND.AUTHZ.TENANT_ONLY_RETURN'],('backend-core','BIZ-01'))
         self.assertFalse(report['runtime']['automatic_framework_verification'])
 
     def test_version_evidence_is_not_target_support_or_runtime_result(self):

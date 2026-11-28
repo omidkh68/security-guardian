@@ -27,6 +27,7 @@ CATEGORY_CONTROL = {
     'host_patch_management': 'HOST-01',
     'container_build_secret_exposure': 'CLOUD-05',
     'ci_image_pinning': 'SDLC-08',
+    'object_level_authorization': 'BIZ-01',
 }
 HINTS = {
     # Require a specific build-context/secret relationship, not merely Docker
