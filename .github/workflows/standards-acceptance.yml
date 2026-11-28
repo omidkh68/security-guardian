@@ -6,6 +6,7 @@ on:
       - 'scripts/standards_inventory.py'
       - 'scripts/test_standards_reference_inventory.py'
       - 'scripts/test_standards_batch.py'
+      - 'scripts/compare_first_cvss.py'
       - 'scripts/verify_sbom_preview.py'
       - 'scripts/test_sbom_preview.py'
       - 'plugins/security-guardian/skills/security-guardian/**'
@@ -57,6 +58,10 @@ jobs:
           Path(sys.argv[1]).write_bytes(raw)
           PY
           SG_EXTERNAL_STANDARDS_TEST=1 SG_SARIF_SCHEMA="$RUNNER_TEMP/sarif-schema.json" "$PY" -m unittest discover -s scripts -p test_standards_batch.py -v
+      - name: Compare CVSS against pinned FIRST reference implementation
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/sg-standards/bin/python" scripts/compare_first_cvss.py | tee "$RUNNER_TEMP/cvss-reference-evidence.json"
       - name: Build exact private preview and validate SPDX and CycloneDX SBOMs
         run: |
           set -euo pipefail
@@ -89,6 +94,7 @@ jobs:
           name: standards-preview-evidence
           path: |
             ${{ runner.temp }}/standards-inventory.json
+            ${{ runner.temp }}/cvss-reference-evidence.json
             ${{ runner.temp }}/sg-preview/preview.tgz
             ${{ runner.temp }}/sg-preview/spdx-sbom.json
             ${{ runner.temp }}/sg-preview/cyclonedx-sbom.json
