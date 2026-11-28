@@ -110,6 +110,31 @@ class StandardsBatchTests(unittest.TestCase):
                 self.assertIn(status,row['Description'])
             print('SARIF_CONSUMER_CSV=PASS rows=2')
 
+    def test_sarif_malformed_cli_and_nonobject_rows(self):
+        for bad in ([],None,42):
+            with self.assertRaises(ValueError):sarif.export(bad)
+            report=example();report['findings'][0]=bad
+            with self.assertRaises(ValueError):sarif.export(report)
+        for field in ('control_id','status','severity'):
+            report=example();report['findings'][0][field]=[]
+            with self.assertRaises(ValueError):sarif.export(report)
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/'source.json'
+            sidecar=Path(tmp)/'locations.json'
+            nested=b'['*10000+b'0'+b']'*10000
+            source.write_bytes(nested)
+            cmd=[sys.executable,sarif.__file__,'--source',str(source)]
+            result=subprocess.run(cmd,capture_output=True,text=True,timeout=20)
+            self.assertEqual(result.returncode,2)
+            self.assertEqual(result.stdout,'')
+            self.assertNotIn('Traceback',result.stderr)
+            source.write_text(json.dumps(example()),encoding='utf-8')
+            sidecar.write_bytes(nested)
+            result=subprocess.run(cmd+['--reviewed-locations',str(sidecar)],capture_output=True,text=True,timeout=20)
+            self.assertEqual(result.returncode,2)
+            self.assertEqual(result.stdout,'')
+            self.assertNotIn('Traceback',result.stderr)
+
     def test_cvss_vector_validation(self):
         base=next(v for v,_,_ in VECTORS if v.startswith('CVSS:4.0/AV:L/AC:L/AT:P/PR:L/'))
         for vector in (base+'/AV:N',base.replace('/AV:L',''),base.replace('AV:L','AV:X'),base+'/U:Invalid',base.replace('CVSS:4.0','CVSS:3.1')):

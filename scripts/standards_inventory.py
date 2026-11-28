@@ -9,7 +9,7 @@ from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 import sys
 
-from verify_standards_sources import s, fetch, cwe_xml_from_zip, CWE_URL, MAX_CWE
+from verify_standards_sources import s, fetch, cwe_xml_from_zip, CWE_URL, MAX_CWE, require_cwe_xml_pin
 import security_masvs as masvs
 
 WSTG_BLOB='cb8b80e6edde0844d8ef3cb1e4a635cc2dd32476'
@@ -166,6 +166,55 @@ def annotate_mapped_mastg(inventory, crosswalk, read_artifact):
                                          'scope':'MAPPED_REFERENCES_ONLY','runtime':'NOT_RUN'}
 
 
+def maswe_metadata(ref, raw):
+    """Inspect bounded mapped weakness front matter without inferring lifecycle."""
+    if not raw or len(raw)>1_000_000 or s.git_blob(raw)!=ref['source_blob_sha']:
+        raise ValueError('MASWE metadata blob mismatch')
+    lines=raw.decode('utf-8').splitlines()
+    if not lines or lines[0]!='---' or '---' not in lines[1:]:
+        raise ValueError('Missing MASWE front matter')
+    end=lines.index('---',1)
+    if end>200:raise ValueError('MASWE front matter exceeds bound')
+    fields={}
+    for line in lines[1:end]:
+        match=re.fullmatch(r'(id|platform|status):\s*(.*)',line)
+        if not match:continue
+        key,value=match.groups()
+        if key in fields:raise ValueError('Duplicate MASWE metadata')
+        fields[key]=value
+    if fields.get('id')!=ref['id']:
+        raise ValueError('Unexpected mapped MASWE identity')
+    platform=fields.get('platform','')
+    if not re.fullmatch(r'\[(?:android|ios)(?:, (?:android|ios))?\]',platform):
+        raise ValueError('Unsupported mapped MASWE platform syntax')
+    platforms=platform[1:-1].split(', ')
+    if len(platforms)!=len(set(platforms)):
+        raise ValueError('Duplicate MASWE platform')
+    status=fields.get('status')
+    if status is not None and not re.fullmatch(r'[a-z][a-z-]{0,39}',status):
+        raise ValueError('Unsupported MASWE status syntax')
+    return {'publisher_platforms':platforms,'publisher_status':status or 'NOT_DECLARED',
+            'body_present':any(line.strip() for line in lines[end+1:]),
+            'semantic_review':'NOT_RUN','project_applicability':'NOT_ASSESSED'}
+
+
+def annotate_mapped_maswe(inventory,crosswalk,read_artifact):
+    refs={ref['id']:ref for ref in crosswalk['references'].values() if ref['standard']=='MASWE'}
+    seen=set()
+    for row in inventory['rows']:
+        row['lifecycle']='NOT_INSPECTED'
+        if row['id'] not in refs:continue
+        ref=refs[row['id']]
+        if row['id'] in seen or row['path']!=ref['source_path'] or row['blob_sha']!=ref['source_blob_sha']:
+            raise ValueError('MASWE mapped metadata identity mismatch')
+        row['publisher_metadata']=maswe_metadata(ref,read_artifact(ref))
+        row['lifecycle']='METADATA_INSPECTED_NOT_ADJUDICATED'
+        seen.add(row['id'])
+    if seen!=set(refs):raise ValueError('Incomplete mapped MASWE metadata review')
+    inventory['mapped_metadata_review']={'inspected':len(seen),'not_inspected':len(inventory['rows'])-len(seen),
+                                         'scope':'MAPPED_REFERENCES_ONLY','semantic_review':'NOT_RUN'}
+
+
 def fetch_mobile_tree(name,repo,revision):
     # Fixed publisher endpoint only; never attach credentials to raw files,
     # MITRE or caller-provided URLs, and never forward them on redirects.
@@ -192,17 +241,19 @@ def main():
         raw=fetch_mobile_tree(name,repo,rev)
         out[name]=reconcile(name,mobile(name,json.loads(raw,object_pairs_hook=s.unique_object)),data)
     out['MASVS']=masvs.enrich(out['MASVS'],data,masvs.load())
-    raw=cwe_xml_from_zip(fetch(CWE_URL,MAX_CWE))
+    raw=require_cwe_xml_pin(cwe_xml_from_zip(fetch(CWE_URL,MAX_CWE)))
     out['CWE']=reconcile('CWE',cwe(raw),data)
     for name,inventory in out.items():
         inventory['reference_identity_review']=validate_reference_inventory(name,inventory,data)
     annotate_mapped_mastg(out['MASTG'],data,lambda ref:fetch(
         'https://raw.githubusercontent.com/OWASP/mastg/'+s.REVISIONS['MASTG']+'/'+ref['source_path'],1_000_000))
+    annotate_mapped_maswe(out['MASWE'],data,lambda ref:fetch(
+        'https://raw.githubusercontent.com/OWASP/maswe/'+s.REVISIONS['MASWE']+'/'+ref['source_path'],1_000_000))
     import hashlib
     out['CWE']['source_xml_sha256']=hashlib.sha256(raw).hexdigest()
     print(json.dumps({'schema_version':1,'kind':'STANDARD_IDENTITY_INVENTORIES','standards':out,
                       'independent_semantic_review':'NOT_RUN',
                       'limitations':['WSTG checklist, mobile pinned file identities and CWE Weakness elements only.',
-                                     'Only mapped MASTG front matter is inspected; no lifecycle adjudication or test execution.',
+                                     'Only mapped MASTG/MASWE front matter is inspected; no lifecycle adjudication or test execution.',
                                      'No new mapping, project assessment, compliance or coverage guarantee.']},indent=2,sort_keys=True))
 if __name__=='__main__':main()
