@@ -67,3 +67,8 @@ Run only in a disposable owned repository with installed CLI and authorized acco
 3. Start Codex in the repository and ask it to report only the loaded marker and selected scope, without opening files or running tools. For Claude inspect /memory, and for Gemini inspect /memory show in a new session or after reload; verify the instruction/marker and scope. If the client does not expose adequate loading evidence, record NOT_VERIFIED.
 4. Introduce an AGENTS.override.md or existing native-context conflict in the disposable fixture only; do not infer authorization or widen scope. Check that each client respects backend scope and refuses unrelated operations.
 5. Record separate PASS/FAIL/NOT_VERIFIED for each agent with version, loader configuration, UTC date, commit and redacted evidence. Never publish credentials, personal paths or real project content. File creation, CLI version or a guessed model response is not a pass. Remove the disposable fixture after testing.
+
+
+## Native CLI preflight (#32)
+
+The separate hosted Ubuntu preflight installs exact requested Codex, Claude and Gemini CLI versions in disposable homes, checks version/help without credentials and exercises Codex's actual `debug prompt-input` with synthetic backend guidance and override precedence in an isolated network namespace. This is not an authenticated model session or proof of Claude/Gemini context loading. The workflow reports those limits explicitly; all authenticated acceptance items remain open. The existing managed-profile implementation and its tests are retained from main.
