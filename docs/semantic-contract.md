@@ -68,3 +68,24 @@ Real CLI replay exposed path-prefixed rule IDs that exceeded the adapter's exist
 ## Adapter resource and benchmark checkpoint (#34)
 
 Semgrep now captures stdout/stderr with live byte budgets (16 MB / 1 MB), a deadline, and process-group termination on POSIX; failed or oversized capture never returns a clean result. Exact rule/path/line/severity duplicates retain occurrence counts and a stable SHA-256 fingerprint; distinct evidence remains separate. Metadata binds the local config digest and reports tool version when supplied by JSON. Fingerprints are not ledger IDs, and automatic ledger linking is NOT_LINKED. This is not a memory/CPU sandbox, arbitrary descendant confinement on Windows, filesystem write prevention or network denial on arbitrary hosts. The existing offline runner fixture provides scoped evidence only. A new external author-labeled DOM probe reads pinned GitHub CodeQL source files without executing them, compares all four explicitly labeled innerHTML assignments in two selected files, reports misses and partial coverage, and deliberately has no negative labels or precision/F1. It is not an independent blind holdout or a CodeQL execution comparison. No closure of #34 before reviewed acceptance of the remaining gaps.
+
+## Unified adapter observations and explicit ledger linking (#34)
+
+The dependency-free `security_evidence.py` normalizes versioned reports from the four supported JS/TS AST packs and bundled Semgrep rules. It allowlists rules and structured fields, recomputes Semgrep fingerprints, retains distinct source-line/sanitizer/scope evidence and duplicate occurrence counts, and excludes arbitrary descriptions or snippets. The observation identity includes adapter, rule, location and structured evidence; edits or line movement can yield a new identity. Semgrep control associations are review hints, not semantic equivalence. Other pack versions, custom Semgrep configs and raw scanner output are deliberately unsupported.
+
+```bash
+python3 plugins/security-guardian/skills/security-guardian/scripts/security_evidence.py --report /path/to/adapter.json
+python3 plugins/security-guardian/skills/security-guardian/scripts/security_tracker.py link-evidence --root /path/to/project --run RUN_ID --report /path/to/adapter.json --plan /path/to/links.json
+```
+
+The plan is an explicit JSON object with `schema_version: 1`, `run_id`, `report_sha256` (exact report bytes), and `links` (array of objects containing only `evidence_id` and `finding_id`). Review these IDs before linking. The active run must have resolved scope; the current scope and component inventory must agree, and the existing finding must match the suggested control and exact relative path. Excluded, private and symlinked paths are rejected. The local file fingerprint records the current file, **not** proof it was scanned. No new finding, confirmation, closure, automatic reassignment or verification is performed. Identical retries in the same run are idempotent; a conflicting link is rejected. Observations are stored under `adapter_observations` on the existing finding, with run and report digest, and a count in RUN.md. Private ledger content is not an attestation or public export. Authorization matrices and native Python scanner signals are not imported by this first boundary; they remain available in their original reports. Existing tracker multi-file persistence is not a transactional database.
+
+```mermaid
+flowchart LR
+ A[Supported adapter JSON] --> B[Allowlisted evidence normalization]
+ B --> C[Explicit report-digest-bound link plan]
+ D[Resolved audit scope and existing finding] --> E[Validate links and current file identity]
+ C --> E
+ E --> F[Private ledger observation only]
+ F --> G[Finding status unchanged]
+```
