@@ -104,3 +104,41 @@ class ReferenceInventoryTests(unittest.TestCase):
             for bad in (raw+b' ',b'',None):
                 with self.subTest(raw=bad),self.assertRaises(ValueError):
                     sources.require_cwe_xml_pin(bad)
+
+    def test_official_download_retries_only_transient_transport_failures(self):
+        import contextlib
+        import http.client
+        import io
+        import ssl
+        import urllib.error
+        from unittest.mock import patch
+        import verify_standards_sources as source
+        url='https://example.invalid/source'
+        transient=[http.client.RemoteDisconnected('closed'),
+                   urllib.error.URLError(TimeoutError('timeout')),
+                   urllib.error.HTTPError(url,503,'unavailable',{},io.BytesIO())]
+        for failure in transient:
+            with self.subTest(kind=type(failure).__name__), \
+                    patch.object(source.urllib.request,'urlopen',side_effect=[failure,io.BytesIO(b'valid')]) as request, \
+                    patch.object(source.time,'sleep') as sleep,contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(source.fetch(url,10),b'valid')
+                self.assertEqual(request.call_count,2)
+                sleep.assert_called_once_with(1)
+        for failure in (urllib.error.URLError(ssl.SSLCertVerificationError('invalid certificate')),
+                        urllib.error.HTTPError(url,404,'not found',{},io.BytesIO())):
+            with patch.object(source.urllib.request,'urlopen',side_effect=failure) as request, \
+                    patch.object(source.time,'sleep') as sleep:
+                with self.assertRaises(urllib.error.URLError):source.fetch(url,10)
+                self.assertEqual(request.call_count,1)
+                sleep.assert_not_called()
+        with patch.object(source.urllib.request,'urlopen',side_effect=http.client.RemoteDisconnected('closed')) as request, \
+                patch.object(source.time,'sleep') as sleep,contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(http.client.RemoteDisconnected):source.fetch(url,10)
+            self.assertEqual(request.call_count,3)
+            self.assertEqual([x.args[0] for x in sleep.call_args_list],[1,2])
+        for raw in (b'',b'12345678901'):
+            with patch.object(source.urllib.request,'urlopen',return_value=io.BytesIO(raw)) as request, \
+                    patch.object(source.time,'sleep') as sleep:
+                with self.assertRaises(ValueError):source.fetch(url,10)
+                self.assertEqual(request.call_count,1)
+                sleep.assert_not_called()
