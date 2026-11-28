@@ -3,7 +3,7 @@
   "standard": "MASVS",
   "edition": "2.1.0",
   "source_revision": "8e133d09f4140518ed04cc254b18be9ff4990ffc",
-  "crosswalk_version": 3,
+  "crosswalk_version": 4,
   "review_status": "AUTHOR_REVIEWED_NOT_INDEPENDENTLY_APPROVED",
   "gaps": [
     {

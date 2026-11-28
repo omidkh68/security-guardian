@@ -150,3 +150,32 @@ This increment preserves every v2 relationship and adds 8 ASVS and 9 WSTG refere
 | ASVS 14.1.2 | GOV-05 | Sensitive data protection policy |
 
 The new regression test checks every added relationship, unknown verification and assessment states, and rejects a stale mapping edition. MASVS gap-review edition binding is refreshed without changing its seven reviewed gaps. No independent human review, target execution, automatic WSTG procedure or compliance claim. All remaining unmapped requirements need review; CI results are pending.
+
+## Mapping edition v4 — mobile and CWE batch (#151–154)
+
+Preserve v3 and add eight Android MASTG test references, seven MASWE weaknesses and five CWE weaknesses (20 advisory relationships). Totals: 263 references, 351 relationships; 105 partial and 40 unmapped handbook controls. MASTG 15/292, MASWE 15/78, CWE 21/984. MASVS remains 17/24; the seven separate evidence-review implementations are not equivalent to new handbook mappings. Pinned beta pages were inspected individually; placeholders 0237–0239 excluded. MASTG source collection is beta and publisher status may be absent. The following review modes are author interpretations of the pinned pages, not an automated executor or publisher lifecycle verdict. MASWE 1.0 and MASTG beta identifiers are not automatically joined. CWE weakness identities are checked against version 5.0 XML; no finding or compliance implied.
+
+| Reference | Control | Review mode |
+|---|---|---|
+| MASTG-TEST-0218 | MOB-02 | DYNAMIC_NETWORK |
+| MASTG-TEST-0233 | MOB-02 | STATIC_CODE |
+| MASTG-TEST-0234 | MOB-02 | STATIC_CODE |
+| MASTG-TEST-0235 | MOB-02 | STATIC_CODE |
+| MASTG-TEST-0250 | MOB-05 | STATIC_CODE |
+| MASTG-TEST-0251 | MOB-05 | DYNAMIC_MANUAL |
+| MASTG-TEST-0252 | MOB-05 | STATIC_CODE |
+| MASTG-TEST-0253 | MOB-05 | DYNAMIC_MANUAL |
+| MASWE-0027 | MOB-02 | TAXONOMY |
+| MASWE-0029 | MOB-04 | TAXONOMY |
+| MASWE-0030 | MOB-11 | TAXONOMY |
+| MASWE-0032 | MOB-04 | TAXONOMY |
+| MASWE-0033 | MOB-05 | TAXONOMY |
+| MASWE-0034 | MOB-05 | TAXONOMY |
+| MASWE-0035 | MOB-05 | TAXONOMY |
+| CWE-295 | MOB-02 | TAXONOMY |
+| CWE-297 | MOB-02 | TAXONOMY |
+| CWE-601 | ANG-11 | TAXONOMY |
+| CWE-209 | API-10 | TAXONOMY |
+| CWE-22 | API-09 | TAXONOMY |
+
+Every new relationship is regression-tested for identity and unknown verification state. Actual device and independent semantic review remain NOT_RUN. Existing MASVS gap plans are unchanged apart from edition binding. Fresh CI pending.
