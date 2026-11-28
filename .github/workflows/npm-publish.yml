@@ -60,6 +60,50 @@ jobs:
           set -euo pipefail
           cd "$RUNNER_TEMP/npm-release"
           sha256sum --check SHA256SUMS
+      - name: Generate and validate SBOMs of exact tested release artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          original="$RUNNER_TEMP/npm-release"
+          dir="$RUNNER_TEMP/release-sbom"
+          mkdir "$dir"
+          shopt -s nullglob
+          packages=("$original"/*.tgz)
+          test "${#packages[@]}" -eq 1
+          cp "${packages[0]}" "$dir/preview.tgz"
+          cp "$original/tested-artifact.json" "$dir/tested-artifact.json"
+          version="${GITHUB_REF_NAME#v}"
+          python - "$dir" "$version" "$GITHUB_SHA" <<'PY'
+          import json,sys
+          from pathlib import Path
+          sys.path.insert(0,'scripts')
+          from verify_sbom_preview import archive_inventory,validate_release_receipt
+          folder=Path(sys.argv[1])
+          archive=folder/'preview.tgz'
+          manifest,inventory=archive_inventory(archive)
+          validate_release_receipt(json.loads((folder/'tested-artifact.json').read_text()),archive,manifest,inventory,sys.argv[2],sys.argv[3])
+          PY
+          tar -xzf "$dir/preview.tgz" -C "$dir"
+          (
+            cd "$dir/package"
+            npm install --package-lock-only --ignore-scripts --offline --no-audit --no-fund
+            npm sbom --package-lock-only --sbom-format=spdx > "$dir/spdx-sbom.json"
+            npm sbom --package-lock-only --sbom-format=cyclonedx > "$dir/cyclonedx-sbom.json"
+          )
+          python -m venv "$RUNNER_TEMP/sg-release-sbom"
+          PY="$RUNNER_TEMP/sg-release-sbom/bin/python"
+          "$PY" -m pip install 'jsonschema==4.25.1'
+          "$PY" -m unittest discover -s scripts -p test_sbom_preview.py -v
+          "$PY" scripts/verify_sbom_preview.py "$dir" --release-version "$version" --source-commit "$GITHUB_SHA" > "$dir/sbom-evidence.json"
+          cmp "${packages[0]}" "$dir/preview.tgz"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: npm-release-sbom
+          path: |
+            ${{ runner.temp }}/release-sbom/spdx-sbom.json
+            ${{ runner.temp }}/release-sbom/cyclonedx-sbom.json
+            ${{ runner.temp }}/release-sbom/sbom-evidence.json
+          if-no-files-found: error
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: npm-release

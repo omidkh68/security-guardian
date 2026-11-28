@@ -5,7 +5,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
-from verify_sbom_preview import archive_inventory
+from verify_sbom_preview import archive_inventory, validate_manifest, validate_release_receipt
 
 
 class PreviewInventoryTests(unittest.TestCase):
@@ -48,3 +48,31 @@ class PreviewInventoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(ValueError):
                 archive_inventory(self.make(tmp,[('package/README.md',b'x',tarfile.REGTYPE)]))
+
+    def test_release_manifest_and_receipt_are_bound_to_exact_bytes(self):
+        import hashlib
+        version='1.3.0'
+        commit='a'*40
+        manifest={'name':'@omidkh68/security-guardian','version':version,'private':False,
+                  'contentPolicy':{'class':'dual-use'}}
+        with tempfile.TemporaryDirectory() as tmp:
+            archive=self.make(tmp,[('package/package.json',json.dumps(manifest).encode(),tarfile.REGTYPE),
+                                   ('package/DISCLOSURE',b'defensive use',tarfile.REGTYPE)])
+            actual,inventory=archive_inventory(archive)
+            receipt={'kind':'TESTED_NPM_ARTIFACT','package':manifest['name'],'version':version,
+                     'private':False,'source_commit':commit,'bytes':archive.stat().st_size,
+                     'sha256':hashlib.sha256(archive.read_bytes()).hexdigest()}
+            validate_release_receipt(receipt,archive,actual,inventory,version,commit)
+            for k,v in [('sha256','0'*64),('bytes',0),('source_commit','b'*40),('private',True),('version','1.3.1'),('package','other'),('kind','other')]:
+                with self.subTest(field=k), self.assertRaises(ValueError):
+                    validate_release_receipt(dict(receipt,**{k:v}),archive,actual,inventory,version,commit)
+            for k,v in [('private',True),('version','1.3.1'),('name','other'),('contentPolicy',{}),('dependencies',{'x':'1'})]:
+                with self.subTest(manifest_field=k), self.assertRaises(ValueError):
+                    validate_release_receipt(receipt,archive,dict(actual,**{k:v}),inventory,version,commit)
+            with self.assertRaises(ValueError):
+                validate_release_receipt(receipt,archive,actual,{'files':[]},version,commit)
+            with self.assertRaises(ValueError):
+                validate_manifest(actual)
+            validate_manifest(dict(actual,private=True))
+            with self.assertRaises(ValueError):
+                validate_manifest(dict(actual,version='1.2.1'),'1.2.1')

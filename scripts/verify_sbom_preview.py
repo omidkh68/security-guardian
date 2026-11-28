@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""Validate npm SBOM documents for the exact private preview tarball."""
+"""Validate npm SBOM documents for an exact private preview or tested release tarball."""
+import argparse
 import hashlib
+import re
 import json
 from pathlib import Path
 import sys
@@ -55,15 +57,56 @@ def archive_inventory(archive):
                      'license_review':'NOT_RUN'}
 
 
+def validate_manifest(manifest, release_version=None):
+    if not isinstance(manifest, dict) or manifest.get('name')!='@omidkh68/security-guardian':
+        raise ValueError('Expected canonical package identity')
+    if any(manifest.get(k) for k in ('dependencies','optionalDependencies','peerDependencies','bundledDependencies','bundleDependencies')):
+        raise ValueError('Expected dependency-free npm package')
+    if release_version is None:
+        if manifest.get('private') is not True:
+            raise ValueError('Expected private preview')
+    else:
+        if not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)',release_version):
+            raise ValueError('Expected stable release version')
+        if tuple(map(int,release_version.split('.')))<(1,3,0):
+            raise ValueError('Release version below first public release')
+        if manifest.get('private') is not False or manifest.get('version')!=release_version:
+            raise ValueError('Release manifest mismatch')
+        if manifest.get('contentPolicy')!={'class':'dual-use'}:
+            raise ValueError('Expected dual-use declaration')
+
+
+def validate_release_receipt(receipt, archive, manifest, inventory, version, source_commit):
+    validate_manifest(manifest,version)
+    if not re.fullmatch(r'[0-9a-f]{40}',source_commit):
+        raise ValueError('Invalid source commit')
+    if not isinstance(receipt,dict) or any(receipt.get(k)!=v for k,v in {
+        'kind':'TESTED_NPM_ARTIFACT','package':manifest['name'],'version':version,
+        'source_commit':source_commit,'sha256':hashlib.sha256(archive.read_bytes()).hexdigest(),
+        'bytes':archive.stat().st_size}.items()) or receipt.get('private') is not False:
+        raise ValueError('Tested release receipt mismatch')
+    if not any(x['path']=='DISCLOSURE' and x['size']>0 for x in inventory['files']):
+        raise ValueError('Missing packaged disclosure')
+
+
 def main():
     import jsonschema
     from referencing import Registry, Resource
     from referencing.jsonschema import DRAFT7
-    folder=Path(sys.argv[1])
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('folder',type=Path)
+    parser.add_argument('--release-version')
+    parser.add_argument('--source-commit')
+    args=parser.parse_args()
+    if (args.release_version is None)!=(args.source_commit is None):
+        parser.error('release version and source commit must be supplied together')
+    folder=args.folder
     archive=folder/'preview.tgz'
     manifest,inventory=archive_inventory(archive)
-    if manifest.get('private') is not True or any(manifest.get(k) for k in ('dependencies','optionalDependencies','peerDependencies','bundledDependencies','bundleDependencies')):
-        raise ValueError('Expected current private dependency-free preview')
+    validate_manifest(manifest,args.release_version)
+    if args.release_version is not None:
+        receipt=json.loads((folder/'tested-artifact.json').read_text(),object_pairs_hook=s.unique_object)
+        validate_release_receipt(receipt,archive,manifest,inventory,args.release_version,args.source_commit)
     name,version=manifest['name'],manifest['version']
     schemas={}
     for filename,(url,blob) in SCHEMAS.items():
@@ -91,13 +134,15 @@ def main():
     # npm can use the extraction directory as the display name; purl binds the package identity.
     if unquote(component.get('purl',''))!='pkg:npm/'+name+'@'+version or component['version']!=version or cdx.get('components'):
         raise ValueError('CycloneDX preview package inventory mismatch')
-    print(json.dumps({'kind':'PRIVATE_PREVIEW_SBOM_EVIDENCE','package':name,'version':version,
+    print(json.dumps({'kind':'PRIVATE_PREVIEW_SBOM_EVIDENCE' if args.release_version is None else 'TESTED_RELEASE_SBOM_EVIDENCE','package':name,'version':version,
+                      'source_commit':args.source_commit,
                       'tarball_sha256':hashlib.sha256(archive.read_bytes()).hexdigest(),
                       'spdx_sha256':hashlib.sha256((folder/'spdx-sbom.json').read_bytes()).hexdigest(),
                       'cyclonedx_sha256':hashlib.sha256((folder/'cyclonedx-sbom.json').read_bytes()).hexdigest(),
                       'schemas':'VALIDATED','dependency_scope':'NPM_PACKAGE_ONLY',
                       'declared_package_license':manifest.get('license','NOASSERTION'),
                       'shipped_file_inventory':inventory,
-                      'limitations':['Not a final release artifact or Python runtime SBOM.',
+                      'limitations':[('Not a final release artifact.' if args.release_version is None else 'Tested release artifact; registry publication not verified.'),
+                                     'Not a Python runtime SBOM.',
                                      'No file-level license adjudication or vulnerability verdict.']},indent=2,sort_keys=True))
 if __name__=='__main__':main()
