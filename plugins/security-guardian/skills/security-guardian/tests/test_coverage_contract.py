@@ -51,7 +51,7 @@ class CoverageContractTests(unittest.TestCase):
         report=c.inventory()
         self.assertEqual(report['matrix_version'],2)
         rows={r['framework']:r for r in report['frameworks']}
-        expected={'Angular':'20.3.34','NestJS':'11.1.6','Flask':'3.1.2'}
+        expected={'Angular':'20.3.34','NestJS':'11.1.6','Flask':'3.1.3'}
         for name,row in rows.items():
             v=row['version_evidence']
             self.assertEqual(v['installed_version'],'NOT_INSPECTED')
