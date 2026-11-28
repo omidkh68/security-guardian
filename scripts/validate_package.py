@@ -86,6 +86,9 @@ def validate():
     assert npm['version'] == v, 'npm and skill versions mismatch'
     assert type(npm['private']) is bool, 'explicit npm private flag required'
     assert npm['name'] == '@omidkh68/security-guardian', 'unexpected npm scope/name'
+    assert npm.get('contentPolicy') == {'class': 'dual-use'}, 'npm dual-use declaration required'
+    assert 'DISCLOSURE' in npm['files'], 'root disclosure must be explicitly packed'
+    assert (ROOT/'DISCLOSURE').read_text(encoding='utf-8').strip(), 'nonempty disclosure required'
     assert npm['publishConfig'] == {'registry': 'https://registry.npmjs.org/', 'access': 'public'}, 'unexpected npm publish destination'
     if not npm['private']:
         assert tuple(map(int, v.split('.'))) >= (1, 3, 0), 'preview versions must remain private'

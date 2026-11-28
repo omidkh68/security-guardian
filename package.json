@@ -35,7 +35,8 @@
     "plugins/security-guardian/skills/security-guardian/scripts/js_dom_flow.mjs",
     "plugins/security-guardian/skills/security-guardian/scripts/js_sql_flow.mjs",
     "plugins/security-guardian/skills/security-guardian/scripts/js_ssr_flow.mjs",
-    "plugins/security-guardian/skills/security-guardian/scripts/js_authz_flow.mjs"
+    "plugins/security-guardian/skills/security-guardian/scripts/js_authz_flow.mjs",
+    "DISCLOSURE"
   ],
   "scripts": {
     "test": "node --test tests/npm-cli.test.mjs tests/npm-release.test.mjs tests/js-flow.test.mjs tests/js-sql-flow.test.mjs tests/js-ssr-flow.test.mjs tests/js-authz-flow.test.mjs"
@@ -43,5 +44,8 @@
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
+  },
+  "contentPolicy": {
+    "class": "dual-use"
   }
 }
