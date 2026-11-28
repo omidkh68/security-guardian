@@ -89,6 +89,41 @@ def validate_release_receipt(receipt, archive, manifest, inventory, version, sou
         raise ValueError('Missing packaged disclosure')
 
 
+def validate_sbom_identity(manifest,spdx,cdx):
+    """Check the declared dependency-free npm inventory, not license conclusions."""
+    name,version=manifest['name'],manifest['version']
+    expected_purl='pkg:npm/'+name+'@'+version
+    if spdx['spdxVersion']!='SPDX-2.3' or cdx['specVersion']!='1.5':
+        raise ValueError('Unexpected generator edition; review schema before changing')
+    pkg=spdx['packages']
+    if len(pkg)!=1 or pkg[0].get('name')!=name or pkg[0].get('versionInfo')!=version:
+        raise ValueError('SPDX package identity mismatch')
+    package=pkg[0]
+    ident=package['SPDXID']
+    doc=spdx['SPDXID']
+    if (ident==doc or spdx.get('documentDescribes')!=[ident]
+            or spdx.get('relationships')!=[{'spdxElementId':doc,'relatedSpdxElement':ident,'relationshipType':'DESCRIBES'}]
+            or package.get('filesAnalyzed') is not False or spdx.get('files') or spdx.get('snippets')):
+        raise ValueError('SPDX dependency-free inventory mismatch')
+    purls=[unquote(x['referenceLocator']) for x in package.get('externalRefs',[])
+           if x.get('referenceCategory')=='PACKAGE-MANAGER' and x.get('referenceType')=='purl']
+    if purls!=[expected_purl]:
+        raise ValueError('SPDX purl mismatch')
+    component=cdx['metadata']['component']
+    ref=component.get('bom-ref')
+    if (not isinstance(ref,str) or not ref or unquote(component.get('purl',''))!=expected_purl
+            or component['version']!=version or cdx.get('components') or component.get('components')
+            or cdx.get('dependencies')!=[{'ref':ref,'dependsOn':[]}]):
+        raise ValueError('CycloneDX dependency-free inventory mismatch')
+    # This package's declared license is a single SPDX identifier. Do not
+    # infer a file-level conclusion from either document.
+    license_id=manifest.get('license')
+    if license_id!='MIT' or package.get('licenseDeclared')!=license_id or component.get('licenses')!=[{'license':{'id':license_id}}]:
+        raise ValueError('SBOM declared license mismatch')
+    return {'package_identity':'MATCHED','dependency_graph':'ROOT_ONLY',
+            'declared_license':'MATCHED_NOT_ADJUDICATED','file_license_review':'NOT_RUN'}
+
+
 def main():
     import jsonschema
     from referencing import Registry, Resource
@@ -113,8 +148,8 @@ def main():
         raw=fetch(url,8_000_000)
         if s.git_blob(raw)!=blob:raise ValueError('SBOM schema identity mismatch')
         schemas[filename]=json.loads(raw)
-    spdx=json.loads((folder/'spdx-sbom.json').read_text())
-    cdx=json.loads((folder/'cyclonedx-sbom.json').read_text())
+    spdx=json.loads((folder/'spdx-sbom.json').read_text(),object_pairs_hook=s.unique_object)
+    cdx=json.loads((folder/'cyclonedx-sbom.json').read_text(),object_pairs_hook=s.unique_object)
     if spdx['spdxVersion']!='SPDX-2.3' or cdx['specVersion']!='1.5':
         raise ValueError('Unexpected generator edition; review schema before changing')
     jsonschema.validate(spdx,schemas['spdx.json'])
@@ -126,20 +161,14 @@ def main():
         registry=registry.with_resource('http://cyclonedx.org/schema/'+k,resource)
         registry=registry.with_resource('https://cyclonedx.org/schema/'+k,resource)
     jsonschema.Draft7Validator(schemas['bom-1.5.schema.json'],registry=registry).validate(cdx)
-    pkg=spdx['packages']
-    matches=[p for p in pkg if p.get('name')==name and p.get('versionInfo')==version]
-    if len(matches)!=1 or len(pkg)!=1 or matches[0]['SPDXID'] not in spdx.get('documentDescribes',[]):
-        raise ValueError('SPDX preview package inventory mismatch')
-    component=cdx['metadata']['component']
-    # npm can use the extraction directory as the display name; purl binds the package identity.
-    if unquote(component.get('purl',''))!='pkg:npm/'+name+'@'+version or component['version']!=version or cdx.get('components'):
-        raise ValueError('CycloneDX preview package inventory mismatch')
+    identity=validate_sbom_identity(manifest,spdx,cdx)
     print(json.dumps({'kind':'PRIVATE_PREVIEW_SBOM_EVIDENCE' if args.release_version is None else 'TESTED_RELEASE_SBOM_EVIDENCE','package':name,'version':version,
                       'source_commit':args.source_commit,
                       'tarball_sha256':hashlib.sha256(archive.read_bytes()).hexdigest(),
                       'spdx_sha256':hashlib.sha256((folder/'spdx-sbom.json').read_bytes()).hexdigest(),
                       'cyclonedx_sha256':hashlib.sha256((folder/'cyclonedx-sbom.json').read_bytes()).hexdigest(),
                       'schemas':'VALIDATED','dependency_scope':'NPM_PACKAGE_ONLY',
+                      'semantic_validation':identity,
                       'declared_package_license':manifest.get('license','NOASSERTION'),
                       'shipped_file_inventory':inventory,
                       'limitations':[('Not a final release artifact.' if args.release_version is None else 'Tested release artifact; registry publication not verified.'),
