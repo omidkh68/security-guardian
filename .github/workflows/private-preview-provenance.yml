@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/private-preview-provenance.yml'
+      - 'scripts/verify_slsa_sources.py'
+      - 'scripts/test_slsa_sources.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,6 +24,11 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: '3.12'
+      - name: Validate pinned SLSA normative sources
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s scripts -p test_slsa_sources.py -v
+          python scripts/verify_slsa_sources.py | tee "$RUNNER_TEMP/slsa-source-evidence.json"
       - name: Build and smoke-test exact preview without publishing
         run: |
           set -euo pipefail
@@ -41,6 +48,7 @@ jobs:
             ${{ runner.temp }}/sg-provenance/preview.tgz
             ${{ runner.temp }}/sg-provenance/SHA256SUMS
             ${{ runner.temp }}/sg-provenance/tested-artifact.json
+            ${{ runner.temp }}/slsa-source-evidence.json
           if-no-files-found: error
           retention-days: 7
   attest:
