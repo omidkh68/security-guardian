@@ -100,6 +100,57 @@ function plan(options, base) {
     return { target, parent, backupDir, existing };
   });
 }
+// Advisory only: default standalone locations are not a complete native-loader inventory.
+function projectVersionWarnings(options, base, targets) {
+  if (!options.project) return [];
+  const warnings = [];
+  const candidates = new Set();
+  const home = path.resolve(os.homedir());
+  for (const agent of options.agents) {
+    const configs = agent === 'claude' ? ['.claude'] : agent === 'gemini' ? ['.agents','.gemini'] : ['.agents'];
+    for (const config of configs) {
+      candidates.add(path.join(home, config, 'skills', name));
+      candidates.add(path.join(base, config, 'skills', name));
+    }
+  }
+  const selected = new Set(targets.map(t => t.target));
+  for (const candidate of candidates) {
+    if (selected.has(candidate)) continue;
+    const scope = candidate.startsWith(base + path.sep) ? 'PROJECT_ALTERNATE' : 'USER_DEFAULT';
+    // Never follow a link or execute a Skill in the alternate location.
+    try {
+      const { root } = path.parse(candidate);
+      let current = root;
+      let exists = true;
+      for (const segment of path.relative(root,candidate).split(path.sep)) {
+        current = path.join(current, segment);
+        const st = stat(current);
+        if (!st) { exists = false; break; }
+        if (st.isSymbolicLink() || !st.isDirectory()) throw new Error('unsafe path');
+      }
+      if (!exists) continue;
+      const versionPath = path.join(candidate,'VERSION');
+      const st = stat(versionPath);
+      if (!st || !st.isFile() || st.isSymbolicLink() || st.size > 128) throw new Error('unreadable identity');
+      const fd = fs.openSync(versionPath,fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
+      let version;
+      try {
+        const buf = Buffer.alloc(129);
+        const length = fs.readSync(fd,buf,0,buf.length,0);
+        if (length > 128) throw new Error('oversized identity');
+        version = buf.subarray(0,length).toString('utf8').trim();
+      } finally { fs.closeSync(fd); }
+      if (!/^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$/.test(version)) throw new Error('invalid version');
+      warnings.push({ code: version === metadata.version ? 'SKILL_DUPLICATE_VERSION' : 'SKILL_VERSION_CONFLICT',
+        scope, location: candidate, observed_version: version, intended_version: metadata.version,
+        message: 'Another default Skill location exists. Verify the actual native loader; no precedence inferred.' });
+    } catch {
+      warnings.push({ code: 'SKILL_ALTERNATE_UNVERIFIED', scope, location: candidate,
+        message: 'Alternate Skill location could not be safely inspected. Verify native loader manually.' });
+    }
+  }
+  return warnings;
+}
 function runtimeFiles() {
   checkAncestors(source);
   skillIdentity(source);
@@ -573,12 +624,13 @@ try {
     } else {
     const files = runtimeFiles();
     const targets = plan(options, base);
+    const warnings = projectVersionWarnings(options, base, targets);
     if (options['dry-run']) {
       console.log(JSON.stringify({ action: 'DRY_RUN', version: metadata.version, platform: process.platform,
-        agents: options.agents, files: files.length, targets: targets.map(t => ({ path: t.target, upgrade: t.existing })) }, null, 2));
+        agents: options.agents, files: files.length, targets: targets.map(t => ({ path: t.target, upgrade: t.existing })), ...(warnings.length ? { warnings } : {}) }, null, 2));
     } else {
       const installed = install(options, base, files);
-      console.log(JSON.stringify({ action: 'INSTALLED', version: metadata.version, agents: options.agents, installed }, null, 2));
+      console.log(JSON.stringify({ action: 'INSTALLED', version: metadata.version, agents: options.agents, installed, ...(warnings.length ? { warnings } : {}) }, null, 2));
     }
     }
   }
