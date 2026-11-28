@@ -114,6 +114,58 @@ def validate_reference_inventory(name, inventory, crosswalk):
             'semantic_review':'NOT_RUN'}
 
 
+def mastg_metadata(ref, raw):
+    """Read a deliberately limited subset of pinned publisher front matter."""
+    if not raw or len(raw)>1_000_000 or s.git_blob(raw)!=ref['source_blob_sha']:
+        raise ValueError('MASTG metadata blob mismatch')
+    lines=raw.decode('utf-8').splitlines()
+    if not lines or lines[0]!='---' or '---' not in lines[1:]:
+        raise ValueError('Missing MASTG front matter')
+    end=lines.index('---',1)
+    if end>200:
+        raise ValueError('MASTG front matter exceeds bound')
+    fields={}
+    for line in lines[1:end]:
+        match=re.fullmatch(r'(id|platform|type|status):\s*(.*)',line)
+        if not match:continue
+        key,val=match.groups()
+        if key in fields:raise ValueError('Duplicate MASTG metadata')
+        fields[key]=val
+    if fields.get('id')!=ref['id'] or fields.get('platform')!='android':
+        raise ValueError('Unexpected mapped MASTG identity/platform')
+    kind=fields.get('type','')
+    if not re.fullmatch(r'\[[a-z]+(?:, [a-z]+)*\]',kind):
+        raise ValueError('Unsupported MASTG type syntax')
+    tags=kind[1:-1].split(', ')
+    allowed={'static','dynamic','code','hooks','network','filesystem','manual'}
+    if len(tags)!=len(set(tags)) or not set(tags)<=allowed or len(set(tags)&{'static','dynamic'})!=1:
+        raise ValueError('Invalid MASTG method tags')
+    status=fields.get('status')
+    if status is not None and not re.fullmatch(r'[a-z][a-z-]{0,39}',status):
+        raise ValueError('Unsupported MASTG status syntax')
+    return {'publisher_platform':fields['platform'],'publisher_type_tags':tags,
+            'publisher_status':status or 'NOT_DECLARED',
+            'procedure_body_present':any(line.strip() for line in lines[end+1:]),
+            'execution_status':'NOT_RUN','automation_status':'NOT_ASSESSED'}
+
+
+def annotate_mapped_mastg(inventory, crosswalk, read_artifact):
+    refs={ref['id']:ref for ref in crosswalk['references'].values() if ref['standard']=='MASTG'}
+    seen=set()
+    for row in inventory['rows']:
+        if row['id'] not in refs:continue
+        ref=refs[row['id']]
+        if row['path']!=ref['source_path'] or row['blob_sha']!=ref['source_blob_sha']:
+            raise ValueError('MASTG mapped metadata identity mismatch')
+        metadata=mastg_metadata(ref,read_artifact(ref))
+        row['publisher_metadata']=metadata
+        row['lifecycle']='METADATA_INSPECTED_NOT_ADJUDICATED'
+        seen.add(row['id'])
+    if seen!=set(refs):raise ValueError('Incomplete mapped MASTG metadata review')
+    inventory['mapped_metadata_review']={'inspected':len(seen),'not_inspected':len(inventory['rows'])-len(seen),
+                                         'scope':'MAPPED_REFERENCES_ONLY','runtime':'NOT_RUN'}
+
+
 def fetch_mobile_tree(name,repo,revision):
     # Fixed publisher endpoint only; never attach credentials to raw files,
     # MITRE or caller-provided URLs, and never forward them on redirects.
@@ -144,11 +196,13 @@ def main():
     out['CWE']=reconcile('CWE',cwe(raw),data)
     for name,inventory in out.items():
         inventory['reference_identity_review']=validate_reference_inventory(name,inventory,data)
+    annotate_mapped_mastg(out['MASTG'],data,lambda ref:fetch(
+        'https://raw.githubusercontent.com/OWASP/mastg/'+s.REVISIONS['MASTG']+'/'+ref['source_path'],1_000_000))
     import hashlib
     out['CWE']['source_xml_sha256']=hashlib.sha256(raw).hexdigest()
     print(json.dumps({'schema_version':1,'kind':'STANDARD_IDENTITY_INVENTORIES','standards':out,
                       'independent_semantic_review':'NOT_RUN',
                       'limitations':['WSTG checklist, mobile pinned file identities and CWE Weakness elements only.',
-                                     'Mobile path inventory does not inspect content, lifecycle or test executability.',
+                                     'Only mapped MASTG front matter is inspected; no lifecycle adjudication or test execution.',
                                      'No new mapping, project assessment, compliance or coverage guarantee.']},indent=2,sort_keys=True))
 if __name__=='__main__':main()

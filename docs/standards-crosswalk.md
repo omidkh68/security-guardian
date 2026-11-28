@@ -179,3 +179,7 @@ Preserve v3 and add eight Android MASTG test references, seven MASWE weaknesses 
 | CWE-22 | API-09 | TAXONOMY |
 
 Every new relationship is regression-tested for identity and unknown verification state. Actual device and independent semantic review remain NOT_RUN. Existing MASVS gap plans are unchanged apart from edition binding. Fresh CI pending.
+
+### Mapped MASTG metadata evidence
+
+The inventory now retrieves each mapped MASTG page at the pinned revision, checks the exact Git blob and parses only bounded `id`, `platform`, `type` and `status` front-matter fields. It preserves source-declared tags, absent status as NOT_DECLARED, and whether a procedure body exists. Unknown or ambiguous mapped identity/method fails closed. All unmapped rows remain NOT_INSPECTED; execution remains NOT_RUN and automation NOT_ASSESSED. No automatic lifecycle inference. Tests cover mutation, duplicate/contradictory fields, placeholder metadata and incomplete inventories.
