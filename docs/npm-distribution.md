@@ -90,3 +90,18 @@ Before packaging, the publish workflow reads the exact GitHub issue #105 using r
 ## Registry artifact integrity (#64)
 
 After authorized publication, the read-only registry smoke job computes SHA-256 and SHA-512 from the exact tested tarball and compares the latter to exact-version registry `dist.integrity`. Receipt package, version, source commit and public state must match. Exact-version CLI installation remains required. This checks registry-advertised integrity, not independent provenance verification. No publication or tag is performed by this change.
+
+
+## First public release: bounded SLSA Build L2 target (#160)
+
+The release workflow builds and tests the exact tarball, generates a signed GitHub artifact attestation in a separate hosted job, then verifies the SLSA v1 predicate, canonical repository, signing workflow, exact tag and source commit in a read-only job before the existing publish job can run. Self-hosted runner attestations are rejected. The private preview runs negative controls for altered artifact bytes and incorrect source ref. No public publish or tag is performed by this change. Release approval and #105 remain mandatory. npm trusted publishing can generate its own registry provenance for a public package from a public repository; verify actual registry evidence after publication, not by inference from OIDC. First-release authentication and npm Trusted Publisher configuration must be verified with the maintainer.
+
+Consumer verification after an authorized release (replace placeholders with the reviewed exact version and commit):
+
+```bash
+npm pack @omidkh68/security-guardian@VERSION --ignore-scripts
+# Use the downloaded tarball filename from npm pack.
+gh attestation verify PACKAGE.tgz --repo omidkh68/security-guardian --signer-workflow omidkh68/security-guardian/.github/workflows/npm-publish.yml --source-ref refs/tags/vVERSION --source-digest COMMIT_SHA --predicate-type https://slsa.dev/provenance/v1 --deny-self-hosted-runners
+```
+
+Normative baseline: [SLSA v1.2 build requirements](https://slsa.dev/spec/v1.2/build-requirements), [build provenance](https://slsa.dev/spec/v1.2/build-provenance), [verification](https://slsa.dev/spec/v1.2/verifying-artifacts), [GitHub attestation](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations), [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/). Target L2, not an achieved level or certification. Level 3, Source Track and comprehensive consumer-project SLSA auditing are post-release evaluation, not additional first-release requirements. Existing #105 criteria are unchanged.
