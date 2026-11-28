@@ -80,3 +80,20 @@ test('release SBOM validation precedes artifact upload and signing', () => {
   for(const fragment of ['validate_release_receipt','--sbom-format=spdx','--sbom-format=cyclonedx','--release-version "$version" --source-commit "$GITHUB_SHA"','cmp ']) assert.ok(verify.includes(fragment),fragment);
   assert.match(workflow,/^  attest-release:\n    needs: verify$/m);
 });
+
+test('private preview upload keeps exact flat artifact layout and separate source evidence', () => {
+  const workflow=normalizeWorkflow(readFileSync(new URL('../.github/workflows/private-preview-provenance.yml',import.meta.url),'utf8'));
+  const build=workflow.split('  build:\n')[1].split('  attest:\n')[0];
+  const upload=build.match(/name: private-preview\n\s+path: \|\n((?: {12}[^\n]+\n)+)/);
+  assert.ok(upload);
+  assert.deepEqual(upload[1].trim().split('\n').map(s=>s.trim()),[
+    '${{ runner.temp }}/sg-provenance/preview.tgz',
+    '${{ runner.temp }}/sg-provenance/SHA256SUMS',
+    '${{ runner.temp }}/sg-provenance/tested-artifact.json',
+  ]);
+  assert.match(build,/name: slsa-normative-source-evidence\n\s+path: \$\{\{ runner.temp \}\}\/slsa-source-evidence\.json/);
+  const consumers=workflow.split('  attest:\n')[1];
+  assert.equal((consumers.match(/name: private-preview\n\s+path: preview/g)||[]).length,2);
+  assert.equal((consumers.match(/cd preview && sha256sum --check SHA256SUMS/g)||[]).length,2);
+  assert.match(workflow,/^  verify:\n    needs: \[build, attest\]$/m);
+});
