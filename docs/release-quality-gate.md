@@ -71,3 +71,7 @@ The [SLSA v1.2 requirements](https://github.com/slsa-framework/slsa/blob/19e4e2f
 | Security best practices | Existing protected main, least privilege and pinned actions; residual risks reviewed separately. |
 
 Do not infer L2 from OIDC or a successful signature alone. The previous preview evidence is real but applies to its source commit. This PR triggers a fresh private preview on main after merge; no tag or publication. Final artifact-specific requirements remain enforced before stage; distribution evidence follows actual authorized publication. No criterion removed and no achieved-level claim.
+
+### Private preview artifact layout regression
+
+Run [46143511537](https://github.com/omidkh68/security-guardian/actions/runs/46143511537) validated the four SLSA source pins and built the exact private package, but signing failed before attestation: including source evidence from a different directory changed the upload common root. Downloaded artifact 15262104317 had ZIP SHA-256 `e0cbb99389d1d17b2f1cc62165aeaafdaf38346c893e225cf291fd19d31605a8` and contained `sg-provenance/SHA256SUMS` rather than root `SHA256SUMS`. The fix uploads source evidence as a distinct required artifact and preserves the original flat private-preview package, checksum and receipt contract. A cross-platform structural regression test checks both consumers. Fresh main build, attest and verify are required; previous failure remains recorded, and no SLSA level or release claim is made.
