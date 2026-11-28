@@ -24,3 +24,28 @@ test('private preview, incorrect identity, branch and mismatch fail closed', () 
     const x = fixture(); change(x); assert.throws(() => validateRelease(x));
   }
 });
+
+// Structural regression only; actual cryptographic verification runs on main/tag.
+import { readFileSync } from 'node:fs';
+// Git checkout may convert YAML to CRLF on Windows; inspect the same logical lines.
+const normalizeWorkflow = text => text.replace(/\r\n/g, '\n');
+test('workflow normalization preserves LF and CRLF job dependencies', () => {
+  const lf='  attest-release:\n    needs: verify\n';
+  assert.equal(normalizeWorkflow(lf),lf);
+  assert.equal(normalizeWorkflow(lf.replace(/\n/g,'\r\n')),lf);
+  assert.doesNotMatch(normalizeWorkflow(lf.replace('needs: verify','needs: other')), /^  attest-release:\n    needs: verify$/m);
+});
+test('release provenance cannot be skipped by the publish job', () => {
+  const workflow=normalizeWorkflow(readFileSync(new URL('../.github/workflows/npm-publish.yml',import.meta.url),'utf8'));
+  assert.match(workflow,/^  attest-release:\n    needs: verify$/m);
+  assert.match(workflow,/^  verify-release-provenance:\n    needs: attest-release$/m);
+  assert.match(workflow,/^  publish:\n    needs: verify-release-provenance$/m);
+  const verification=workflow.split('  verify-release-provenance:\n')[1].split('  publish:\n')[0];
+  assert.match(verification,/attestations: read/);
+  assert.doesNotMatch(verification,/id-token: write/);
+  for(const arg of ['--source-digest "$GITHUB_SHA"','--source-ref "$GITHUB_REF"','--predicate-type https://slsa.dev/provenance/v1','--deny-self-hosted-runners','--signer-workflow "$REPO/.github/workflows/npm-publish.yml"']) assert.ok(verification.includes(arg),arg);
+  const preview=normalizeWorkflow(readFileSync(new URL('../.github/workflows/private-preview-provenance.yml',import.meta.url),'utf8'));
+  assert.match(preview,/negative_controls/);
+  assert.match(preview,/ERROR: altered artifact accepted/);
+  assert.match(preview,/ERROR: incorrect source ref accepted/);
+});

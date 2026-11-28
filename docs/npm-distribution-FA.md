@@ -90,3 +90,10 @@ Workflow انتشار قبل از ساخت بسته، Issue دقیق #105 را �
 ## بررسی Integrity رجیستری (#64)
 
 پس از انتشار مجاز، Job فقط‌خواندنی Registry Smoke، SHA-256 و SHA-512 همان Tarball آزموده‌شده را محاسبه و `dist.integrity` نسخه دقیق رجیستری را تطبیق می‌دهد. نسخه، بسته، Commit و وضعیت عمومی رسید نیز باید یکسان باشند. نصب CLI نسخه دقیق همچنان لازم است. این بررسی صرفاً تطابق هش اعلام‌شده رجیستری است و جای بررسی مستقل Provenance را نمی‌گیرد. هیچ انتشار یا Tag در این تغییر انجام نمی‌شود.
+
+
+## هدف محدود SLSA Build L2 برای اولین انتشار عمومی (#160)
+
+Workflow انتشار همان Tarball آزموده‌شده را در Job میزبانی‌شده جداگانه Attest می‌کند. Job فقط‌خواندنی قبل از Publish نوع Predicate نسخه ۱ SLSA، مخزن مرجع، Workflow امضاکننده، Tag دقیق و Commit سورس را بررسی و Attestation مربوط به Runner خودمیزبان را رد می‌کند. پیش‌نمایش خصوصی آزمون منفی تغییر بایت و Ref اشتباه دارد. هیچ Tag یا انتشار عمومی در این تغییر انجام نمی‌شود. تأیید انتشار و #105 همچنان الزامی است. Trusted Publishing می‌تواند برای بسته و مخزن عمومی Provenance رجیستری تولید کند؛ شواهد واقعی رجیستری پس از انتشار بررسی شوند، نه استنباط از OIDC. احراز هویت اولین انتشار و تنظیم Trusted Publisher باید با Maintainer تأیید شود.
+
+دستور اعتبارسنجی مصرف‌کننده با نسخه و Commit دقیق بازبینی‌شده در [مستند انگلیسی](npm-distribution.md#first-public-release-bounded-slsa-build-l2-target-160) آمده است. منابع رسمی: [الزامات SLSA v1.2](https://slsa.dev/spec/v1.2/build-requirements)، [Provenance](https://slsa.dev/spec/v1.2/build-provenance)، [Verification](https://slsa.dev/spec/v1.2/verifying-artifacts)، [GitHub Attestation](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations)، [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/). L2 هدف است، نه سطح تأییدشده یا گواهی. ارزیابی L3، Source Track و Audit جامع SLSA پروژه کاربران پس از انتشار است؛ معیارهای موجود #105 تغییر نمی‌کنند.

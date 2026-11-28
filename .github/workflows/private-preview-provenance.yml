@@ -82,7 +82,17 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          gh attestation verify preview/preview.tgz --repo "$REPO" --signer-workflow "$REPO/.github/workflows/private-preview-provenance.yml" --source-digest "$SHA" --source-ref refs/heads/main --format json > verification.json
+          gh attestation verify preview/preview.tgz --repo "$REPO" --signer-workflow "$REPO/.github/workflows/private-preview-provenance.yml" --source-digest "$SHA" --source-ref refs/heads/main --predicate-type https://slsa.dev/provenance/v1 --deny-self-hosted-runners --format json > verification.json
+          # Negative controls use actual verification, not a synthetic signature.
+          cp preview/preview.tgz "$RUNNER_TEMP/tampered-preview.tgz"
+          printf x >> "$RUNNER_TEMP/tampered-preview.tgz"
+          if gh attestation verify "$RUNNER_TEMP/tampered-preview.tgz" --repo "$REPO" --signer-workflow "$REPO/.github/workflows/private-preview-provenance.yml" --source-digest "$SHA" --source-ref refs/heads/main --predicate-type https://slsa.dev/provenance/v1 --deny-self-hosted-runners > /dev/null 2>&1; then
+            echo "ERROR: altered artifact accepted" >&2; exit 1
+          fi
+          if gh attestation verify preview/preview.tgz --repo "$REPO" --signer-workflow "$REPO/.github/workflows/private-preview-provenance.yml" --source-digest "$SHA" --source-ref refs/heads/slsa-negative-control --predicate-type https://slsa.dev/provenance/v1 --deny-self-hosted-runners > /dev/null 2>&1; then
+            echo "ERROR: incorrect source ref accepted" >&2; exit 1
+          fi
+          echo "Tampered artifact and incorrect source ref rejected"
           python - <<'PY'
           import hashlib,json,os
           from pathlib import Path
@@ -106,6 +116,7 @@ jobs:
                     'verification_sha256':hashlib.sha256(raw).hexdigest(),
                     'tested_artifact_receipt_sha256':hashlib.sha256(receipt_raw).hexdigest(),
                     'verification':'GH_ATTESTATION_VERIFY_SUCCEEDED',
+                    'negative_controls':{'tampered_artifact':'REJECTED','incorrect_source_ref':'REJECTED'},
                     'slsa_level':'NOT_ASSESSED','publication':'NOT_PERFORMED'}
           Path('verification-evidence.json').write_text(json.dumps(evidence,indent=2,sort_keys=True))
           print(json.dumps(evidence,sort_keys=True))
