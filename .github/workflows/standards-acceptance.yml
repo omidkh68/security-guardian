@@ -6,6 +6,8 @@ on:
       - 'scripts/standards_inventory.py'
       - 'scripts/test_standards_reference_inventory.py'
       - 'scripts/test_standards_batch.py'
+      - 'scripts/verify_scorecard_evidence.py'
+      - 'scripts/test_scorecard_evidence.py'
       - 'scripts/compare_first_cvss.py'
       - 'scripts/verify_sbom_preview.py'
       - 'scripts/test_sbom_preview.py'
@@ -107,6 +109,14 @@ jobs:
     permissions:
       contents: read
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+      - name: Test Scorecard evidence validation
+        run: python -m unittest discover -s scripts -p test_scorecard_evidence.py -v
       - name: Run pinned OpenSSF Scorecard against base revision
         env:
           GITHUB_AUTH_TOKEN: ${{ github.token }}
@@ -114,21 +124,18 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
+          workspace="$PWD"
           cd "$RUNNER_TEMP"
           curl --fail --silent --show-error --location --max-time 90 -o scorecard.tar.gz https://github.com/ossf/scorecard/releases/download/v5.7.0/scorecard_5.7.0_linux_amd64.tar.gz
           echo '3b08ec0a8681806c3e744ec9210742a502c7d66f06f25523b70f7128738235d3  scorecard.tar.gz' | sha256sum --check
           tar -xzf scorecard.tar.gz scorecard
           ./scorecard --repo="github.com/$REPOSITORY" --commit="$BASE_SHA" --format=json --show-details > scorecard.json
-          python - <<'PY'
-          import json,os
-          d=json.load(open('scorecard.json'))
-          assert d['repo']['commit']==os.environ['BASE_SHA']
-          assert d['checks']
-          for check in d['checks']: print(check['name'],check['score'])
-          PY
+          python "$workspace/scripts/verify_scorecard_evidence.py" scorecard.json --revision "$BASE_SHA" | tee scorecard-evidence.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: scorecard-base-revision
-          path: ${{ runner.temp }}/scorecard.json
+          path: |
+            ${{ runner.temp }}/scorecard.json
+            ${{ runner.temp }}/scorecard-evidence.json
           if-no-files-found: error
           retention-days: 7
