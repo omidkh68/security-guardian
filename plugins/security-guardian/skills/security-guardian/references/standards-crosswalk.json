@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "crosswalk_version": 2,
+  "crosswalk_version": 3,
   "catalog_blob_sha": "7d939ce0b3d83250b6eb47adf172e16a98f5f1f2",
   "review_status": "AUTHOR_REVIEWED_NOT_INDEPENDENTLY_APPROVED",
   "sources": {
@@ -295,6 +295,15 @@
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 12.2.1"
     },
+    "ASVS:12.2.2": {
+      "standard": "ASVS",
+      "id": "12.2.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Public TLS certificate trust"
+    },
     "ASVS:12.3.1": {
       "standard": "ASVS",
       "id": "12.3.1",
@@ -312,6 +321,15 @@
       "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 12.3.2"
+    },
+    "ASVS:12.3.3": {
+      "standard": "ASVS",
+      "id": "12.3.3",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Internal transport confidentiality"
     },
     "ASVS:12.3.5": {
       "standard": "ASVS",
@@ -447,6 +465,15 @@
       "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 14.1.1"
+    },
+    "ASVS:14.1.2": {
+      "standard": "ASVS",
+      "id": "14.1.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Sensitive data protection policy"
     },
     "ASVS:14.2.2": {
       "standard": "ASVS",
@@ -826,6 +853,15 @@
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 2.4.2"
     },
+    "ASVS:3.2.1": {
+      "standard": "ASVS",
+      "id": "3.2.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Response rendering context"
+    },
     "ASVS:3.2.2": {
       "standard": "ASVS",
       "id": "3.2.2",
@@ -1042,6 +1078,15 @@
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 4.3.1"
     },
+    "ASVS:4.3.2": {
+      "standard": "ASVS",
+      "id": "4.3.2",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "GraphQL introspection"
+    },
     "ASVS:4.4.1": {
       "standard": "ASVS",
       "id": "4.4.1",
@@ -1105,6 +1150,15 @@
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 5.2.3"
     },
+    "ASVS:5.2.4": {
+      "standard": "ASVS",
+      "id": "5.2.4",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Upload resource quotas"
+    },
     "ASVS:5.3.1": {
       "standard": "ASVS",
       "id": "5.3.1",
@@ -1131,6 +1185,15 @@
       "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 5.3.3"
+    },
+    "ASVS:5.4.1": {
+      "standard": "ASVS",
+      "id": "5.4.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Download filename handling"
     },
     "ASVS:5.4.3": {
       "standard": "ASVS",
@@ -1257,6 +1320,15 @@
       "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
       "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
       "topic": "Requirement 6.7.2"
+    },
+    "ASVS:7.1.1": {
+      "standard": "ASVS",
+      "id": "7.1.1",
+      "version": "5.0.0",
+      "source_url": "https://github.com/OWASP/ASVS/blob/180622b1329ee7ed349c9f5ce5e14fa91f42c359/5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_path": "5.0/docs_en/OWASP_Application_Security_Verification_Standard_5.0.0_en.json",
+      "source_blob_sha": "16a314527781b79f2e499ac8f1e33eaf76234d22",
+      "topic": "Session lifetime policy"
     },
     "ASVS:7.1.2": {
       "standard": "ASVS",
@@ -1978,6 +2050,15 @@
       "source_blob_sha": "e38b89555cdaa0a4957851565d250ffb91fc366a",
       "topic": "Object reference authorization"
     },
+    "WSTG:WSTG-v42-BUSL-06": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-BUSL-06",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/10-Business_Logic_Testing/06-Testing_for_the_Circumvention_of_Work_Flows.md",
+      "source_path": "document/4-Web_Application_Security_Testing/10-Business_Logic_Testing/06-Testing_for_the_Circumvention_of_Work_Flows.md",
+      "source_blob_sha": "d0dabbde31808b3f01c13abeff3b259de35022a7",
+      "topic": "Workflow state integrity"
+    },
     "WSTG:WSTG-v42-BUSL-08": {
       "standard": "WSTG",
       "id": "WSTG-v42-BUSL-08",
@@ -2005,6 +2086,15 @@
       "source_blob_sha": "ce9dffc1971b667d01bb504eaf7b7995d876bf13",
       "topic": "DOM XSS tests"
     },
+    "WSTG:WSTG-v42-CLNT-04": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-CLNT-04",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/11-Client-side_Testing/04-Testing_for_Client-side_URL_Redirect.md",
+      "source_path": "document/4-Web_Application_Security_Testing/11-Client-side_Testing/04-Testing_for_Client-side_URL_Redirect.md",
+      "source_blob_sha": "7578f455bfb1ac31dab52baf3ccb2e951cfb59fc",
+      "topic": "Client redirect validation"
+    },
     "WSTG:WSTG-v42-CLNT-07": {
       "standard": "WSTG",
       "id": "WSTG-v42-CLNT-07",
@@ -2023,6 +2113,15 @@
       "source_blob_sha": "8b055b6e0c2caf03dac68b442c4092798dedbcbc",
       "topic": "Web testing CLNT-09"
     },
+    "WSTG:WSTG-v42-CLNT-10": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-CLNT-10",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/11-Client-side_Testing/10-Testing_WebSockets.md",
+      "source_path": "document/4-Web_Application_Security_Testing/11-Client-side_Testing/10-Testing_WebSockets.md",
+      "source_blob_sha": "329e8f35d372bc77a6067d716dcacf07668479e1",
+      "topic": "WebSocket security"
+    },
     "WSTG:WSTG-v42-CONF-07": {
       "standard": "WSTG",
       "id": "WSTG-v42-CONF-07",
@@ -2031,6 +2130,33 @@
       "source_path": "document/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/07-Test_HTTP_Strict_Transport_Security.md",
       "source_blob_sha": "301cb889142ee9e0baf527c28f210bdc74253ab6",
       "topic": "Web testing CONF-07"
+    },
+    "WSTG:WSTG-v42-CONF-11": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-CONF-11",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/11-Test_Cloud_Storage.md",
+      "source_path": "document/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/11-Test_Cloud_Storage.md",
+      "source_blob_sha": "1ae35f0e3ffc84a9afcf7431c15dfaef342e7fb8",
+      "topic": "Cloud storage authorization"
+    },
+    "WSTG:WSTG-v42-CRYP-01": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-CRYP-01",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/01-Testing_for_Weak_Transport_Layer_Security.md",
+      "source_path": "document/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/01-Testing_for_Weak_Transport_Layer_Security.md",
+      "source_blob_sha": "e612385f228987faa6453d612fab1f0011549bdd",
+      "topic": "Transport security"
+    },
+    "WSTG:WSTG-v42-ERRH-01": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-ERRH-01",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/08-Testing_for_Error_Handling/01-Testing_For_Improper_Error_Handling.md",
+      "source_path": "document/4-Web_Application_Security_Testing/08-Testing_for_Error_Handling/01-Testing_For_Improper_Error_Handling.md",
+      "source_blob_sha": "0116d7be05f64fb5523e90725e49426aa97ee9ad",
+      "topic": "Error disclosure"
     },
     "WSTG:WSTG-v42-IDNT-04": {
       "standard": "WSTG",
@@ -2049,6 +2175,24 @@
       "source_path": "document/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05-Testing_for_SQL_Injection.md",
       "source_blob_sha": "3a22e2c82f1c2bc485c4c57295af4a506fadfcbd",
       "topic": "SQL injection tests"
+    },
+    "WSTG:WSTG-v42-INPV-17": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-INPV-17",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/07-Input_Validation_Testing/17-Testing_for_Host_Header_Injection.md",
+      "source_path": "document/4-Web_Application_Security_Testing/07-Input_Validation_Testing/17-Testing_for_Host_Header_Injection.md",
+      "source_blob_sha": "f09ca948daeb6a1ae552e154f89110c43c525f3c",
+      "topic": "Host header trust"
+    },
+    "WSTG:WSTG-v42-INPV-19": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-INPV-19",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/07-Input_Validation_Testing/19-Testing_for_Server-Side_Request_Forgery.md",
+      "source_path": "document/4-Web_Application_Security_Testing/07-Input_Validation_Testing/19-Testing_for_Server-Side_Request_Forgery.md",
+      "source_blob_sha": "b2ab7672d690ee2a725227d6957a29316435ec76",
+      "topic": "SSRF"
     },
     "WSTG:WSTG-v42-SESS-02": {
       "standard": "WSTG",
@@ -2076,6 +2220,15 @@
       "source_path": "document/4-Web_Application_Security_Testing/06-Session_Management_Testing/06-Testing_for_Logout_Functionality.md",
       "source_blob_sha": "c58c0091125f754cc19ffc98e05e8da9f464bd0f",
       "topic": "Web testing SESS-06"
+    },
+    "WSTG:WSTG-v42-SESS-07": {
+      "standard": "WSTG",
+      "id": "WSTG-v42-SESS-07",
+      "version": "4.2",
+      "source_url": "https://github.com/OWASP/wstg/blob/dd33419e10edb22b78d89325a6c2aad9f184e3a2/document/4-Web_Application_Security_Testing/06-Session_Management_Testing/07-Testing_Session_Timeout.md",
+      "source_path": "document/4-Web_Application_Security_Testing/06-Session_Management_Testing/07-Testing_Session_Timeout.md",
+      "source_blob_sha": "ccb937f0755d3f4629fe6bbf242c9cf3b2df29fe",
+      "topic": "Session expiry"
     }
   },
   "controls": [
@@ -2116,6 +2269,12 @@
           "reference": "ASVS:14.2.6",
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Data classification and minimum disclosure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:14.1.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Classification and retention support part of the protection policy; other data-handling requirements remain separate.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
@@ -2512,6 +2671,18 @@
           "relationship": "RELATED_WEAKNESS",
           "rationale": "Insufficient session expiration overlaps idle and absolute expiry and revocation.",
           "applicability": "WHERE_WEAKNESS_APPLIES"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-SESS-07",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review idle and absolute expiry and verify that expired sessions cannot be reused.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:7.1.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Idle and absolute expiry are related; documented justification and assurance-specific policy need separate review.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -2785,6 +2956,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Intermediary headers",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-INPV-17",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review host allowlisting and trusted proxy boundaries in SSR; other host-dependent flows need separate tests.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -2891,6 +3068,12 @@
           "reference": "ASVS:3.7.3",
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "URL and redirects",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-CLNT-04",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review user-controlled redirect targets against the approved destination policy.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
@@ -3040,6 +3223,12 @@
           "reference": "WSTG:WSTG-v42-CLNT-09",
           "relationship": "RELATED_TEST",
           "rationale": "Review frame-ancestors policy and whether protected views can be framed.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:3.2.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Content type and nosniff hardening cover one browser rendering defense, not every embedding context.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
@@ -3196,6 +3385,12 @@
           "relationship": "RELATED_WEAKNESS",
           "rationale": "SSRF; taxonomy association only",
           "applicability": "WHERE_WEAKNESS_APPLIES"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-INPV-19",
+          "relationship": "RELATED_TEST",
+          "rationale": "Check outbound destination restrictions in authorized fetcher tests; no full runtime assessment.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -3269,6 +3464,12 @@
           "relationship": "RELATED_WEAKNESS",
           "rationale": "Dangerous unrestricted file uploads overlap type and processing constraints.",
           "applicability": "WHERE_WEAKNESS_APPLIES"
+        },
+        {
+          "reference": "ASVS:5.2.4",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "File count and size limits address storage abuse; per-user aggregate quota still needs explicit review.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -3293,6 +3494,12 @@
           "reference": "ASVS:16.5.4",
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Generic errors and secure failure",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-ERRH-01",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review error output for internal details; the fail-closed control also requires separate authorization evidence.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
@@ -3325,6 +3532,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "WebSocket transport and authorization",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-CLNT-10",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review handshake identity and origin plus message-level authorization; full protocol testing remains separate.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -3349,6 +3562,12 @@
           "reference": "WSTG:WSTG-v42-APIT-01",
           "relationship": "RELATED_TEST",
           "rationale": "GraphQL production configuration and resolver authorization review; not execution of every GraphQL test.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:4.3.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "The control restricts production introspection where appropriate; deployment policy and runtime verification are separate.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
@@ -3518,6 +3737,12 @@
           "reference": "ASVS:2.3.3",
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Ordered flows and transactions",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-BUSL-06",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review server-authoritative transition rules and rejection of skipped or invalid steps.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
@@ -4173,6 +4398,12 @@
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Transport and data protection",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:12.3.3",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Transport encryption across service boundaries is related; internal HTTP coverage and no-fallback behavior need verification.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
       "unmapped_reason": null,
@@ -4217,6 +4448,18 @@
           "reference": "ASVS:14.2.4",
           "relationship": "PARTIAL_REQUIREMENT",
           "rationale": "Data access; object storage settings separate",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-CONF-11",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review private object access and signed URL boundaries; provider-wide configuration needs separate inspection.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:5.4.1",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Safe Content-Disposition supports controlled download naming; caller filename validation is separately reviewed.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
@@ -4310,6 +4553,18 @@
           "reference": "WSTG:WSTG-v42-CONF-07",
           "relationship": "RELATED_TEST",
           "rationale": "Review HSTS response behavior under the selected host policy.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "WSTG:WSTG-v42-CRYP-01",
+          "relationship": "RELATED_TEST",
+          "rationale": "Review TLS versions, cipher configuration and certificate deployment; complete endpoint testing remains separate.",
+          "applicability": "WEB_OR_API_WHERE_RELEVANT"
+        },
+        {
+          "reference": "ASVS:12.2.2",
+          "relationship": "PARTIAL_REQUIREMENT",
+          "rationale": "Certificate deployment relates to public trust; actual trust chain and endpoint configuration require verification.",
           "applicability": "WEB_OR_API_WHERE_RELEVANT"
         }
       ],
