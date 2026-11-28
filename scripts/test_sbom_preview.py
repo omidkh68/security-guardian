@@ -5,7 +5,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
-from verify_sbom_preview import archive_inventory, validate_manifest, validate_release_receipt
+from verify_sbom_preview import archive_inventory, validate_manifest, validate_release_receipt, validate_sbom_identity
 
 
 class PreviewInventoryTests(unittest.TestCase):
@@ -76,3 +76,47 @@ class PreviewInventoryTests(unittest.TestCase):
             validate_manifest(dict(actual,private=True))
             with self.assertRaises(ValueError):
                 validate_manifest(dict(actual,version='1.2.1'),'1.2.1')
+
+    def test_sbom_semantic_identity_and_graph(self):
+        import copy
+        name='@omidkh68/security-guardian'
+        version='1.3.0'
+        manifest={'name':name,'version':version,'private':False,'license':'MIT'}
+        purl='pkg:npm/%40omidkh68/security-guardian@1.3.0'
+        ident='SPDXRef-Package'
+        doc='SPDXRef-DOCUMENT'
+        spdx={'spdxVersion':'SPDX-2.3','SPDXID':doc,'documentDescribes':[ident],
+              'packages':[{'SPDXID':ident,'name':name,'versionInfo':version,
+                           'filesAnalyzed':False,'licenseDeclared':'MIT',
+                           'externalRefs':[{'referenceCategory':'PACKAGE-MANAGER','referenceType':'purl','referenceLocator':purl}]}],
+              'relationships':[{'spdxElementId':doc,'relatedSpdxElement':ident,'relationshipType':'DESCRIBES'}]}
+        ref=name+'@'+version
+        cdx={'specVersion':'1.5','metadata':{'component':{'bom-ref':ref,'version':version,
+                'purl':purl,'licenses':[{'license':{'id':'MIT'}}]}},
+             'components':[],'dependencies':[{'ref':ref,'dependsOn':[]}]}
+        self.assertEqual(validate_sbom_identity(manifest,spdx,cdx)['dependency_graph'],'ROOT_ONLY')
+        cases=[
+            (spdx,('packages',0,'licenseDeclared'),'Apache-2.0'),
+            (spdx,('packages',0,'filesAnalyzed'),True),
+            (spdx,('packages',0,'externalRefs',0,'referenceLocator'),'pkg:npm/other@1.3.0'),
+            (spdx,('relationships',0,'relatedSpdxElement'),'SPDXRef-Other'),
+            (spdx,('documentDescribes',),[ident,'SPDXRef-Other']),
+            (spdx,('files',),[{'SPDXID':'SPDXRef-File'}]),
+            (cdx,('dependencies',0,'dependsOn'),['unknown']),
+            (cdx,('dependencies',0,'ref'),'unknown'),
+            (cdx,('metadata','component','licenses'),[{'license':{'id':'Apache-2.0'}}]),
+            (cdx,('metadata','component','components'),[{'name':'hidden'}]),
+            (cdx,('metadata','component','purl'),'pkg:npm/other@1.3.0'),
+            (cdx,('components',),[{'name':'unexpected'}]),
+        ]
+        for original,path,value in cases:
+            with self.subTest(path=path):
+                modified=copy.deepcopy(original)
+                target=modified
+                for key in path[:-1]:target=target[key]
+                target[path[-1]]=value
+                with self.assertRaises(ValueError):
+                    validate_sbom_identity(manifest,modified if original is spdx else spdx,
+                                           modified if original is cdx else cdx)
+        with self.assertRaises(ValueError):
+            validate_sbom_identity(dict(manifest,license='NOASSERTION'),spdx,cdx)
