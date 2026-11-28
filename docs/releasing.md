@@ -10,3 +10,7 @@
 8. Document incompatibilities, migration instructions and outstanding risks. Never automatically release undocumented vulnerabilities or private assessment data.
 
 The repository itself can be installed directly from Claude Code marketplace once public. Do not claim a GitHub release or tag exists until actually created.
+
+## v1.3.0 acceptance
+
+Before any public tag or npm publication, review the [release quality gate](release-quality-gate.md) against the exact candidate commit. Its development checkpoint is BLOCKED, not release approval. Keep unresolved requirements and unapproved deferrals visible.

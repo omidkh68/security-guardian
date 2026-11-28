@@ -24,6 +24,7 @@ import control_mapping
 from security_fingerprint import fingerprint as source_fingerprint
 import security_test_runner
 import security_remediation
+import security_evidence
 
 VERSION = '1.1.0'
 TRACK_DIR = '.security-guardian'
@@ -314,6 +315,12 @@ def make_run_report(run, ledger, scan):
             f"- AST size/complexity-limited files: {flow['size_limited_files']}/{flow['complexity_limited_files']}; path-budget-limited functions: {flow.get('path_limited_functions', 0)}",
         ])
     coverage_lines.extend(['- Workflow completion does not establish complete scanner coverage or verified safety.',''])
+    linked = run.get('adapter_observations_linked',0)
+    if linked:
+        coverage_lines.extend(['## Linked adapter observations','',
+            f'- Explicit evidence links in this run: {linked}',
+            '- Imported adapter observations are unverified; no automatic finding transition or execution attestation.',
+            '- Full structured observations: findings.json (private audit history).',''])
     marker=lines.index('## Status snapshot (entire project, not just this run)')
     lines[marker:marker]=coverage_lines
     if run.get('scope_resolution'):
@@ -438,6 +445,39 @@ def begin(args):
                'signal_coverage': scan['summary'].get('signal_coverage', {}),
                'python_sql_flow': scan['summary'].get('python_sql_flow'),
                'next': f'python3 <skill-dir>/scripts/security_tracker.py record --root <repo-root> --run {run_id} --file <reviewed-findings.json>'}).strip())
+
+
+def link_evidence(args):
+    """Explicitly link sanitized observations; do not change finding status/history."""
+    root, store = root_and_store(args.root)
+    try:
+        report,digest=security_evidence.read_json(args.report)
+        bundle=security_evidence.normalize(report,digest)
+        plan,_=security_evidence.read_json(args.plan)
+    except (ValueError,OSError,TypeError,KeyError,RecursionError):
+        raise ValueError('Invalid adapter report or explicit link plan') from None
+    with locked(store):
+        index,ledger=load_state(store)
+        rdir,run=ensure_run(store,index,args.run)
+        if rdir.is_symlink():
+            raise ValueError('Refusing symlinked run directory')
+        try:
+            additions=security_evidence.plan_links(root,run,ledger,bundle,plan)
+        except (ValueError,OSError,TypeError,KeyError,RecursionError):
+            raise ValueError('Evidence linking rejected: check scope, report, location and finding identity') from None
+        for fid,key,obs in additions:
+            ledger['findings'][fid].setdefault('adapter_observations',{})[key]=obs
+        if additions:
+            run['adapter_observations_linked']=run.get('adapter_observations_linked',0)+len(additions)
+            save_state(store,index,ledger)
+            snapshot(store,rdir,run,ledger,read_json(rdir/'scanner.json'))
+            for fid,key,obs in additions:
+                append_event(rdir/'events.jsonl',{'at':now(),'type':'ADAPTER_EVIDENCE_LINKED',
+                    'id':fid,'observation_id':key,'report_sha256':obs['report_sha256'],
+                    'status_unchanged':True})
+    print(dump({'run_id':args.run,'linked':len(additions),
+        'already_linked':len(plan['links'])-len(additions),
+        'finding_status_changed':False,'execution_attested':False}).strip())
 
 
 def record(args):
@@ -938,6 +978,12 @@ def main():
     p.add_argument('--run', required=True)
     p.add_argument('--file', help='JSON object/array containing reviewed findings')
     p.set_defaults(fn=record)
+    p = subs.add_parser('link-evidence', help='Explicitly link adapter observations to existing findings without changing status')
+    p.add_argument('--root', default='.')
+    p.add_argument('--run', required=True)
+    p.add_argument('--report', required=True)
+    p.add_argument('--plan', required=True)
+    p.set_defaults(fn=link_evidence)
     p = subs.add_parser('test', help='Record tests as evidence; never executes any tests')
     p.add_argument('--root', default='.')
     p.add_argument('--run', required=True)
