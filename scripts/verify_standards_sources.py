@@ -16,6 +16,7 @@ import security_standards as s
 import security_asvs as asvs
 
 CWE_URL='https://cwe.mitre.org/data/xml/cwec_v5.0.xml.zip'
+CWE_XML_SHA256='47165a9593def89c69b9ef50c34d99ac68db55df8373613e85e9cc9ceecefb1d'
 MAX_OWASP=8_000_000
 MAX_CWE=32_000_000
 REPOS={'ASVS':'ASVS','WSTG':'wstg','MASVS':'masvs','MASTG':'mastg','MASWE':'maswe'}
@@ -45,6 +46,12 @@ def cwe_xml_from_zip(raw):
         with archive.open(entries[0]) as h:xml=h.read(MAX_CWE+1)
     if len(xml)>MAX_CWE:raise ValueError('CWE XML exceeds bound')
     return xml
+
+
+def require_cwe_xml_pin(raw):
+    if not isinstance(raw,bytes) or not raw or len(raw)>MAX_CWE or hashlib.sha256(raw).hexdigest()!=CWE_XML_SHA256:
+        raise ValueError('CWE 5.0 XML source digest mismatch')
+    return raw
 
 
 def verify_cwe(data,raw):
@@ -93,6 +100,7 @@ def main():
         def read_artifact(name,path):
             with (a.source_dir/name/path).open('rb') as h:return h.read(MAX_OWASP+1)
         with a.cwe_xml.open('rb') as h:raw_cwe=h.read(MAX_CWE+1)
+    require_cwe_xml_pin(raw_cwe)
     captured={}
     def read_verified_artifact(name,path):
         raw=read_artifact(name,path)
