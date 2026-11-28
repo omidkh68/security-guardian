@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a review-only hash lock candidate for the isolated Linux Python fixture."""
+"""Generate a review-only hash lock candidate for a bounded Linux Python group."""
 import argparse
 import hashlib
 import json
@@ -12,7 +12,11 @@ PIN=re.compile(r'([A-Za-z0-9_-]+)==([0-9]+(?:\.[0-9]+)+)')
 def normalize(name):
     return re.sub(r'[-_.]+','-',name).lower()
 
-def candidate(pins,folder):
+SCOPES={'fixture':'LINUX_PYTHON_FIXTURE_CURRENT_RUNNER_ONLY',
+        'standards':'LINUX_PYTHON_STANDARDS_CURRENT_RUNNER_ONLY'}
+
+def candidate(pins,folder,scope='fixture'):
+    if scope not in SCOPES:raise ValueError('Unknown dependency group')
     expected={}
     for line in pins.splitlines():
         if not line.strip():continue
@@ -44,20 +48,65 @@ def candidate(pins,folder):
     rows=[found[k] for k in sorted(found)]
     lock=''.join(f"{x['name']}=={x['version']} --hash=sha256:{x['sha256']}\n" for x in rows)
     return lock,{'kind':'DEPENDENCY_LOCK_CANDIDATE','status':'REVIEW_REQUIRED',
-                 'scope':'LINUX_PYTHON_FIXTURE_CURRENT_RUNNER_ONLY',
+                 'scope':SCOPES[scope],
                  'manifest_sha256':hashlib.sha256(pins.encode()).hexdigest(),
                  'wheels':rows,'limitations':['Hashes observed from this download, not independent publisher verification.',
                                              'Do not automatically commit or adopt this candidate.',
                                              'Other platforms and dependency groups are not covered.']}
+
+def verify_registry(report, read_release):
+    """Compare exact observed wheels to separately retrieved PyPI release metadata."""
+    if report.get('scope')!=SCOPES['standards'] or report.get('status')!='REVIEW_REQUIRED':
+        raise ValueError('Unexpected candidate scope')
+    rows=report.get('wheels')
+    if not isinstance(rows,list) or not 1<=len(rows)<=100:
+        raise ValueError('Invalid candidate inventory')
+    seen=set()
+    verified=[]
+    for row in rows:
+        name,version,filename,digest=(row[k] for k in ('name','version','filename','sha256'))
+        if (not PIN.fullmatch(name+'=='+version) or normalize(name) in seen
+                or not re.fullmatch(r'[A-Za-z0-9_.-]+\.whl',filename)
+                or not re.fullmatch(r'[0-9a-f]{64}',digest)):
+            raise ValueError('Invalid candidate identity')
+        seen.add(normalize(name))
+        release=read_release(name,version)
+        info=release['info']
+        if normalize(info['name'])!=normalize(name) or info['version']!=version:
+            raise ValueError('Registry release identity mismatch: '+name)
+        matches=[x for x in release['urls'] if x.get('filename')==filename]
+        if (len(matches)!=1 or matches[0].get('packagetype')!='bdist_wheel'
+                or matches[0].get('yanked') is not False
+                or matches[0].get('digests',{}).get('sha256')!=digest):
+            raise ValueError('Registry wheel identity, status or digest mismatch: '+name)
+        verified.append(dict(name=name,version=version,filename=filename,sha256=digest))
+    return {'kind':'PYPI_RELEASE_METADATA_COMPARISON','status':'MATCHED',
+            'verified_count':len(verified),'wheels':verified,'publisher_signature':'NOT_VERIFIED',
+            'promotion':'REVIEW_REQUIRED'}
+
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('manifest',type=Path)
     p.add_argument('wheels',type=Path)
     p.add_argument('output',type=Path)
+    p.add_argument('--scope',choices=sorted(SCOPES),default='fixture')
+    p.add_argument('--verify-registry',action='store_true')
+    p.add_argument('--expected-lock-sha256')
     a=p.parse_args()
-    lock,report=candidate(a.manifest.read_text(encoding='utf-8'),a.wheels)
+    lock,report=candidate(a.manifest.read_text(encoding='utf-8'),a.wheels,a.scope)
+    if a.verify_registry:
+        if not a.expected_lock_sha256 or hashlib.sha256(lock.encode()).hexdigest()!=a.expected_lock_sha256:
+            raise ValueError('Candidate lock differs from reviewed baseline')
+        from verify_standards_sources import fetch
+        def read_release(name,version):
+            return json.loads(fetch('https://pypi.org/pypi/'+name+'/'+version+'/json',8_000_000))
+        registry=verify_registry(report,read_release)
+        registry['lock_sha256']=a.expected_lock_sha256
+        print(json.dumps(registry,sort_keys=True))
     a.output.mkdir()
+    if a.verify_registry:
+        (a.output/'registry-evidence.json').write_text(json.dumps(registry,indent=2,sort_keys=True)+'\n',encoding='utf-8')
     (a.output/'requirements-candidate.txt').write_text(lock,encoding='utf-8')
     (a.output/'candidate-evidence.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n',encoding='utf-8')
     print(json.dumps(report,sort_keys=True))
