@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 import zipfile
-from dependency_lock_candidate import candidate
+from dependency_lock_candidate import candidate, verify_registry
 
 class LockCandidateTests(unittest.TestCase):
     def setUp(self):
@@ -26,3 +26,33 @@ class LockCandidateTests(unittest.TestCase):
             with self.assertRaises(ValueError):candidate(pins,self.root)
         self.wheel('Flask','3.1.3','duplicate.whl')
         with self.assertRaises(ValueError):candidate('Flask==3.1.3',self.root)
+
+    def test_group_scope_never_implies_promotion(self):
+        self.wheel('cvss','3.6')
+        lock,report=candidate('cvss==3.6',self.root,'standards')
+        self.assertEqual(report['scope'],'LINUX_PYTHON_STANDARDS_CURRENT_RUNNER_ONLY')
+        self.assertEqual(report['status'],'REVIEW_REQUIRED')
+        with self.assertRaises(ValueError):
+            candidate('cvss==3.6',self.root,'unknown')
+
+    def test_registry_exact_wheel_and_digest(self):
+        import copy
+        self.wheel('cvss','3.6')
+        _,report=candidate('cvss==3.6',self.root,'standards')
+        row=report['wheels'][0]
+        release={'info':{'name':'cvss','version':'3.6'},
+                 'urls':[{'filename':row['filename'],'packagetype':'bdist_wheel',
+                          'yanked':False,'digests':{'sha256':row['sha256']}}]}
+        result=verify_registry(report,lambda *_:release)
+        self.assertEqual(result['verified_count'],1)
+        self.assertEqual(result['promotion'],'REVIEW_REQUIRED')
+        for key,value in [('filename','other.whl'),('packagetype','sdist'),('yanked',True),
+                          ('digests',{'sha256':'0'*64})]:
+            bad=copy.deepcopy(release);bad['urls'][0][key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):
+                verify_registry(report,lambda *_:bad)
+        for rows in ([],release['urls']*2):
+            bad=copy.deepcopy(release);bad['urls']=rows
+            with self.assertRaises(ValueError):verify_registry(report,lambda *_:bad)
+        bad=copy.deepcopy(release);bad['info']['version']='3.5'
+        with self.assertRaises(ValueError):verify_registry(report,lambda *_:bad)
