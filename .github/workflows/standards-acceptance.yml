@@ -7,6 +7,9 @@ on:
       - 'scripts/verify_standards_sources.py'
       - 'scripts/test_standards_reference_inventory.py'
       - 'scripts/test_standards_batch.py'
+      - 'scripts/requirements-standards-linux-py312.lock'
+      - 'scripts/requirements-standards-candidate.txt'
+      - 'scripts/test_dependency_lock_candidate.py'
       - 'scripts/verify_scorecard_evidence.py'
       - 'scripts/test_scorecard_evidence.py'
       - 'scripts/compare_first_cvss.py'
@@ -50,7 +53,11 @@ jobs:
           set -euo pipefail
           python -m venv "$RUNNER_TEMP/sg-standards"
           PY="$RUNNER_TEMP/sg-standards/bin/python"
-          "$PY" -m pip install 'cvss==3.6' 'jsonschema==4.25.1' 'sarif-tools==3.0.0'
+          "$PY" -c 'import sys,platform; assert sys.version_info[:2] == (3,12) and platform.python_implementation()=="CPython" and sys.platform=="linux" and platform.machine()=="x86_64"'
+          python -m unittest discover -s scripts -p test_dependency_lock_candidate.py -v
+          echo 'b519758f80ff327b116a2deb19e77b8d33f64fce9f94bc1cc96a90ded87609cb  scripts/requirements-standards-linux-py312.lock' | sha256sum --check
+          "$PY" -m pip --isolated install --index-url https://pypi.org/simple --only-binary=:all: --no-deps --require-hashes -r scripts/requirements-standards-linux-py312.lock
+          "$PY" -m pip check
           "$PY" - "$RUNNER_TEMP/sarif-schema.json" <<'PY'
           import sys
           from pathlib import Path

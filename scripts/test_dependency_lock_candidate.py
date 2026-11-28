@@ -56,3 +56,14 @@ class LockCandidateTests(unittest.TestCase):
             with self.assertRaises(ValueError):verify_registry(report,lambda *_:bad)
         bad=copy.deepcopy(release);bad['info']['version']='3.5'
         with self.assertRaises(ValueError):verify_registry(report,lambda *_:bad)
+
+    def test_promoted_standards_lock_matches_reviewed_candidate(self):
+        import hashlib,re
+        scripts=Path(__file__).resolve().parent
+        lock=(scripts/'requirements-standards-linux-py312.lock').read_bytes()
+        self.assertEqual(hashlib.sha256(lock).hexdigest(),'b519758f80ff327b116a2deb19e77b8d33f64fce9f94bc1cc96a90ded87609cb')
+        lines=lock.decode('ascii').splitlines()
+        self.assertEqual(len(lines),25)
+        for line in lines:
+            self.assertRegex(line,r'^[A-Za-z0-9_.-]+==[^ ]+ --hash=sha256:[a-f0-9]{64}$')
+        self.assertEqual([line.split(' --hash=')[0] for line in lines],(scripts/'requirements-standards-candidate.txt').read_text().splitlines())
