@@ -69,3 +69,26 @@ class ReferenceInventoryTests(unittest.TestCase):
         self.assertEqual(inventory['mapped_metadata_review']['inspected'],1)
         self.assertEqual(inventory['mapped_metadata_review']['not_inspected'],1)
         with self.assertRaises(ValueError):inv.annotate_mapped_mastg({'rows':[other]},data,lambda _:raw)
+
+    def test_maswe_metadata_platform_status_and_integrity(self):
+        raw=b'---\nid: MASWE-0032\nplatform: [android]\n---\nWeakness description\n'
+        ref={'standard':'MASWE','id':'MASWE-0032','source_path':'weaknesses/MASVS-PLATFORM/MASWE-0032.md','source_blob_sha':inv.s.git_blob(raw)}
+        meta=inv.maswe_metadata(ref,raw)
+        self.assertEqual(meta['publisher_platforms'],['android'])
+        self.assertEqual(meta['publisher_status'],'NOT_DECLARED')
+        self.assertEqual(meta['project_applicability'],'NOT_ASSESSED')
+        self.assertTrue(meta['body_present'])
+        for bad in (raw.replace(b'[android]',b'[android, android]'),raw.replace(b'[android]',b'[other]'),
+                    raw.replace(b'id: MASWE-0032',b'id: MASWE-0033'),raw.replace(b'platform:',b'id: MASWE-0032\nplatform:')):
+            with self.subTest(raw=bad),self.assertRaises(ValueError):
+                inv.maswe_metadata({**ref,'source_blob_sha':inv.s.git_blob(bad)},bad)
+        with self.assertRaises(ValueError):inv.maswe_metadata(ref,raw+b'changed')
+        row={'id':ref['id'],'path':ref['source_path'],'blob_sha':ref['source_blob_sha']}
+        other={'id':'MASWE-9999'}
+        inventory={'rows':[row,other]}
+        data={'references':{'MASWE:'+ref['id']:ref}}
+        inv.annotate_mapped_maswe(inventory,data,lambda _:raw)
+        self.assertEqual(inventory['mapped_metadata_review']['inspected'],1)
+        self.assertEqual(other['lifecycle'],'NOT_INSPECTED')
+        self.assertNotIn('publisher_metadata',other)
+        with self.assertRaises(ValueError):inv.annotate_mapped_maswe({'rows':[other]},data,lambda _:raw)

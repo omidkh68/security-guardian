@@ -35,7 +35,7 @@ def reviewed_locations(sidecar,source_sha256):
 def export(report,*,sidecar=None,source_sha256=None):
     locations={} if sidecar is None else reviewed_locations(sidecar,source_sha256)
     used=set()
-    if type(report.get('schema_version')) is not int or report['schema_version']!=1 or report.get('privacy')!='STRUCTURED_SUMMARY_NO_PROJECT_PROSE':
+    if not isinstance(report,dict) or type(report.get('schema_version')) is not int or report['schema_version']!=1 or report.get('privacy')!='STRUCTURED_SUMMARY_NO_PROJECT_PROSE':
         raise ValueError('Only structured summary snapshots are accepted')
     catalog={x['control_id'] for x in standards.load()['controls']}
     rows=report['findings']
@@ -44,11 +44,12 @@ def export(report,*,sidecar=None,source_sha256=None):
     results=[]
     rules=set()
     for row in rows:
+        if not isinstance(row,dict):raise ValueError('Invalid finding row')
         cid,ident,status,severity=(row.get(k) for k in ('control_id','id','status','severity'))
-        if cid not in catalog or not isinstance(ident,str) or not re.fullmatch('SG-'+re.escape(cid)+r'-[0-9A-F]{12}',ident) or ident in seen:
+        if not isinstance(cid,str) or cid not in catalog or not isinstance(ident,str) or not re.fullmatch('SG-'+re.escape(cid)+r'-[0-9A-F]{12}',ident) or ident in seen:
             raise ValueError('Unknown, malformed or duplicate finding identity')
         seen.add(ident)
-        if severity not in LEVELS or status not in STATUSES|{'VERIFIED_FIXED','FALSE_POSITIVE','SUPERSEDED'}:
+        if not isinstance(severity,str) or not isinstance(status,str) or severity not in LEVELS or status not in STATUSES|{'VERIFIED_FIXED','FALSE_POSITIVE','SUPERSEDED'}:
             raise ValueError('Unrecognized finding status or severity')
         if status not in STATUSES:continue
         candidate=status in {'CANDIDATE','NEEDS_REVIEW'}
@@ -87,5 +88,5 @@ def main():
             if not isinstance(sidecar,dict):raise ValueError('Invalid location inventory')
         print(json.dumps(export(json.loads(raw,object_pairs_hook=standards.unique_object),
                                 sidecar=sidecar,source_sha256=hashlib.sha256(raw).hexdigest()),indent=2,sort_keys=True))
-    except (ValueError,TypeError,KeyError,OSError,AttributeError):p.error('Invalid structured snapshot')
+    except (ValueError,TypeError,KeyError,OSError,AttributeError,RecursionError):p.error('Invalid structured snapshot')
 if __name__=='__main__':main()
