@@ -4,6 +4,7 @@ on:
     paths:
       - '.github/workflows/standards-acceptance.yml'
       - 'scripts/standards_inventory.py'
+      - 'scripts/verify_standards_sources.py'
       - 'scripts/test_standards_reference_inventory.py'
       - 'scripts/test_standards_batch.py'
       - 'scripts/verify_scorecard_evidence.py'

@@ -9,6 +9,10 @@ from pathlib import Path
 import sys
 import tempfile
 import urllib.request
+import urllib.error
+import http.client
+import ssl
+import time
 import xml.etree.ElementTree as ET
 import zipfile
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'plugins/security-guardian/skills/security-guardian/scripts'))
@@ -30,12 +34,37 @@ def groups(data):
     return result
 
 
+def transient_download_error(exc):
+    # TLS/authentication and other permanent failures are never retried.
+    if isinstance(exc,urllib.error.HTTPError):
+        return exc.code in (408,429,500,502,503,504)
+    if isinstance(exc,urllib.error.URLError):
+        exc=exc.reason
+    if isinstance(exc,ssl.SSLError):
+        return False
+    return isinstance(exc,(TimeoutError,ConnectionError,http.client.RemoteDisconnected,
+                           http.client.IncompleteRead))
+
+
 def fetch(url,limit):
     req=urllib.request.Request(url,headers={'User-Agent':'Security-Guardian-Standards-Revalidation'})
-    with urllib.request.urlopen(req,timeout=20) as response:
-        raw=response.read(limit+1)
-    if not raw or len(raw)>limit:raise ValueError('Official source unavailable or exceeds bound')
-    return raw
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req,timeout=20) as response:
+                raw=response.read(limit+1)
+        except (urllib.error.URLError,OSError,http.client.HTTPException) as exc:
+            if attempt==2 or not transient_download_error(exc):
+                raise
+            if isinstance(exc,urllib.error.HTTPError):
+                exc.close()
+            print('Transient official source download failure; retry '+str(attempt+1)+'/2',
+                  file=sys.stderr)
+            time.sleep(2**attempt)
+            continue
+        if not raw or len(raw)>limit:
+            raise ValueError('Official source unavailable or exceeds bound')
+        return raw
+    raise AssertionError('Unreachable retry state')
 
 
 def cwe_xml_from_zip(raw):
