@@ -9,6 +9,8 @@ BASE={'AV':'NALP','AC':'LH','AT':'NP','PR':'NLH','UI':'NPA','VC':'HLN','VI':'HLN
 OPTIONAL={'E':'XAPU','CR':'XHML','IR':'XHML','AR':'XHML','MAV':'XNALP','MAC':'XLH','MAT':'XNP','MPR':'XNLH','MUI':'XNPA','MVC':'XHLN','MVI':'XHLN','MVA':'XHLN','MSC':'XHLN','MSI':'XHLNS','MSA':'XHLNS','S':'XNP','AU':'XNY','R':'XAUI','V':'XDC','RE':'XLMH','U':('X','Clear','Green','Amber','Red')}
 METRICS={**BASE,**OPTIONAL}
 PIN='3.6'
+ATTRIBUTION='CVSS is owned by FIRST.Org, Inc. and used by permission.'
+SPECIFICATION='https://www.first.org/cvss/v4.0/specification-document'
 ENVIRONMENTAL=frozenset(('CR','IR','AR','MAV','MAC','MAT','MPR','MUI','MVC','MVI','MVA','MSC','MSI','MSA'))
 
 def validate(vector):
@@ -39,7 +41,8 @@ def score(vector):
         raise ValueError('Calculator severity mismatch')
     nomenclature='CVSS-B'+('T' if fields.get('E','X')!='X' else '')+('E' if any(fields.get(k,'X')!='X' for k in ENVIRONMENTAL) else '')
     return {'standard':'CVSS:4.0','vector':vector,'score':value,'severity':severity,
-            'nomenclature':nomenclature,'engine':'cvss=='+PIN,'metric_evidence':'USER_SUPPLIED_NOT_VERIFIED'}
+            'nomenclature':nomenclature,'engine':'cvss=='+PIN,'metric_evidence':'USER_SUPPLIED_NOT_VERIFIED',
+            'attribution':ATTRIBUTION,'specification_url':SPECIFICATION}
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)

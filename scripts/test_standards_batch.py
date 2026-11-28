@@ -124,6 +124,8 @@ class StandardsBatchTests(unittest.TestCase):
                 self.assertEqual(r['score'],expected)
                 self.assertEqual(r['nomenclature'],nomenclature)
                 self.assertEqual(r['vector'],vector)
+                self.assertEqual(r['attribution'],'CVSS is owned by FIRST.Org, Inc. and used by permission.')
+                self.assertEqual(r['specification_url'],'https://www.first.org/cvss/v4.0/specification-document')
         print('CVSS_REFERENCE_VECTORS=PASS count='+str(len(VECTORS)))
 
     @unittest.skipUnless(os.environ.get('SG_EXTERNAL_STANDARDS_TEST')=='1','optional pinned tools')
