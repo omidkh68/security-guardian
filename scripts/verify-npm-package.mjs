@@ -36,13 +36,16 @@ try {
   if (!pkg.private) assert.ok(Number(pkg.version.split('.')[0]) > 1 || (pkg.version.startsWith('1.') && Number(pkg.version.split('.')[1]) >= 3), 'preview versions must stay private');
   assert.equal(pkg.version, fs.readFileSync(path.join(root, prefix, 'VERSION'), 'utf8').trim());
   assert.deepEqual(pkg.dependencies ?? {}, {});
+  assert.deepEqual(pkg.contentPolicy, { class: 'dual-use' }, 'npm dual-use declaration required');
+  assert.ok(pkg.files.includes('DISCLOSURE'), 'root disclosure must be explicitly packed');
+  assert.ok(fs.readFileSync(path.join(root, 'DISCLOSURE'), 'utf8').trim(), 'nonempty disclosure required');
   for (const key of ['preinstall', 'install', 'postinstall', 'prepare', 'prepack', 'postpack']) assert.ok(!pkg.scripts?.[key]);
   const tracked = run('git', ['ls-files']).trim().split(/\r?\n/);
   const runtime = tracked.filter(p => p.startsWith(prefix) && (
     /^(SKILL\.md|VERSION|LICENSE)$/.test(p.slice(prefix.length)) ||
     /^references\/.+\.(md|json|yaml)$/.test(p.slice(prefix.length)) ||
     (/^scripts\/[^/]+\.py$/.test(p.slice(prefix.length)) || ['scripts/js_dom_flow.mjs', 'scripts/js_sql_flow.mjs', 'scripts/js_ssr_flow.mjs', 'scripts/js_authz_flow.mjs'].includes(p.slice(prefix.length)))));
-  const expected = [...runtime, 'package.json', 'LICENSE', 'README.md', 'README-FA.md',
+  const expected = [...runtime, 'package.json', 'LICENSE', 'README.md', 'README-FA.md', 'DISCLOSURE',
     'bin/security-guardian.mjs', 'docs/npm-distribution.md', 'docs/npm-distribution-FA.md'].sort();
   for (const dry of [true, false]) {
     const [pack] = JSON.parse(run('npm', ['pack', '--json', '--ignore-scripts',

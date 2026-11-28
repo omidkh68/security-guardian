@@ -1,0 +1,10 @@
+Security Guardian — npm dual-use content disclosure
+
+This package distributes a local installer and agent skill resources for defensive application-security review, vulnerability detection, evidence collection, and scoped remediation and verification. Security analysis techniques, test fixtures, and guidance can have legitimate security-assurance uses and may also be misused. Use only on repositories, applications and environments you own or are explicitly authorized to assess.
+
+The installer copies local skill assets; it does not automatically run security scans, activate agents, or publish findings. Runtime actions require appropriate authorization and must remain within approved scope. Do not use the package to access systems without permission, compromise accounts, or disclose private findings or secrets. Detection candidates are not proof of exploitation or independent security certification.
+
+Report vulnerabilities in Security Guardian using the repository security policy: https://github.com/omidkh68/security-guardian/security/policy
+Policy reference: https://docs.npmjs.com/policies/dual-use/
+
+فارسی: این بسته برای بررسی دفاعی امنیت نرم‌افزار، شناسایی آسیب‌پذیری، ثبت شواهد و اصلاح و اعتبارسنجی محدود به مجوز ارائه می‌شود. تکنیک‌ها و نمونه‌های امنیتی می‌توانند کاربرد دوگانه داشته باشند. فقط روی پروژه‌ها و محیط‌های تحت اختیار یا دارای مجوز صریح استفاده شود. نصب‌کننده خودکار اسکن، فعال‌سازی ایجنت یا انتشار یافته‌ها انجام نمی‌دهد. یافته‌های احتمالی اثبات بهره‌برداری یا گواهی امنیتی مستقل نیستند.
