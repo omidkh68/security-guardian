@@ -25,8 +25,11 @@ def evaluate(policy_raw,observations_raw):
     for raw in (policy_raw,observations_raw):
         if not isinstance(raw,bytes) or not raw or len(raw)>LIMIT:
             raise ValueError('Input exceeds bound')
-    policy=json.loads(policy_raw,object_pairs_hook=unique)
-    data=json.loads(observations_raw,object_pairs_hook=unique)
+    try:
+        policy=json.loads(policy_raw,object_pairs_hook=unique)
+        data=json.loads(observations_raw,object_pairs_hook=unique)
+    except RecursionError:
+        raise ValueError('JSON nesting exceeds bound') from None
     if (not isinstance(policy,dict) or set(policy)!={'schema_version','platform','minimum_build'}
             or type(policy['schema_version']) is not int or policy['schema_version']!=1
             or policy['platform'] not in ('android','ios')

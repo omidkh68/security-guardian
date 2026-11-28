@@ -15,8 +15,27 @@ import xml.etree.ElementTree as ET
 LIMIT=2_000_000
 ANDROID_NS='{http://schemas.android.com/apk/res/android}'
 
+def xml_text(raw):
+    # Inspect actual characters before handing bytes to an XML parser.
+    # Reject ambiguous encodings; UTF-8 (including BOM) and BOM-marked UTF-16
+    # are sufficient for resolved app metadata. Binary plists bypass XML.
+    if raw.startswith((b'\xff\xfe\x00\x00',b'\x00\x00\xfe\xff')):
+        raise ValueError('Unsupported XML encoding')
+    encoding='utf-16' if raw.startswith((b'\xff\xfe',b'\xfe\xff')) else 'utf-8-sig'
+    text=raw.decode(encoding)
+    if '\x00' in text:
+        raise ValueError('Unsupported XML encoding')
+    declaration=re.match(r'\s*<\?xml\s+[^?]*encoding\s*=\s*["\']([^"\']+)["\']',text,re.I)
+    if declaration:
+        allowed={'utf-16','utf-16le','utf-16be'} if encoding=='utf-16' else {'utf-8','us-ascii'}
+        if declaration.group(1).lower() not in allowed:
+            raise ValueError('Unsupported XML encoding declaration')
+    return text
+
+
 def android_floor(raw):
-    if b'<!DOCTYPE' in raw.upper() or b'<!ENTITY' in raw.upper():
+    text=xml_text(raw)
+    if '<!DOCTYPE' in text.upper() or '<!ENTITY' in text.upper():
         raise ValueError('Unsupported XML declaration')
     root=ET.fromstring(raw)
     if root.tag!='manifest':
@@ -37,8 +56,10 @@ def ios_version(value):
 
 def ios_floor(raw):
     # plistlib does not expand XML entities; reject nonstandard XML entity declarations.
-    if b'<!ENTITY' in raw.upper():
-        raise ValueError('Unsupported plist entity')
+    if not raw.startswith(b'bplist00'):
+        text=xml_text(raw)
+        if '<!ENTITY' in text.upper():
+            raise ValueError('Unsupported plist entity')
     data=plistlib.loads(raw)
     if not isinstance(data,dict):
         raise ValueError('Expected app plist dictionary')
@@ -67,7 +88,7 @@ def check(platform,raw,required):
             'metadata_sha256':hashlib.sha256(raw).hexdigest(),
             'policy_origin':'USER_SUPPLIED_NOT_VERIFIED','runtime_verification':'NOT_RUN',
             'security_patch_policy':'NOT_ASSESSED','compliance':'NOT_ASSESSED',
-            'limitations':['Resolved Android manifest XML or iOS app plist only; no APK/IPA parsing.',
+            'limitations':['Resolved UTF-8 or BOM-marked UTF-16 Android XML, or iOS app plist only; no APK/IPA parsing.',
                            'Caller must establish metadata provenance and appropriate OS policy.',
                            'No device execution, platform support lifecycle or security patch assessment.']}
 

@@ -33,7 +33,10 @@ def unique(pairs):
 def read(raw):
     if not isinstance(raw,bytes) or not raw or len(raw)>LIMIT:
         raise ValueError('Invalid input size')
-    data=json.loads(raw,object_pairs_hook=unique)
+    try:
+        data=json.loads(raw,object_pairs_hook=unique)
+    except RecursionError:
+        raise ValueError('JSON nesting exceeds bound') from None
     if (not isinstance(data,dict) or type(data.get('schema_version')) is not int
             or data['schema_version']!=1 or data.get('synthetic_only') is not True):
         raise ValueError('Expected explicit synthetic fixture schema')

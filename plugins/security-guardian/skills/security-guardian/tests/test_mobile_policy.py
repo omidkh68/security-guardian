@@ -39,3 +39,14 @@ class MobilePolicyTests(unittest.TestCase):
     def test_output_does_not_echo_unrelated_metadata(self):
         raw=plistlib.dumps({'MinimumOSVersion':'16.0','secret':'PRIVATE_CANARY'})
         self.assertNotIn('PRIVATE_CANARY',str(policy.check('ios',raw,'16.0')))
+
+    def test_xml_encoding_cannot_hide_entity_declarations(self):
+        unsafe='<!DOCTYPE manifest [<!ENTITY api "28">]><manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-sdk android:minSdkVersion="&api;"/></manifest>'
+        for encoding in ('utf-8','utf-16','utf-16-le','utf-32'):
+            with self.subTest(encoding=encoding),self.assertRaises(ValueError):
+                policy.check('android',unsafe.encode(encoding),28)
+        safe=manifest('28').decode()
+        self.assertEqual(policy.check('android',safe.encode('utf-16'),28)['status'],'CONFIGURATION_MEETS_POLICY')
+        unsafe_plist='<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE plist [<!ENTITY value "16.0">]><plist version="1.0"><dict><key>MinimumOSVersion</key><string>&value;</string></dict></plist>'
+        with self.assertRaises(ValueError):
+            policy.check('ios',unsafe_plist.encode('utf-16'),'16.0')
