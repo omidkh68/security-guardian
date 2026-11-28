@@ -63,3 +63,7 @@ This is an evidence-integrity increment, not a newly independent benchmark. Fres
 ## External DOM evidence integrity (#34 / #37)
 
 The positive-only probe uses four author-labeled innerHTML assignments in two pinned public CodeQL fixture files. The release bundle now binds the report to the current engine and parser hashes, source blob identities, case identity, scope isolation and elapsed wall time. It preserves every miss, including partial misses, and recomputes the positive-only denominator. Negative labels are absent; precision is null, and running CodeQL or independently adjudicating the probe remains NOT_RUN. No combined score or independent accuracy claim. CI must pass the new integrity checks before acceptance.
+
+### Tenant ownership indicator regression
+
+Adds a synthetic positive/negative pair for BACKEND.AUTHZ.TENANT_ONLY_RETURN. The original manifest completeness and selected-scope gates remain unchanged. This measures a heuristic candidate, not exploitation or blind detection accuracy. Historical benchmark results remain historical; fresh CI pending.

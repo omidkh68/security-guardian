@@ -74,6 +74,16 @@
       "negative": "const name = body.displayName;"
     },
     {
+      "pack": "backend-core",
+      "framework": "Express",
+      "dependency": "express",
+      "rule_id": "BACKEND.AUTHZ.TENANT_ONLY_RETURN",
+      "control_id": "BIZ-01",
+      "file": "access.mjs",
+      "positive": "export function canRead(user, record) {\n  return user.tenantId === record.tenantId;\n}\n",
+      "negative": "export function canRead(user, record) {\n  return user.tenantId === record.tenantId && user.id === record.ownerId;\n}\n"
+    },
+    {
       "pack": "react-next",
       "framework": "React",
       "dependency": "react",
