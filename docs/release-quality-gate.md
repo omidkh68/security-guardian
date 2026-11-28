@@ -55,3 +55,19 @@ PRs #208–212 are merged. [CI #398](https://github.com/omidkh68/security-guardi
 The proposed final SBOM gate uses the exact tested tarball and validates its canonical manifest, stable version, explicit public state, dual-use declaration, disclosure, receipt digest, size and source commit before extraction. SPDX 2.3 and CycloneDX 1.5 are generated offline from the extracted package lock and checked against the existing pinned schemas; the companion evidence hashes every shipped regular file and both SBOMs. SBOM validation and upload must pass before the release artifact is signed and staged. File-level license review, Python dependencies and independent human review remain separate; do not call this full supply-chain compliance.
 
 The pre-tag gate reviews bounded preview evidence and the planned enforceable final checks. The final tagged prepare/stage run must produce and validate the exact final SBOM and signed provenance before any authorized registry mutation. Registry comparison follows owner 2FA promotion. Final checks cannot be described as completed before they run. No checklist item is removed, and #105 remains blocked pending its actual acceptance review.
+
+## SLSA v1.2 source and Build L2 evidence boundary (#160)
+
+The [SLSA v1.2 requirements](https://github.com/slsa-framework/slsa/blob/19e4e2f005f871270c4f555fc47afecfb37f3efe/docs/spec/v1.2/build-requirements.md), build provenance and distribution documents and [Community Specification License 1.0](https://github.com/slsa-framework/slsa/blob/19e4e2f005f871270c4f555fc47afecfb37f3efe/LICENSE.md) are pinned at the exact publisher revision. The private preview build verifies four source Git blobs, emits hashes and tests altered/missing inputs. Source validation is not a level assessment.
+
+| Build L2 requirement (SLSA v1.2) | Evidence boundary |
+|---|---|
+| Appropriate platform and consistent process | GitHub-hosted Actions; explicit pinned workflow and tested artifact receipt; final candidate run pending. |
+| Provenance existence | Actual preview attestation and exact artifact digest; final release pending. |
+| Authenticity | Separate read-only gh verification of signature, repository, workflow, source and predicate; actual preview negative controls passed. |
+| Control-plane accuracy | Hosted platform's attestation trust boundary must be evaluated; workflow alone does not establish this requirement. |
+| Hosted build | Hosted runner and deny-self-hosted check; final tag run pending. |
+| Distribute provenance | GitHub preview attestation available; final consumer retrieval and npm distribution verification pending. |
+| Security best practices | Existing protected main, least privilege and pinned actions; residual risks reviewed separately. |
+
+Do not infer L2 from OIDC or a successful signature alone. The previous preview evidence is real but applies to its source commit. This PR triggers a fresh private preview on main after merge; no tag or publication. Final artifact-specific requirements remain enforced before stage; distribution evidence follows actual authorized publication. No criterion removed and no achieved-level claim.
