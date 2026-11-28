@@ -481,3 +481,34 @@ test('commit flush uncertainty preserves complete journal and installed state', 
   assert.ok(!fs.existsSync(lock));
   assert.equal(fs.readFileSync(path.join(backup, 'local-note.txt'), 'utf8'), 'preserve');
 });
+
+test('project install warns about alternate standalone skill versions without changing them', t => {
+  const {home,project,run} = fixture(t);
+  ok(run('--agent','claude','--user','--yes'));
+  const global = path.join(home,'.claude','skills','security-guardian');
+  fs.writeFileSync(path.join(global,'VERSION'),'1.2.0\n');
+  const before = fs.readFileSync(path.join(global,'SKILL.md'));
+  const preview = JSON.parse(ok(run('--agent','claude','--project',project,'--dry-run')));
+  assert.equal(preview.warnings[0].code,'SKILL_VERSION_CONFLICT');
+  assert.equal(preview.warnings[0].observed_version,'1.2.0');
+  assert.deepEqual(fs.readdirSync(project),[]);
+  const installed = JSON.parse(ok(run('--agent','claude','--project',project,'--yes')));
+  assert.equal(installed.warnings[0].code,'SKILL_VERSION_CONFLICT');
+  assert.deepEqual(fs.readFileSync(path.join(global,'SKILL.md')),before);
+  assert.equal(fs.readFileSync(path.join(global,'VERSION'),'utf8'),'1.2.0\n');
+  fs.writeFileSync(path.join(global,'VERSION'),fs.readFileSync(path.join(source,'VERSION')));
+  assert.equal(JSON.parse(ok(run('--agent','claude','--project',project,'--dry-run','--upgrade'))).warnings[0].code,'SKILL_DUPLICATE_VERSION');
+  fs.writeFileSync(path.join(global,'VERSION'),'untrusted text\n');
+  assert.equal(JSON.parse(ok(run('--agent','claude','--project',project,'--dry-run','--upgrade'))).warnings[0].code,'SKILL_ALTERNATE_UNVERIFIED');
+});
+
+test('Gemini alternate default Skill location is advisory only',t=>{
+  const {home,project,run}=fixture(t);
+  const alternate=path.join(home,'.gemini','skills','security-guardian');
+  fs.mkdirSync(alternate,{recursive:true});
+  fs.writeFileSync(path.join(alternate,'VERSION'),'1.2.0');
+  const p=JSON.parse(ok(run('--agent','gemini','--project',project,'--dry-run')));
+  assert.equal(p.warnings[0].code,'SKILL_VERSION_CONFLICT');
+  assert.deepEqual(fs.readdirSync(project),[]);
+  assert.equal(fs.readFileSync(path.join(alternate,'VERSION'),'utf8'),'1.2.0');
+});

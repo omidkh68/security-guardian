@@ -110,3 +110,7 @@ gh attestation verify PACKAGE.tgz --repo omidkh68/security-guardian --signer-wor
 ```
 
 Normative baseline: [SLSA v1.2 build requirements](https://slsa.dev/spec/v1.2/build-requirements), [build provenance](https://slsa.dev/spec/v1.2/build-provenance), [verification](https://slsa.dev/spec/v1.2/verifying-artifacts), [GitHub attestation](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations), [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/). Target L2, not an achieved level or certification. Level 3, Source Track and comprehensive consumer-project SLSA auditing are post-release evaluation, not additional first-release requirements. Existing #105 criteria are unchanged.
+
+### Native loader version conflict warning
+
+Project-scope npm preview and install report advisory warnings for another default standalone Skill location in the user home or alternate Gemini project location, including differing, duplicate or unverified versions. They never remove, upgrade, execute or follow symlinked alternate copies. This addresses the maintainer-observed Claude global 1.2.0 versus project 1.2.1 selection. Custom config directories, marketplace plugins, and actual loader precedence are not inspected; a warning-free installation does not prove native activation. Restart the actual client and verify its loaded Skill path and version. Fresh CI pending.
