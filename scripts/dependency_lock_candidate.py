@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a review-only hash lock candidate for the isolated Linux Python fixture."""
+"""Generate a review-only hash lock candidate for a bounded Linux Python group."""
 import argparse
 import hashlib
 import json
@@ -12,7 +12,11 @@ PIN=re.compile(r'([A-Za-z0-9_-]+)==([0-9]+(?:\.[0-9]+)+)')
 def normalize(name):
     return re.sub(r'[-_.]+','-',name).lower()
 
-def candidate(pins,folder):
+SCOPES={'fixture':'LINUX_PYTHON_FIXTURE_CURRENT_RUNNER_ONLY',
+        'standards':'LINUX_PYTHON_STANDARDS_CURRENT_RUNNER_ONLY'}
+
+def candidate(pins,folder,scope='fixture'):
+    if scope not in SCOPES:raise ValueError('Unknown dependency group')
     expected={}
     for line in pins.splitlines():
         if not line.strip():continue
@@ -44,7 +48,7 @@ def candidate(pins,folder):
     rows=[found[k] for k in sorted(found)]
     lock=''.join(f"{x['name']}=={x['version']} --hash=sha256:{x['sha256']}\n" for x in rows)
     return lock,{'kind':'DEPENDENCY_LOCK_CANDIDATE','status':'REVIEW_REQUIRED',
-                 'scope':'LINUX_PYTHON_FIXTURE_CURRENT_RUNNER_ONLY',
+                 'scope':SCOPES[scope],
                  'manifest_sha256':hashlib.sha256(pins.encode()).hexdigest(),
                  'wheels':rows,'limitations':['Hashes observed from this download, not independent publisher verification.',
                                              'Do not automatically commit or adopt this candidate.',
@@ -55,8 +59,9 @@ def main():
     p.add_argument('manifest',type=Path)
     p.add_argument('wheels',type=Path)
     p.add_argument('output',type=Path)
+    p.add_argument('--scope',choices=sorted(SCOPES),default='fixture')
     a=p.parse_args()
-    lock,report=candidate(a.manifest.read_text(encoding='utf-8'),a.wheels)
+    lock,report=candidate(a.manifest.read_text(encoding='utf-8'),a.wheels,a.scope)
     a.output.mkdir()
     (a.output/'requirements-candidate.txt').write_text(lock,encoding='utf-8')
     (a.output/'candidate-evidence.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n',encoding='utf-8')

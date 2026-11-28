@@ -26,3 +26,11 @@ class LockCandidateTests(unittest.TestCase):
             with self.assertRaises(ValueError):candidate(pins,self.root)
         self.wheel('Flask','3.1.3','duplicate.whl')
         with self.assertRaises(ValueError):candidate('Flask==3.1.3',self.root)
+
+    def test_group_scope_never_implies_promotion(self):
+        self.wheel('cvss','3.6')
+        lock,report=candidate('cvss==3.6',self.root,'standards')
+        self.assertEqual(report['scope'],'LINUX_PYTHON_STANDARDS_CURRENT_RUNNER_ONLY')
+        self.assertEqual(report['status'],'REVIEW_REQUIRED')
+        with self.assertRaises(ValueError):
+            candidate('cvss==3.6',self.root,'unknown')
